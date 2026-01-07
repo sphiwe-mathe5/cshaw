@@ -1,0 +1,72 @@
+{% extends 'users/base_auth.html' %}
+
+{% block title %}Coordinator Registration{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <h2>Coordinator Registration</h2>
+    <p class="subtitle">Staff and Leadership Sign Up</p>
+
+    <form id="coordinatorRegisterForm">
+        <div class="form-group">
+            <label for="first_name">First Name</label>
+            <input type="text" id="first_name" name="first_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <input type="text" id="last_name" name="last_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="campus">Main Campus</label>
+            <select id="campus" name="campus" required>
+                <option value="" disabled selected>Select your campus</option>
+                <option value="APB">APB</option>
+                <option value="DFC">DFC</option>
+                <option value="APK">APK</option>
+                <option value="SWC">SWC</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="admin_code">Staff Number</label>
+            <input type="password" id="admin_code" name="admin_code" placeholder="Provided by the school" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <div class="password-wrapper">
+                <input type="password" id="password" name="password" required>
+                <span class="toggle-password" onclick="togglePasswordVisibility('password', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
+            <small id="passwordStrength" class="info-text"></small>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <div class="password-wrapper">
+                <input type="password" id="confirm_password" name="confirm_password" required>
+                 <span class="toggle-password" onclick="togglePasswordVisibility('confirm_password', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
+            <div id="passwordError" class="error-text hidden">Passwords do not match</div>
+        </div>
+
+        <div id="formError" class="error-message hidden"></div>
+
+        <button type="submit" id="submitBtn">Register as Coordinator</button>
+        <div id="loader" class="loader hidden"></div>
+    </form>
+
+    <p class="switch-link">Student? <a href="/register/student/">Go to Student Register</a></p>
+</div>
+{% endblock %}

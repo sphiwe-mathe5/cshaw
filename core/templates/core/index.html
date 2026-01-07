@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volunteer Hub | Dashboard</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+</head>
+<body>
+
+<nav class="navbar">
+        <div class="nav-left">
+            <button id="sidebarToggle" class="icon-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <div class="brand">Volunteer<span>Hub</span></div>
+        </div>
+        
+        <div class="nav-right">
+            {% if user.is_authenticated %}
+                <span class="user-greeting">Hi, {{ user.first_name }}</span>
+                <div class="avatar">{{ user.first_name|first }}{{ user.last_name|first }}</div>
+            {% else %}
+                <a href="/login/" class="btn-nav-login">Login</a>
+                <a href="/register/student/" class="btn-nav-join">Join Us</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="main-container">
+        
+        <aside class="sidebar" id="sidebar">
+            <ul class="nav-list">
+                
+                <li class="nav-item active" id="nav-item-activities">
+                    <a href="#" class="nav-link" id="link-activities">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                        <span>
+                            {% if user.is_authenticated %}
+                                Volunteer Activities
+                            {% else %}
+                                Upcoming Events
+                            {% endif %}
+                        </span>
+                    </a>
+                </li>
+
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        <span>My Applications</span>
+                    </a>
+                </li>
+
+                <li class="nav-item" id="nav-item-stats">
+                    <a href="#" class="nav-link" id="link-stats">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>My Progress</span>
+                    </a>
+                </li>
+                
+                {% if user.role == 'COORDINATOR' %}
+                <li class="nav-item" id="nav-item-students">
+                    <a href="#" class="nav-link" id="link-manage-students">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                        <span>Manage Students</span>
+                    </a>
+                </li>
+
+                <li class="nav-item" id="nav-item-create-event">
+                    <a href="#" class="nav-link" id="link-create-event">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        <span>Manage Events</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item bottom-link">
+                    <a href="#" id="logoutBtn" class="nav-link">
+                        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                        <span>Logout</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </aside>
+
+        <main class="content-area" id="mainContent">
+            <div class="header-section">
+                <h1>Loading...</h1>
+                <p>Fetching latest volunteer opportunities.</p>
+            </div>
+            <div class="loader"></div>
+        </main>
+    </div>
+
+    <div id="roleModal" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; display:none; justify-content:center; align-items:center;">
+        <div class="modal" style="background:white; padding:30px; border-radius:12px; width:400px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom:20px; font-size:1.5rem;">Assign Executive Role</h2>
+            <p id="modalStudentName" style="margin-bottom:15px; color:#666;"></p>
+            
+            <form id="assignRoleForm">
+                <input type="hidden" id="selectedStudentId" name="student_id">
+                
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Select Position</label>
+                    <select id="roleSelect" name="position" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="">-- Remove Role --</option>
+                        <option value="Chairperson">Chairperson</option>
+                        <option value="Deputy Chairperson">Deputy Chairperson</option>
+                        <option value="Secretary">Secretary</option>
+                        <option value="Training Officer">Training Officer</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeModal()" style="padding:8px 16px; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer;">Cancel</button>
+                    <button type="submit" style="padding:8px 16px; background:var(--primary-orange); color:white; border:none; border-radius:4px; cursor:pointer;">Save Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="signupModal" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; display:none; justify-content:center; align-items:center;">
+        <div class="modal" style="background:white; padding:30px; border-radius:12px; width:450px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom:10px; font-size:1.5rem; color: var(--text-main);">Confirm RSVP</h2>
+            <p style="color: #666; margin-bottom: 20px;">You are signing up for: <b id="signupEventTitle"></b></p>
+            
+            <form id="rsvpForm">
+                <input type="hidden" id="signupEventId" name="activity">
+                
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600;">Select Your Role</label>
+                    <p style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">Which team would you like to join?</p>
+                    <select id="signupRoleSelect" name="selected_role" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;" required>
+                        </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom:20px; background: #FFF4EC; padding: 15px; border-radius: 6px;">
+                    <label style="display:flex; align-items:start; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" required style="margin-top: 4px;"> 
+                        <span style="font-size: 0.9rem; color: #555;">I commit to attending this event. I understand that signing up reserves a spot that others cannot take.</span>
+                    </label>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="closeSignupModal()" style="padding:10px 20px; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer;">Cancel</button>
+                    <button type="submit" id="confirmRsvpBtn" style="padding:10px 20px; background:var(--primary-orange); color:white; border:none; border-radius:4px; cursor:pointer; font-weight: 600;">Confirm & Sign Up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{% static 'js/index.js' %}"></script>
+</body>
+</html>

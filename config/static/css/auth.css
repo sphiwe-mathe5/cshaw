@@ -1,0 +1,301 @@
+/* --- 1. Variables & Reset (Modernized) --- */
+:root {
+    /* New Palette */
+    --primary-soft-orange: #FF8C42;  /* WARMER, SOFTER ORANGE */
+    --primary-orange-hover: #E87A30; /* Slightly darker for hover */
+
+    --bg-page: #F0F2F5;              /* Very light cool grey, modern feel */
+    --bg-card: #FFFFFF;
+    
+    --text-main: #2C3E50;            /* Deep blue-grey text, softer than black */
+    --text-muted: #7F8C8D;           /* Muted grey for subtitles */
+    --border-color: #E1E8ED;         /* Very subtle borders */
+    --input-bg: #F8F9FA;             /* Slight tint for inputs */
+    
+    --border-radius: 8px;            /* Softer, more rounded corners */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh; /* Use min-height instead of height for long forms */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0; /* Add padding for mobile scrolling */
+}
+
+/* --- 2. Layout & Card (Wider for 2-col layout) --- */
+.auth-container {
+    width: 100%;
+    /* Increased max-width to accommodate side-by-side fields nicely */
+    max-width: 650px; 
+    padding: 20px;
+}
+
+.form-wrapper {
+    background-color: var(--bg-card);
+    padding: 40px 50px;
+    border-radius: 12px; /* Moderner, rounder corners */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05), 0 4px 10px rgba(0,0,0,0.03); /* Subtle, modern layered shadow */
+    text-align: center;
+}
+
+/* --- 3. Typography --- */
+h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: var(--text-main);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 35px;
+}
+
+/* --- 4. Form Elements (Modernized) --- */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+    width: 100%;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select {
+    width: 100%;
+    padding: 14px 16px; /* More breathing room */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: var(--input-bg);
+    color: var(--text-main);
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-soft-orange);
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.15); /* Soft orange glow */
+}
+
+/* --- 5. DESKTOP GRID LAYOUT (The 2x2 Grouping) --- */
+@media (min-width: 768px) {
+    /* Apply grid only to registration forms, login stays simple stack */
+    #studentRegisterForm, 
+    #coordinatorRegisterForm {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two equal columns */
+        column-gap: 25px; /* Space between columns */
+        row-gap: 0px; /* Row gap handled by form-group margin */
+    }
+
+    /* --- Spanning Rules --- */
+    /* By default, items take 1 column. We force some to take 2 columns. */
+
+    /* Full width elements for both forms (Buttons, Loaders, Errors) */
+    #studentRegisterForm button[type="submit"],
+    #coordinatorRegisterForm button[type="submit"],
+    .loader,
+    .error-message {
+        grid-column: 1 / -1; /* Span from start to end */
+    }
+
+    /* Student Specific Spans */
+    /* We want Email(4th) to be full width. 
+       First(1) & Last(2) are side-by-side. 
+       StudentNum(3) & Campus(5 - moved up visually) side-by-side.
+       Pass(6) & Confirm(7) side-by-side.
+    */
+     #studentRegisterForm .form-group:nth-of-type(4) { /* Email */
+         grid-column: 1 / -1;
+     }
+ 
+    /* Coordinator Specific Spans */
+    /* Email(3), Campus(4), AdminCode(5) need to be full width to look neat */
+    #coordinatorRegisterForm .form-group:nth-of-type(3), /* Email */
+    #coordinatorRegisterForm .form-group:nth-of-type(4), /* Campus */
+    #coordinatorRegisterForm .form-group:nth-of-type(5)  /* Admin Code */
+    {
+        grid-column: 1 / -1;
+    }
+}
+
+/* --- 6. Buttons (Softer) --- */
+button {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--primary-soft-orange);
+    color: white;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 15px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 6px rgba(255, 140, 66, 0.2); /* Soft colored shadow */
+}
+
+button:hover {
+    background-color: var(--primary-orange-hover);
+    transform: translateY(-2px); /* Slight lift effect */
+    box-shadow: 0 6px 12px rgba(255, 140, 66, 0.3);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background-color: #BDC3C7;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- 7. Links & Utilities --- */
+.switch-link {
+    margin-top: 25px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.switch-link a {
+    color: var(--primary-soft-orange);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.switch-link a:hover {
+    color: var(--primary-orange-hover);
+    text-decoration: underline;
+}
+/* ... Keep Variables, Reset, and Typography from V2.0 ... */
+
+/* --- Updated Grid Layout for Specific Structure --- */
+@media (min-width: 768px) {
+    #studentRegisterForm {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two columns */
+        column-gap: 20px;
+        row-gap: 5px;
+    }
+
+    /* Force "Full Width" elements to span 2 columns */
+    .full-width,
+    #formError,
+    button[type="submit"],
+    .loader {
+        grid-column: 1 / -1;
+    }
+}
+
+/* --- DESKTOP GRID LAYOUT (The 2x2 Grouping) --- */
+@media (min-width: 768px) {
+    /* Apply grid to the student form */
+    #studentRegisterForm {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two equal columns */
+        column-gap: 20px;
+        row-gap: 5px; /* Minimal vertical gap */
+    }
+
+    /* --- Spanning Rules --- */
+
+    /* 1. Force these specific elements to always be full width */
+    .full-width,            /* This targets the Campus dropdown */
+    #formError,             /* Error messages */
+    button[type="submit"],  /* The Register Button */
+    .loader {
+        grid-column: 1 / -1; /* Span across both columns */
+    }
+
+    /* 2. Coordinator Form Logic (If you want that one customized too) */
+    #coordinatorRegisterForm {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+    }
+    
+    /* For Coordinator: Email(3), Campus(4), Code(5) are full width */
+    #coordinatorRegisterForm .form-group:nth-of-type(3), 
+    #coordinatorRegisterForm .form-group:nth-of-type(4),
+    #coordinatorRegisterForm .form-group:nth-of-type(5) {
+        grid-column: 1 / -1;
+    }
+}
+
+/* --- Password Eye Toggle Styles --- */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 40px; /* Make space for the eye icon */
+    width: 100%;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.toggle-password:hover svg {
+    stroke: var(--primary-soft-orange); /* Eye turns orange on hover */
+}
+/* Utility classes remain mostly same but updated colors */
+.hidden { display: none !important; }
+
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-soft-orange);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto 0 auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.error-message {
+    background-color: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #B91C1C;
+    padding: 12px;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.error-text { color: #B91C1C; font-size: 0.85rem; margin-top: 6px; }
+.info-text { color: var(--text-muted); font-size: 0.85rem; margin-top: 6px; }
