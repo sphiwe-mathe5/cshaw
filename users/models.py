@@ -34,6 +34,7 @@ class User(AbstractUser):
     # Executive Team Logic (Chairperson, Treasurer, etc.)
     # Only Coordinators can change this field
     executive_position = models.CharField(max_length=100, null=True, blank=True, help_text="E.g., Chairperson, Secretary. Leave empty if regular volunteer.")
+    receive_notifications = models.BooleanField(default=True, help_text="Receive email updates about events")
 
     # Coordinator specific logic can be handled by the 'role' field, 
     # but if they need specific fields (like department), add them here.

@@ -1,14 +1,18 @@
 from django.contrib.auth import authenticate, login, logout
 from rest_framework import status, generics, permissions, views
+from rest_framework.views import APIView
 from django.shortcuts import render
 from rest_framework.response import Response
 from .serializers import (
     StudentRegistrationSerializer, 
     CoordinatorRegistrationSerializer, 
     UserLoginSerializer,
-    StudentListSerializer
+    StudentListSerializer,
+    UserProfileSerializer,
+    ChangePasswordSerializer
 )
 from .models import User
+
 from .permissions import IsCoordinator
 
 # --- 1. Registration Views ---
@@ -83,6 +87,38 @@ class StudentListView(generics.ListAPIView):
         # Return only students, ordered by Campus then Name
         return User.objects.filter(role=User.Roles.STUDENT).order_by('campus', 'first_name')
     
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            # Note: If using Session Auth, this might log them out. 
+            # If using Tokens, it's usually fine.
+            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# 2. Delete Account
+class UserDeleteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response({"message": "Account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 # --- 4. Simple Page Render Views (if needed) ---
 def login_page(request):

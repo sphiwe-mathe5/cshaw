@@ -138,6 +138,43 @@ ul { list-style: none; }
 .sidebar.collapsed { width: 72px; }
 .sidebar.collapsed .nav-text { display: none; }
 
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 900px) {
+    .sidebar {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        height: calc(100vh - 64px);
+        width: 260px;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transform: translateX(-100%);
+        
+        /* FIX: Boost Z-Index to sit above sticky table headers (which are usually 10 or 11) */
+        z-index: 2000 !important; 
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 64px);
+        background: rgba(0,0,0,0.5);
+        display: none;
+        
+        /* FIX: Ensure overlay is just behind the sidebar but above the content */
+        z-index: 1999 !important; 
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
+
 .nav-list {
     padding: 20px 10px;
     display: flex;
@@ -360,3 +397,550 @@ ul { list-style: none; }
     transform: none;
 }
 
+
+/* --- 8. Stats Dashboard (New) --- */
+
+/* The Dark Hero Section */
+
+.dashboard-form-wrapper, 
+.profile-section { /* Apply same styles to profile section */
+    background: var(--bg-surface);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    margin-bottom: 30px;
+}
+
+/* Headings inside sections */
+.dashboard-form-wrapper h3,
+.profile-section h3 {
+    margin-bottom: 20px;
+    color: var(--text-main);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+/* INPUTS & SELECTS - The "Proper Styling" */
+.profile-section input,
+.profile-section select,
+.dashboard-form-wrapper input,
+.dashboard-form-wrapper select,
+.dashboard-form-wrapper textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #dfe6e9;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background-color: #FAFAFA;
+    transition: all 0.2s;
+    color: var(--text-main);
+    margin-bottom: 5px; /* Spacing */
+}
+
+.profile-section input:focus,
+.profile-section select:focus,
+.dashboard-form-wrapper input:focus,
+.dashboard-form-wrapper select:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+    background-color: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.1);
+}
+
+/* Read-only / Disabled Inputs */
+.profile-section input:disabled {
+    background-color: #eee;
+    color: #888;
+    cursor: not-allowed;
+    border-color: #ddd;
+}
+
+/* Labels */
+.profile-section label,
+.dashboard-form-wrapper label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.stats-hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); /* Dark Blue/Black Theme */
+    color: white;
+    padding: 40px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Big Number */
+.hero-number {
+    font-size: 6rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #FF8C42; /* UJ Orange Pop */
+}
+
+.hero-text h2 {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+    color: white;
+}
+
+.hero-text p {
+    color: #a0a0a0;
+    font-size: 1rem;
+    max-width: 400px;
+}
+
+/* Progress Bar Container */
+.progress-container {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    height: 10px;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #FF8C42;
+    border-radius: 5px;
+    transition: width 1s ease-in-out;
+}
+
+.progress-label {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #FF8C42;
+    font-weight: 600;
+}
+
+/* 3-Column Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.stat-card h3 {
+    font-size: 1.1rem;
+    color: var(--text-main);
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+/* List Items in Cards */
+.stat-list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f9f9f9;
+}
+.stat-list-item:last-child { border-bottom: none; }
+
+.stat-val { font-weight: 700; color: var(--text-main); }
+.stat-label { color: var(--text-muted); }
+
+/* Rank Badge */
+.rank-badge {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-weight: 700;
+    margin-top: 10px;
+}
+
+
+/* --- 9. Profile & Danger Zone --- */
+.profile-section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.profile-section h3 {
+    margin-bottom: 20px;
+    color: var(--text-main);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Danger Zone Specifics */
+.danger-zone {
+    border: 1px solid #ffcccc;
+    background: #fff5f5;
+}
+
+.danger-zone h3 {
+    color: #c0392b;
+    border-bottom-color: #ffcccc;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+/* Toggle Switch Style */
+.toggle-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 0;
+}
+.toggle-label { font-weight: 500; }
+
+
+/* --- 10. Management Split Layout --- */
+.management-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 50% List, 50% Form */
+    gap: 30px;
+    align-items: start; /* Aligns items to the top */
+}
+
+/* The Left Side (List) */
+/* --- Updated List Container (With Slider) --- */
+.event-list-container {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    max-height: 85vh;
+    
+    /* ENABLE SLIDER HERE */
+    overflow-y: auto; /* Vertical scroll */
+    overflow-x: auto; /* Horizontal scroll (The Slider) */
+    position: relative;
+    
+    /* Ensure table creates scrollable width if needed */
+    display: block; 
+}
+
+/* Make the Slider Look Nice */
+.event-list-container::-webkit-scrollbar {
+    width: 8px;  /* Vertical scrollbar width */
+    height: 8px; /* Horizontal slider height */
+}
+
+.event-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.event-list-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.event-list-container::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-orange);
+}
+
+/* Force Actions to stay on one line so they don't stack weirdly */
+.event-list-container td, 
+.event-list-container th {
+    white-space: nowrap; 
+}
+
+/* --- Table Header Styling --- */
+.event-list-container th {
+    background-color: #f8f9fa; /* Light grey background */
+    color: #6c757d;            /* Muted text color */
+    font-weight: 700;          /* Bold */
+    font-size: 0.8rem;         /* Slightly smaller font */
+    text-transform: uppercase; /* UPPERCASE headers */
+    letter-spacing: 0.05em;    /* Spacing for readability */
+    padding: 15px;             /* Comfortable padding */
+    border-bottom: 2px solid #e9ecef; /* distinct border */
+    white-space: nowrap;       /* Prevent text wrapping */
+    
+    /* Sticky Header Logic */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Fix for the last column (Actions) */
+.event-list-container th:last-child {
+    text-align: right;
+    padding-right: 20px;
+}
+
+/* Update Mobile styles to ensure slider works there too */
+@media (max-width: 900px) {
+    .event-list-container {
+        max-height: 300px;
+        overflow-x: auto; /* Ensure slider works on mobile */
+    }
+}
+
+/* The Right Side (Form) */
+.dashboard-form-wrapper.sticky-form {
+    position: sticky; /* Stays fixed while you scroll the page */
+    top: 20px;
+    margin-bottom: 0;
+    max-height: 85vh;
+    overflow-y: auto; /* Scroll inside form if it's too long */
+}
+
+
+
+/* The Grid for Roles */
+.role-selection-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 columns on desktop */
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* The Role "Card" */
+.role-card {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Hover Effect */
+.role-card:hover {
+    border-color: var(--primary-orange);
+    background-color: #FFF4EC;
+}
+
+/* Checkbox specific styling inside the card */
+.role-card input[type="checkbox"] {
+    width: 18px !important; /* Override the 100% width from general inputs */
+    height: 18px;
+    margin-right: 12px;
+    accent-color: var(--primary-orange); /* Makes the tick orange */
+    cursor: pointer;
+    margin-bottom: 0; /* Remove bottom margin from general input styles */
+}
+
+.role-card span {
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.role-card small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+/* --- MOBILE RESPONSIVENESS FIXES --- */
+@media (max-width: 900px) {
+    /* Stack the layout vertically */
+    .management-layout {
+        grid-template-columns: 1fr; 
+        gap: 20px;
+    }
+
+    /* List becomes a scrollable box at the top */
+    .event-list-container {
+        max-height: 300px; /* Shorter list so form is visible */
+        border-bottom: 2px solid var(--primary-orange);
+    }
+
+    /* Remove sticky behavior on mobile so it flows naturally */
+    .dashboard-form-wrapper.sticky-form {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+
+    /* Roles become single column on very small screens for easier tapping */
+    .role-selection-grid {
+        grid-template-columns: 1fr; 
+    }
+}
+
+/* --- 12. Attendance Sheet Responsive --- */
+
+.attendance-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden; /* Keeps the rounded corners clean */
+    border: 1px solid var(--border-color);
+}
+
+/* The wrapper that allows scrolling */
+.table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scroll on mobile */
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Ensure table is wide enough to look good, forcing scroll on mobile */
+    min-width: 600px; 
+}
+
+.attendance-table th, 
+.attendance-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap; /* Prevent names/dates from wrapping uglily */
+}
+
+.attendance-table th {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+/* --- MOBILE MAGIC: Sticky First Column --- */
+@media (max-width: 768px) {
+    /* Make the Student Name column stick to the left */
+    .attendance-table th:first-child,
+    .attendance-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background-color: white; /* Cover content sliding under it */
+        border-right: 2px solid #f0f0f0; /* Visual separator */
+    }
+
+    /* Ensure the sticky header matches the gray background */
+    .attendance-table th:first-child {
+        background-color: #f8f9fa; 
+    }
+}
+
+/* --- 13. Password Toggles --- */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    padding-right: 45px !important; /* Make room for the eye icon */
+}
+
+.toggle-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    cursor: pointer;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.toggle-icon:hover {
+    background: #f0f0f0;
+    color: var(--primary-orange);
+}
+
+/* --- Stats Hero Mobile Polish --- */
+@media (max-width: 768px) {
+    .stats-hero {
+        padding: 30px 20px;
+        text-align: center;
+    }
+
+    /* Stack everything vertically */
+    .hero-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Force the avatar to be centered and smaller */
+    .hero-content > div:first-child { 
+        margin: 0 auto; /* Center horizontal */
+        width: 60px !important; 
+        height: 60px !important;
+        font-size: 1.5rem !important;
+    }
+
+    /* Resize the Big Number */
+    .hero-number {
+        font-size: 3.5rem; /* Smaller to fit nicely */
+        margin: 5px 0;
+    }
+
+    .hero-text p {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+        color: #b0b0b0; /* Lighter grey for better readability */
+    }
+
+    /* Progress Bar Spacing */
+    .progress-container {
+        margin: 0 auto 10px auto; /* Center it */
+        width: 100%;
+    }
+
+    .progress-label {
+        margin-bottom: 10px;
+        display: block;
+        position: relative;
+        z-index: 5; /* Ensure text sits on top */
+    }
+
+    /* CRITICAL FIX: Hide the chart bars on mobile */
+    .hero-decoration {
+        display: none !important;
+    }
+}

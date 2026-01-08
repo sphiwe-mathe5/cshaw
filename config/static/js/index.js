@@ -12,10 +12,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItemStudents = document.getElementById('nav-item-students');
 
     // Sidebar Toggle
-    const toggleBtn = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
-    if(toggleBtn && sidebar) {
-        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('sidebarOverlay'); // Get the overlay
+    
+    // Toggle Function
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('active');
+    }
+
+    // Close Function (for clicking links or overlay)
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+    }
+
+    // A. Click Hamburger Button
+    if(toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent immediate closing
+            toggleSidebar();
+        });
+    }
+
+    // B. Click Overlay (Close menu)
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+
+    // C. Click any Nav Link (Auto-close on mobile)
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            // Only close if we are on mobile (check window width)
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+
+    const linkSettings = document.getElementById('link-settings');
+    const navItemSettings = document.getElementById('nav-item-settings');
+
+    if (linkSettings) {
+        linkSettings.addEventListener('click', (e) => {
+            e.preventDefault();
+            setActiveNav(navItemSettings);
+            renderSettings();
+        });
     }
 
     const linkStats = document.getElementById('link-stats');
@@ -215,26 +259,30 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderAttendanceSheet(activityId, activityTitle) {
         mainContent.innerHTML = `
             <div class="header-section">
-                <button id="backToManage" style="background:none; border:none; color:#666; cursor:pointer; margin-bottom:10px;">&larr; Back to Events</button>
+                <button id="backToManage" style="background:none; border:none; color:#666; cursor:pointer; margin-bottom:10px; font-weight: 500;">
+                    &larr; Back to Events
+                </button>
                 <h1>Attendance Sheet</h1>
                 <p style="color: var(--primary-orange); font-weight:600;">${activityTitle}</p>
             </div>
             
-            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: var(--shadow-sm);">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa; text-align: left;">
-                            <th style="padding: 15px;">Student</th>
-                            <th style="padding: 15px;">Role</th>
-                            <th style="padding: 15px;">Status</th>
-                            <th style="padding: 15px;">Time Logged</th>
-                            <th style="padding: 15px; text-align: right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceTableBody">
-                        <tr><td colspan="5" style="padding:20px; text-align:center;">Loading RSVPs...</td></tr>
-                    </tbody>
-                </table>
+            <div class="attendance-container">
+                <div class="table-scroll-wrapper">
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Time Logged</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr><td colspan="5" style="padding:20px; text-align:center;">Loading RSVPs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
 
@@ -246,47 +294,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const tbody = document.getElementById('attendanceTableBody');
             
             if (rsvps.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center;">No students have RSVPed yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#999;">No students have RSVPed yet.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = '';
             rsvps.forEach(rsvp => {
                 // Determine Status and Button
-                let statusBadge = '<span style="background:#eee; padding:4px 8px; border-radius:4px; color:#666;">Pending</span>';
-                let actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" style="padding:6px 12px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer;">Sign In</button>`;
-                let timeLog = '-';
+                let statusBadge = '<span style="background:#f1f1f1; padding:4px 10px; border-radius:12px; color:#666; font-size:0.85rem;">Pending</span>';
+                let actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Sign In</button>`;
+                let timeLog = '<span style="color:#ccc;">--:--</span>';
 
                 if (rsvp.sign_in_time && !rsvp.sign_out_time) {
                     // Currently Signed In
                     const signInTime = new Date(rsvp.sign_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    statusBadge = '<span style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px;">In Progress</span>';
-                    timeLog = `In: ${signInTime}`;
-                    actionBtn = `<button class="btn-signout" data-id="${rsvp.id}" style="padding:6px 12px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer;">Sign Out</button>`;
+                    statusBadge = '<span style="background:#e8f5e9; color:#2e7d32; padding:4px 10px; border-radius:12px; font-size:0.85rem;">● In Progress</span>';
+                    timeLog = `<span style="color:#2e7d32; font-weight:600;">In: ${signInTime}</span>`;
+                    actionBtn = `<button class="btn-signout" data-id="${rsvp.id}" style="padding:6px 16px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Sign Out</button>`;
                 } 
                 else if (rsvp.sign_out_time) {
                     // Completed
-                    statusBadge = '<span style="background:#cce5ff; color:#004085; padding:4px 8px; border-radius:4px;">Completed</span>';
-                    timeLog = `${rsvp.hours_earned} Hrs`;
-                    actionBtn = `<span style="color:#27ae60; font-weight:bold;">✔ Saved</span>`;
+                    statusBadge = '<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:12px; font-size:0.85rem;">✓ Completed</span>';
+                    timeLog = `<strong>${rsvp.hours_earned} Hrs</strong>`;
+                    actionBtn = `<span style="color:#27ae60; font-weight:bold; font-size:1.2rem;">✓</span>`;
                 }
 
                 const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid #eee';
                 tr.innerHTML = `
-                    <td style="padding: 15px;">
-                        <strong>${rsvp.student_name} ${rsvp.student_surname}</strong><br>
-                        <small style="color:#888;">${rsvp.student_email}</small>
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-main);">${rsvp.student_name} ${rsvp.student_surname}</div>
+                        <div style="font-size: 0.8rem; color: #888;">${rsvp.student_email}</div>
                     </td>
-                    <td style="padding: 15px;">${rsvp.role_name || 'General'}</td>
-                    <td style="padding: 15px;">${statusBadge}</td>
-                    <td style="padding: 15px;">${timeLog}</td>
-                    <td style="padding: 15px; text-align: right;">${actionBtn}</td>
+                    <td>${rsvp.role_name || 'General'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${timeLog}</td>
+                    <td style="text-align: right;">${actionBtn}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            // Attach Listeners for Actions
+            // Attach Listeners
             document.querySelectorAll('.btn-signin').forEach(btn => {
                 btn.addEventListener('click', () => handleAttendance(btn.dataset.id, 'signin', activityId, activityTitle));
             });
@@ -296,86 +343,108 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
+            document.getElementById('attendanceTableBody').innerHTML = '<tr><td colspan="5" style="color:red; text-align:center;">Error loading data.</td></tr>';
         }
     }
 
     async function renderStudentStats() {
-        mainContent.innerHTML = `
-            <div class="header-section">
-                <h1>My Progress</h1>
-                <p>Track your volunteer impact and hours.</p>
-            </div>
-            <div class="loader"></div>
-        `;
+        // Initial Loader
+        mainContent.innerHTML = `<div class="loader"></div>`;
 
         try {
             const response = await fetch('/api/users/stats/');
             const data = await response.json();
 
-            // 1. Build History Rows
-            let historyHtml = '';
-            if (data.history.length === 0) {
-                historyHtml = '<tr><td colspan="3" style="padding:15px; text-align:center; color:#888;">No completed activities yet.</td></tr>';
+            // 1. Build Monthly Rows
+            let monthlyHtml = '';
+            if (data.monthly.length === 0) {
+                monthlyHtml = '<p style="color:#999; text-align:center;">No activity yet.</p>';
             } else {
-                data.history.forEach(item => {
-                    const dateStr = new Date(item.date).toLocaleDateString();
-                    historyHtml += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:12px;">${item.activity}</td>
-                            <td style="padding:12px;">${dateStr}</td>
-                            <td style="padding:12px; font-weight:bold; color:#27ae60;">+${item.hours} hrs</td>
-                        </tr>
+                data.monthly.forEach(m => {
+                    monthlyHtml += `
+                        <div class="stat-list-item">
+                            <span class="stat-label">${m.name}</span>
+                            <span class="stat-val">${m.hours} hrs</span>
+                        </div>
                     `;
                 });
             }
 
-            // 2. Render Dashboard Grid
+            // 2. Build Events Rows
+            let eventsHtml = '';
+            if (data.history.length === 0) {
+                eventsHtml = '<p style="color:#999; text-align:center;">No events attended.</p>';
+            } else {
+                data.history.forEach((e, index) => {
+                    eventsHtml += `
+                        <div class="stat-list-item">
+                            <span class="stat-label">${index + 1}. ${e.title}</span>
+                            <span class="stat-val" style="font-size:0.85rem; color:#27ae60;">Done</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // 3. Render The Dashboard
             mainContent.innerHTML = `
-                <div class="header-section">
-                    <h1>My Progress</h1>
-                    <p>Track your volunteer impact and hours.</p>
+                <div class="stats-hero">
+                    <div class="hero-content">
+                        <div style="width: 80px; height: 80px; background: white; border-radius: 50%; display:flex; align-items:center; justify-content:center; color: #1a1a2e; font-weight:800; font-size: 2rem; border: 4px solid #FF8C42; flex-shrink: 0;">
+                            ME
+                        </div>
+                        
+                        <div class="hero-number">${data.total_hours}</div>
+                        
+                        <div class="hero-text" style="flex-grow: 1;">
+                            <h2>Volunteering Hours</h2>
+                            <p>${data.motivation}</p>
+                            
+                            <div class="progress-container">
+                                <div class="progress-fill" style="width: ${data.progress_percent}%;"></div>
+                            </div>
+                            <div class="progress-label">
+                                ${data.remaining <= 0 ? "Goal Complete!" : `${data.remaining} Hours away from ${data.target} Hours`}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-decoration" style="position: absolute; right: 40px; bottom: 40px; display: flex; align-items: flex-end; gap: 10px; opacity: 0.8;">
+                        <div style="width: 20px; height: 40px; background: #FF8C42; border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 70px; background: #FF8C42; border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 50px; background: #4ecdc4; border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 90px; background: #4ecdc4; border-radius: 4px;"></div>
+                    </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="stats-grid">
                     
-                    <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: var(--shadow-sm); display:flex; align-items:center; border-left: 5px solid var(--primary-orange);">
-                        <div style="background: #FFF4EC; padding: 15px; border-radius: 50%; margin-right: 20px;">
-                            <svg width="30" height="30" viewBox="0 0 24 24" fill="#FF8C42"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-                        </div>
-                        <div>
-                            <h3 style="font-size: 2.5rem; margin: 0; color: var(--text-main);">${data.total_hours}</h3>
-                            <p style="margin: 0; color: var(--text-muted);">Total Hours Earned</p>
-                        </div>
+                    <div class="stat-card">
+                        <h3>Monthly Hours</h3>
+                        ${monthlyHtml}
                     </div>
 
-                    <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: var(--shadow-sm); display:flex; align-items:center; border-left: 5px solid #27ae60;">
-                        <div style="background: #eafaf1; padding: 15px; border-radius: 50%; margin-right: 20px;">
-                            <svg width="30" height="30" viewBox="0 0 24 24" fill="#27ae60"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                        </div>
-                        <div>
-                            <h3 style="font-size: 2.5rem; margin: 0; color: var(--text-main);">${data.events_attended}</h3>
-                            <p style="margin: 0; color: var(--text-muted);">Events Completed</p>
-                        </div>
+                    <div class="stat-card">
+                        <h3>Events You Attended</h3>
+                        ${eventsHtml}
                     </div>
 
-                </div>
-
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-                    
-                    <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: var(--shadow-sm); min-height: 300px;">
-                        <h3 style="margin-bottom: 20px;">Activity Overview</h3>
-                        <div style="height: 200px; background: #fafafa; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999; border: 2px dashed #eee;">
-                            [ Graph: Monthly Hours will go here ]
+                    <div class="stat-card">
+                        <h3>Achievements</h3>
+                        
+                        <div class="stat-list-item">
+                            <span class="stat-label">Most Hours</span>
+                            <span class="stat-val">(${data.total_hours})</span>
                         </div>
-                    </div>
+                        
+                        <div class="stat-list-item">
+                            <span class="stat-label">Total Events</span>
+                            <span class="stat-val">${data.events_count}</span>
+                        </div>
 
-                    <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: var(--shadow-sm);">
-                        <h3 style="margin-bottom: 20px;">Recent Activity</h3>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            ${historyHtml}
-                        </table>
-                        <div style="margin-top: 15px; text-align: center;">
-                            <a href="#" style="color: var(--primary-orange); font-weight: 600; font-size: 0.85rem;">View Full History</a>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <div style="font-size: 3rem;">🏅</div>
+                            <div class="rank-badge">Current Rank: Position ${data.rank}</div>
+                            <p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Overall Leaderboard</p>
                         </div>
                     </div>
 
@@ -385,6 +454,267 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error(err);
             mainContent.innerHTML = `<div class="header-section"><h1>Error</h1><p>Could not load stats.</p></div>`;
+        }
+    }
+
+    async function renderSettings() {
+        mainContent.innerHTML = `<div class="loader"></div>`;
+
+        try {
+            const response = await fetch('/api/users/profile/');
+            const user = await response.json();
+
+            // Helper to check campus selection
+            const isSelected = (val) => user.campus === val ? 'selected' : '';
+
+
+            mainContent.innerHTML = `
+                <div class="header-section">
+                    <h1>Profile & Settings</h1>
+                    <p>Manage your account details and preferences.</p>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Personal Information</h3>
+                    <form id="profileForm">
+                        
+                        <div class="form-group form-row">
+                            <div>
+                                <label>Role</label>
+                                <input type="text" value="${user.role_label}" disabled>
+                            </div>
+                            <div>
+                                <label>Student / Staff Number</label>
+                                <input type="text" value="${user.student_number || 'N/A'}" disabled>
+                            </div>
+                        </div>
+
+                        <div class="form-group form-row">
+                            <div>
+                                <label>First Name</label>
+                                <input type="text" name="first_name" value="${user.first_name}" required>
+                            </div>
+                            <div>
+                                <label>Last Name</label>
+                                <input type="text" name="last_name" value="${user.last_name}" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group form-row">
+                            <div>
+                                <label>Campus</label>
+                                <select name="campus">
+                                    <option value="APB" ${isSelected('APB')}>APB Campus</option>
+                                    <option value="DFC" ${isSelected('DFC')}>DFC Campus</option>
+                                    <option value="APK" ${isSelected('APK')}>APK Campus</option>
+                                    <option value="SWC" ${isSelected('SWC')}>SWC Campus</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Email Address</label>
+                                <input type="email" value="${user.email}" disabled>
+                                <small style="color:#999; font-size: 0.8em;">Contact support to change email.</small>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right; margin-top: 20px;">
+                            <button type="submit" class="btn-submit" id="saveProfileBtn">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Security</h3>
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <div class="password-wrapper">
+                                <input type="password" name="old_password" required placeholder="Enter current password">
+                                <span class="toggle-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group form-row">
+                            <div>
+                                <label>New Password</label>
+                                <div class="password-wrapper">
+                                    <input type="password" name="new_password" id="newPass" required placeholder="New password">
+                                    <span class="toggle-icon">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <label>Confirm New Password</label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="confirmPass" required placeholder="Repeat new password">
+                                    <span class="toggle-icon">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: right; margin-top: 15px;">
+                            <button type="submit" class="btn-submit" id="savePasswordBtn" style="background-color: #34495e;">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Preferences</h3>
+                    <div class="toggle-wrapper">
+                        <div>
+                            <div class="toggle-label">Email Notifications</div>
+                            <div style="font-size:0.9rem; color:#666;">Receive updates about upcoming events and reminders.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifToggle" ${user.receive_notifications ? 'checked' : ''}>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="profile-section danger-zone">
+                    <h3>Danger Zone</h3>
+                    <p style="color: #c0392b; margin-bottom: 20px;">
+                        Deleting your account is permanent. All your volunteer hours, history, and signups will be erased immediately.
+                    </p>
+                    <button id="deleteAccountBtn" class="btn-danger">Delete My Account</button>
+                </div>
+            `;
+
+            // --- Attach Listeners ---
+
+            document.querySelectorAll('.toggle-icon').forEach(icon => {
+                icon.addEventListener('click', () => {
+                    const input = icon.parentElement.querySelector('input');
+                    if (input.type === 'password') {
+                        input.type = 'text'; 
+                        // Icon: Eye Slash
+                        icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M1 1l22 22"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>`;
+                    } else {
+                        input.type = 'password'; 
+                        // Icon: Eye
+                        icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+                    }
+                });
+            });
+
+            // A. Update Profile
+            document.getElementById('profileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('saveProfileBtn');
+                btn.textContent = 'Saving...';
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const res = await fetch('/api/users/profile/', {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    if (res.ok) {
+                        alert('Profile updated successfully.');
+                        // Update greeting in navbar immediately
+                        const nameEl = document.querySelector('.user-greeting');
+                        if (nameEl) nameEl.textContent = `Hi, ${data.first_name}`;
+                    } else {
+                        alert('Failed to update profile.');
+                    }
+                } catch (err) { console.error(err); } 
+                finally { btn.textContent = 'Save Changes'; }
+            });
+
+            document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const newPass = document.getElementById('newPass').value;
+                const confirmPass = document.getElementById('confirmPass').value;
+                const btn = document.getElementById('savePasswordBtn');
+                
+
+                // 1. Frontend Validation
+                if (newPass !== confirmPass) {
+                    alert("New passwords do not match!");
+                    return;
+                }
+                
+                if (newPass.length < 8) {
+                    alert("Password must be at least 8 characters long.");
+                    return;
+                }
+
+                btn.textContent = 'Updating...';
+                btn.disabled = true;
+
+                try {
+                    const formData = new FormData(e.target);
+                    const data = Object.fromEntries(formData);
+                    // Remove confirm password from data sent to API (Backend doesn't need it)
+                    delete data['confirmPass']; 
+
+                    const response = await fetch('/api/users/change-password/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        alert("Password changed successfully!");
+                        e.target.reset(); // Clear form
+                    } else {
+                        // Display backend errors (e.g., "Old password incorrect" or "Password too simple")
+                        let errorMsg = 'Error: ';
+                        if (result.old_password) errorMsg += result.old_password + '\n';
+                        if (result.new_password) errorMsg += result.new_password + '\n';
+                        alert(errorMsg);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Network error.");
+                } finally {
+                    btn.textContent = 'Update Password';
+                    btn.disabled = false;
+                }
+            });
+
+            // B. Preferences & C. Delete (Same as before)
+            document.getElementById('notifToggle').addEventListener('change', async (e) => {
+                 /* ... reuse previous logic ... */
+                 const isChecked = e.target.checked;
+                 await fetch('/api/users/profile/', {
+                     method: 'PATCH',
+                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                     body: JSON.stringify({ receive_notifications: isChecked })
+                 });
+            });
+
+            document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+                /* ... reuse previous logic ... */
+                if(confirm("Are you sure?")) {
+                     await fetch('/api/users/delete/', {
+                         method: 'DELETE',
+                         headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                     });
+                     window.location.href = '/login/';
+                }
+            });
+
+        } catch (err) {
+            console.error(err);
+            mainContent.innerHTML = `<div class="header-section"><h1>Error</h1><p>Could not load settings.</p></div>`;
         }
     }
 
@@ -486,8 +816,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MANAGE EVENTS (Create, List, Edit, Delete) ---
 
     async function renderCreateEventForm() {
-        // 1. Structure: Split page into List (Top) and Form (Bottom/Modal)
-        // For simplicity, we put the List on top and the Form below it.
         
         mainContent.innerHTML = `
             <div class="header-section">
@@ -495,121 +823,145 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Create new opportunities or update existing ones.</p>
             </div>
 
-            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 40px;">
-                <h3 style="margin-bottom: 15px; color: var(--text-main);">My Posted Events</h3>
-                <div style="overflow-x: auto;">
+            <div class="management-layout">
+
+                <div class="event-list-container">
+                    <div style="padding: 20px; border-bottom: 1px solid #eee; background: #fff; position: sticky; top: 0; z-index: 11;">
+                        <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">My Posted Events</h3>
+                    </div>
+                    
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="background: #f8f9fa; color: var(--text-muted); font-size: 0.9rem;">
-                                <th style="padding: 12px; text-align: left;">Title</th>
-                                <th style="padding: 12px; text-align: left;">Date</th>
-                                <th style="padding: 12px; text-align: left;">Spots</th>
-                                <th style="padding: 12px; text-align: right;">Actions</th>
+                            <tr>
+                                <th style="text-align: left;">Title</th>
+                                <th style="text-align: left;">Date</th>
+                                <th style="text-align: center;">Spots</th> <th style="text-align: right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="myEventsTableBody">
-                            <tr><td colspan="4" style="padding: 20px; text-align: center;">Loading your events...</td></tr>
+                            <tr><td colspan="4" style="padding: 20px; text-align: center;">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            <div class="dashboard-form-wrapper">
-                <h3 id="formTitle" style="margin-bottom: 20px; color: var(--text-main);">Create New Event</h3>
-                
-                <form id="createEventForm">
-                    <input type="hidden" name="event_id" id="eventIdField"> <div class="form-group">
-                        <label>Event Image</label>
-                        <input type="file" name="image" accept="image/*">
-                        <small id="currentImageText" style="color: #666; display: none;">Current image: <a href="#" target="_blank">View</a></small>
+                <div class="dashboard-form-wrapper sticky-form">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 id="formTitle" style="margin:0; border:none;">Create New Event</h3>
+                        <button type="button" id="cancelEditBtn" style="background:#95a5a6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:0.8rem; display:none;">Cancel Edit</button>
                     </div>
+                    
+                    <form id="createEventForm">
+                        <input type="hidden" name="event_id" id="eventIdField"> 
+                        
+                        <div class="form-group">
+                            <label>Event Image</label>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div id="imagePreviewContainer" style="display: none; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; background: #f9f9f9;">
+                                    <img id="imagePreview" src="" alt="Current Event Image" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                
+                                <div style="flex-grow: 1;">
+                                    <input type="file" name="image" accept="image/*">
+                                    <small id="imageHelpText" style="color: #888; display: none; margin-top: 5px;">Leave empty to keep current image</small>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Event Name (Title)</label>
-                        <input type="text" name="title" id="inputTitle" required placeholder="e.g. Saturday Campus Cleanup">
-                    </div>
+                        <div class="form-group">
+                            <label>Event Name</label>
+                            <input type="text" name="title" id="inputTitle" required placeholder="e.g. Saturday Cleanup">
+                        </div>
 
-                    <div class="form-group form-row">
-                        <div>
-                            <label>Campus</label>
-                            <select name="campus" id="inputCampus" required>
-                                <option value="ALL">All Campuses</option>
-                                <option value="APB">APB</option>
-                                <option value="DFC">DFC</option>
-                                <option value="APK">APK</option>
-                                <option value="SWC">SWC</option>
-                            </select>
+                        <div class="form-group form-row">
+                            <div>
+                                <label>Campus</label>
+                                <select name="campus" id="inputCampus" required>
+                                    <option value="ALL">All</option>
+                                    <option value="APB">APB</option>
+                                    <option value="DFC">DFC</option>
+                                    <option value="APK">APK</option>
+                                    <option value="SWC">SWC</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Start Date</label>
+                                <input type="datetime-local" name="date_time" id="inputDate" required>
+                            </div>
                         </div>
-                        <div>
-                            <label>Start Date & Time</label>
-                            <input type="datetime-local" name="date_time" id="inputDate" required>
-                        </div>
-                        <div>
-                            <label>Duration (Hours)</label>
-                            <input type="number" name="duration_hours" id="inputDuration" step="0.5" min="0.5" required>
-                        </div>
-                    </div>
 
-                    <div class="form-group form-row">
-                        <div>
-                            <label>Total Spots</label>
-                            <input type="number" name="total_spots" id="inputSpots" min="1" required>
+                        <div class="form-group form-row">
+                            <div>
+                                <label>Duration (Hrs)</label>
+                                <input type="number" name="duration_hours" id="inputDuration" step="0.5" min="0.5" required>
+                            </div>
+                            <div>
+                                <label>Spots</label>
+                                <input type="number" name="total_spots" id="inputSpots" min="1" required>
+                            </div>
                         </div>
-                        <div>
+
+                        <div class="form-group">
                             <label>Short Description</label>
                             <input type="text" name="description" id="inputDesc" required>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label>Full Details</label>
-                        <textarea name="details" id="inputDetails" rows="5" required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Additional Info</label>
-                        <textarea name="additional_details" id="inputAdditional" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Available Roles for Volunteers</label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #fafafa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                            
-                            <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;">
-                                <input type="checkbox" name="role_types" value="Set Up" style="width: auto; margin-right: 10px;"> 
-                                <span>Set Up <small style="color:#666; display:block; font-size:0.8em;">Preparing for the event</small></span>
-                            </label>
-
-                            <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;">
-                                <input type="checkbox" name="role_types" value="Demonstration" style="width: auto; margin-right: 10px;"> 
-                                <span>Demonstration <small style="color:#666; display:block; font-size:0.8em;">Showcase safety tips</small></span>
-                            </label>
-
-                            <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;">
-                                <input type="checkbox" name="role_types" value="Recruitment" style="width: auto; margin-right: 10px;"> 
-                                <span>Recruitment <small style="color:#666; display:block; font-size:0.8em;">Convince students to join</small></span>
-                            </label>
-
-                            <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;">
-                                <input type="checkbox" name="role_types" value="General" checked style="width: auto; margin-right: 10px;"> 
-                                <span>General Helper <small style="color:#666; display:block; font-size:0.8em;">General tasks</small></span>
-                            </label>
-
+                        <div class="form-group">
+                            <label>Full Details</label>
+                            <textarea name="details" id="inputDetails" rows="4" required></textarea>
                         </div>
-                    </div>
 
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn-submit" id="submitEventBtn">Publish Event</button>
-                        <button type="button" id="cancelEditBtn" class="btn-submit" style="background-color: #95a5a6; display: none;">Cancel Edit</button>
-                    </div>
-                </form>
+                        <div class="form-group">
+                            <label>Additional Info</label>
+                            <textarea name="additional_details" id="inputAdditional" rows="2"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Available Roles</label>
+                            <div class="role-selection-grid">
+                                
+                                <label class="role-card">
+                                    <input type="checkbox" name="role_types" value="Set Up">
+                                    <div>
+                                        <span>Set Up</span>
+                                        <small>Preparing for event</small>
+                                    </div>
+                                </label>
+
+                                <label class="role-card">
+                                    <input type="checkbox" name="role_types" value="Demonstration">
+                                    <div>
+                                        <span>Demonstration</span>
+                                        <small>Showcase safety tips</small>
+                                    </div>
+                                </label>
+
+                                <label class="role-card">
+                                    <input type="checkbox" name="role_types" value="Recruitment">
+                                    <div>
+                                        <span>Recruitment</span>
+                                        <small>Convince students to join</small>
+                                    </div>
+                                </label>
+
+                                <label class="role-card">
+                                    <input type="checkbox" name="role_types" value="General" checked>
+                                    <div>
+                                        <span>General Helper</span>
+                                        <small>General tasks</small>
+                                    </div>
+                                </label>
+
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="submitEventBtn" style="width:100%; margin-top:10px;">Publish Event</button>
+                    </form>
+                </div>
             </div>
         `;
 
-        // 2. Load the Table Data
+        // Load Data & Attach Listeners
         fetchMyEvents();
-
-        // 3. Attach Listeners
         document.getElementById('createEventForm').addEventListener('submit', handleEventSubmit);
         document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
     }
@@ -623,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const allEvents = await response.json();
             
             if (allEvents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center;">No events found. Create one below!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center;">No events found.</td></tr>';
                 return;
             }
 
@@ -633,17 +985,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #eee';
                 
-                // --- FIX IS HERE: The HTML is inside the backticks (`) ---
                 tr.innerHTML = `
-                    <td style="padding: 12px; font-weight: 600;">${event.title}</td>
-                    <td style="padding: 12px;">${new Date(event.date_time).toLocaleDateString()}</td>
-                    <td style="padding: 12px;">${event.spots_left} / ${event.total_spots}</td>
+                    <td style="padding: 15px; font-weight: 600; color: var(--text-main);">
+                        ${event.title}
+                        <div style="font-size: 0.75rem; color: #999; font-weight: normal; margin-top:2px;">${event.campus}</div>
+                    </td>
+
+                    <td style="padding: 15px; color: var(--text-main);">
+                        ${new Date(event.date_time).toLocaleDateString()}
+                        <div style="font-size: 0.75rem; color: #999;">${new Date(event.date_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    </td>
                     
-                    <td style="padding: 12px; text-align: right;">
-                        <button class="icon-btn attendance-btn" data-id="${event.id}" data-title="${event.title}" style="color: #E35205; font-weight:bold; margin-right: 10px; cursor: pointer;">📋 Attendance</button>
-                        
-                        <button class="icon-btn edit-btn" data-id="${event.id}" style="color: blue; display: inline-block; margin-right: 10px; cursor: pointer;">Edit</button>
-                        <button class="icon-btn delete-btn" data-id="${event.id}" style="color: red; display: inline-block; cursor: pointer;">Delete</button>
+                    <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.95rem;">
+                        <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
+                        <span style="color: #ccc;">/</span> 
+                        ${event.total_spots}
+                    </td>
+                    
+                    <td style="padding: 15px; text-align: right;">
+                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <button class="icon-btn attendance-btn" data-id="${event.id}" data-title="${event.title}" 
+                                title="Attendance" style="background: #FFF4EC; color: #E35205;">
+                                📋
+                            </button>
+                            
+                            <button class="icon-btn duplicate-btn" data-id="${event.id}" 
+                                title="Duplicate / Reuse" style="background: #f3e5f5; color: #8e24aa;">
+                                ❐
+                            </button>
+                            
+                            <button class="icon-btn edit-btn" data-id="${event.id}" 
+                                title="Edit" style="background: #e3f2fd; color: #1565c0;">
+                                ✏️
+                            </button>
+
+                            <button class="icon-btn delete-btn" data-id="${event.id}" 
+                                title="Delete" style="background: #ffebee; color: #c62828;">
+                                🗑️
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -666,23 +1046,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', () => deleteEvent(btn.dataset.id));
             });
 
+            //4. Duplicate
+            document.querySelectorAll('.duplicate-btn').forEach(btn => {
+                btn.addEventListener('click', () => duplicateEvent(allEvents.find(e => e.id == btn.dataset.id)));
+            });
+
         } catch (err) {
             console.error(err);
             tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error loading list.</td></tr>';
         }
     }
 
-    // --- Helper: Load Data into Form (Edit Mode) ---
-    function loadEventIntoForm(event) {
-        // Scroll to form
+    // --- Helper: Duplicate Event (Reuse Details) ---
+    function duplicateEvent(event) {
+        // 1. Scroll to form
         document.querySelector('.dashboard-form-wrapper').scrollIntoView({ behavior: 'smooth' });
 
-        // Update UI Text
+        // 2. Update UI Text
+        document.getElementById('formTitle').textContent = `New Event (Copy of ${event.title})`;
+        document.getElementById('submitEventBtn').textContent = 'Publish New Event';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block'; // Allow them to cancel the "copy mode"
+
+        // 3. CRITICAL: Clear the ID so it saves as NEW
+        document.getElementById('eventIdField').value = '';
+
+        // 4. Fill Reusable Fields
+        document.getElementById('inputTitle').value = event.title; // Keep title (user can edit)
+        document.getElementById('inputCampus').value = event.campus;
+        document.getElementById('inputDuration').value = event.duration_hours;
+        document.getElementById('inputSpots').value = event.total_spots;
+        document.getElementById('inputDesc').value = event.description;
+        document.getElementById('inputDetails').value = event.details;
+        document.getElementById('inputAdditional').value = event.additional_details || '';
+
+        // 5. CLEAR Date (User must pick a new date for the new event)
+        document.getElementById('inputDate').value = '';
+
+        // 6. Handle Roles (Copy them over)
+        const checkboxes = document.querySelectorAll('input[name="role_types"]');
+        checkboxes.forEach(cb => cb.checked = false); // Clear first
+        if (event.roles && Array.isArray(event.roles)) {
+            event.roles.forEach(roleObj => {
+                const matching = document.querySelector(`input[name="role_types"][value="${roleObj.role_type}"]`);
+                if (matching) matching.checked = true;
+            });
+        }
+
+        // 7. Handle Image (Reset it)
+        // Browsers block copying file inputs for security, so we clear it.
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+        document.getElementById('imagePreview').src = '';
+        document.getElementById('imageHelpText').style.display = 'none';
+        
+        // Optional: Alert the user
+        // alert("Details copied! Please set a new Date and Image.");
+    }
+    // --- Helper: Load Data into Form (Edit Mode) ---
+    function loadEventIntoForm(event) {
+        // 1. Scroll to form
+        document.querySelector('.dashboard-form-wrapper').scrollIntoView({ behavior: 'smooth' });
+
+        // 2. Update UI Text
         document.getElementById('formTitle').textContent = `Editing: ${event.title}`;
         document.getElementById('submitEventBtn').textContent = 'Update Event';
         document.getElementById('cancelEditBtn').style.display = 'inline-block';
 
-        // Fill Standard Fields
+        // 3. Fill Standard Fields
         document.getElementById('eventIdField').value = event.id;
         document.getElementById('inputTitle').value = event.title;
         document.getElementById('inputCampus').value = event.campus;
@@ -692,23 +1121,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('inputDetails').value = event.details;
         document.getElementById('inputAdditional').value = event.additional_details || '';
 
-        // Format Date (YYYY-MM-DDTHH:MM)
+        // 4. Format Date (YYYY-MM-DDTHH:MM)
         if (event.date_time) {
             const d = new Date(event.date_time);
             d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             document.getElementById('inputDate').value = d.toISOString().slice(0, 16);
         }
 
-        // --- NEW: Handle Roles Checkboxes ---
-        // 1. Clear all first
+        // 5. Handle Roles Checkboxes
+        // Clear all first
         const checkboxes = document.querySelectorAll('input[name="role_types"]');
         checkboxes.forEach(cb => cb.checked = false);
 
-        // 2. Check the ones that exist in the event
-        // The API returns 'roles' as a list of objects: [{role_type: "Set Up", ...}, ...]
+        // Check the ones that exist
         if (event.roles && Array.isArray(event.roles)) {
             event.roles.forEach(roleObj => {
-                // Find the checkbox with this value
                 const matchingCheckbox = document.querySelector(`input[name="role_types"][value="${roleObj.role_type}"]`);
                 if (matchingCheckbox) {
                     matchingCheckbox.checked = true;
@@ -716,13 +1143,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Handle Image Text
-        const imgText = document.getElementById('currentImageText');
+        // 6. Handle Image Preview (Visual Thumbnail)
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('imagePreview');
+        const helpText = document.getElementById('imageHelpText');
+
         if (event.image) {
-            imgText.style.display = 'block';
-            imgText.querySelector('a').href = event.image;
+            // Show the thumbnail if image exists
+            previewContainer.style.display = 'block';
+            previewImg.src = event.image;
+            helpText.style.display = 'block'; // Shows "Leave empty to keep current"
         } else {
-            imgText.style.display = 'none';
+            // Hide if no image
+            previewContainer.style.display = 'none';
+            previewImg.src = '';
+            helpText.style.display = 'none';
         }
     }
 

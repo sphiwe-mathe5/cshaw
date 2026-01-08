@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+from decouple import config # Assuming you use python-decouple
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -162,3 +163,19 @@ MEDIA_URL = '/media/'
 
 # Path where media is stored
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# 2. SMTP Configuration (Example for Gmail)
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True  # Encrypts the connection
+
+# 3. Your Credentials (Load these from .env file for security!)
+
+EMAIL_HOST_USER = config('EMAIL_HOST_USER') 
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+
+# 4. Default Sender
+DEFAULT_FROM_EMAIL = 'UJ Volunteer Portal <noreply@yourdomain.com>'

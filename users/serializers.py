@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 
@@ -45,3 +46,33 @@ class CoordinatorRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('admin_code', None)
         validated_data['role'] = User.Roles.COORDINATOR
         return User.objects.create_user(**validated_data)
+    
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    # Field to display readable role name (e.g. "Student" instead of "STUDENT")
+    role_label = serializers.CharField(source='get_role_display', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'first_name', 'last_name', 'email', 
+            'student_number', 'campus', 'role', 'role_label',
+            'receive_notifications'
+        ]
+        # These fields cannot be changed by the user
+        read_only_fields = ['email', 'role', 'role_label', 'student_number']
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate_new_password(self, value):
+        # Use Django's settings to validate complexity
+        validate_password(value)
+        return value
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value

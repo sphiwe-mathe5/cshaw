@@ -8,7 +8,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer
 from users.permissions import IsCoordinator # Import from your users app
-from django.db.models import Sum
+from django.db.models import Sum, Count
+from django.db.models.functions import ExtractMonth, ExtractYear
 
 
 def index_page(request):
@@ -137,32 +138,78 @@ class StudentStatsView(APIView):
 
     def get(self, request):
         user = request.user
+        TARGET_HOURS = 80.00
         
-        # 1. Calculate Total Hours
-        # We filter signups for this user where hours > 0
-        stats = ActivitySignup.objects.filter(user=user).aggregate(
+        # 1. Total Stats
+        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
             total_hours=Sum('hours_earned'),
-            total_events=Sum('attended') # Boolean sums to count of True
+            total_events=Count('id')
         )
-        
-        # Handle "None" result if they haven't done anything yet
-        hours = stats['total_hours'] or 0.00
-        events = stats['total_events'] or 0
+        total_hours = float(stats['total_hours'] or 0.00)
+        events_count = stats['total_events'] or 0
 
-        # 2. Get recent history (for a mini table)
-        recent_activity = ActivitySignup.objects.filter(user=user, attended=True).order_by('-sign_out_time')[:5]
+        # 2. Motivation Logic
+        remaining = max(0, TARGET_HOURS - total_hours)
+        progress_percent = min(100, (total_hours / TARGET_HOURS) * 100)
         
-        # We can construct a simple list for the frontend
-        history_data = []
-        for item in recent_activity:
-            history_data.append({
-                'activity': item.activity.title,
-                'date': item.sign_out_time,
-                'hours': item.hours_earned
+        if total_hours >= 80:
+            motivation = "🌟 Incredible! You've reached the 80-hour goal. You are a Super Volunteer!"
+        elif total_hours >= 60:
+            motivation = "🔥 You are on fire! Just a final push to the finish line."
+        elif total_hours >= 40:
+            motivation = "🚀 Halfway there! Your consistency is inspiring."
+        elif total_hours >= 10:
+            motivation = "👍 Great start! Keep the momentum going."
+        else:
+            motivation = "👋 Welcome! Every hour counts, let's get started."
+
+        # 3. Calculate Rank (Position)
+        # Count how many users have MORE hours than current user
+        # (This is a simplified ranking, adequate for this stage)
+        user_hours_map = ActivitySignup.objects.filter(attended=True).values('user').annotate(
+            hours=Sum('hours_earned')
+        )
+        # Find current user's rank
+        rank = 1
+        for u in user_hours_map:
+            if float(u['hours']) > total_hours:
+                rank += 1
+
+        # 4. Monthly Breakdown (For the first card)
+        # Group by Year/Month
+        monthly_data = ActivitySignup.objects.filter(user=user, attended=True).annotate(
+            month=ExtractMonth('sign_out_time'),
+            year=ExtractYear('sign_out_time')
+        ).values('month', 'year').annotate(
+            hours=Sum('hours_earned')
+        ).order_by('-year', '-month')[:5] # Last 5 months
+
+        # Convert month numbers to names (1 -> January)
+        import calendar
+        formatted_months = []
+        for item in monthly_data:
+            month_name = calendar.month_name[item['month']]
+            formatted_months.append({
+                'name': month_name,
+                'hours': item['hours']
             })
 
+        # 5. Recent Events (For the middle card)
+        recent_events = ActivitySignup.objects.filter(user=user, attended=True).order_by('-sign_out_time')[:5]
+        events_list = [{
+            'title': e.activity.title,
+            'date': e.sign_out_time,
+            'hours': e.hours_earned
+        } for e in recent_events]
+
         return Response({
-            "total_hours": hours,
-            "events_attended": events,
-            "history": history_data
+            "total_hours": total_hours,
+            "events_count": events_count,
+            "target": TARGET_HOURS,
+            "remaining": remaining,
+            "progress_percent": progress_percent,
+            "motivation": motivation,
+            "rank": rank,
+            "monthly": formatted_months,
+            "history": events_list
         })
