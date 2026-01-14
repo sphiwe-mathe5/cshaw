@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Privacy Policy - UJ Volunteer Portal</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        body { background: #f9f9f9; color: #333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .legal-container { max-width: 800px; margin: 40px auto; background: white; padding: 50px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h1 { color: #1a1a2e; border-bottom: 2px solid #E35205; padding-bottom: 15px; margin-bottom: 30px; }
+        h2 { color: #E35205; font-size: 1.2rem; margin-top: 30px; }
+        p, li { line-height: 1.6; color: #555; }
+        ul { padding-left: 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: 500; }
+        .back-link:hover { color: #E35205; }
+    </style>
+</head>
+<body>
+    <div class="legal-container">
+        <a href="{% url 'index' %}" class="back-link">&larr; Back to Portal</a>
+        
+        <h1>Privacy Policy</h1>
+        <p><strong>Last Updated:</strong> January 2026</p>
+
+        <p>The UJ Volunteer Portal ("we", "our") is committed to protecting the privacy of our students and staff. This policy outlines how we handle your personal information.</p>
+
+        <h2>1. Information We Collect</h2>
+        <p>We collect information necessary to manage volunteer activities and academic records:</p>
+        <ul>
+            <li><strong>Personal Details:</strong> Name, Surname, Student/Staff Number, and Email Address.</li>
+            <li><strong>Activity Data:</strong> Volunteer hours logged, events attended, and campus affiliations.</li>
+        </ul>
+
+        <h2>2. How We Use Your Data</h2>
+        <p>Your data is used exclusively for:</p>
+        <ul>
+            <li>Verifying student identity and academic standing.</li>
+            <li>Tracking community engagement hours for certification.</li>
+            <li>Generating aggregate reports for the University Community Engagement (UCE) division.</li>
+        </ul>
+
+        <h2>3. Data Sharing</h2>
+        <p>We do not sell or share your personal data with third parties. Data is only accessible by:</p>
+        <ul>
+            <li><strong>Portal Administrators:</strong> To manage the platform.</li>
+            <li><strong>Coordinators:</strong> To verify attendance for events you RSVP to.</li>
+        </ul>
+
+        <h2>4. Data Security</h2>
+        <p>We implement security measures including password encryption (hashing) and secure session management to protect your account.</p>
+
+        <h2>5. Contact Us</h2>
+        <p>If you have questions about your data, please contact the UJ Community Engagement office.</p>
+    </div>
+</body>
+</html>

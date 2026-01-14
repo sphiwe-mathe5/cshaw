@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .header { background-color: #E35205; padding: 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
+        .content { padding: 30px; color: #333333; line-height: 1.6; }
+        .btn { display: inline-block; background-color: #E35205; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+        .footer { background-color: #1a1a2e; padding: 15px; text-align: center; color: #888888; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to C-SHAW Hub!</h1>
+        </div>
+        <div class="content">
+            <h2>Hi {{ first_name }},</h2>
+            <p>Welcome to the UJ Community Engagement family! 🎉</p>
+            <p>You have successfully registered as a <strong>{{ role_name }}</strong>.</p>
+            <p>You can now log in to the portal to view upcoming volunteer opportunities, track your hours, and manage your profile.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ login_url }}" class="btn">Log In to Portal</a>
+            </div>
+            
+            <p style="margin-top: 30px;">If the button above doesn't work, copy this link:<br>
+            <small><a href="{{ login_url }}">{{ login_url }}</a></small></p>
+        </div>
+        <div class="footer">
+            &copy; {% now "Y" %} University of Johannesburg - Community Engagement<br>
+            C-SHAW Volunteering Hub
+        </div>
+    </div>
+</body>
+</html>

@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- 1. Utilities ---
-
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -31,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showError = (message) => {
         const errorDiv = document.getElementById('formError');
-        errorDiv.textContent = message; // Safe: prevents HTML injection
+        errorDiv.textContent = message; 
         errorDiv.classList.remove('hidden');
     };
 
@@ -41,8 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorDiv.classList.add('hidden');
     };
 
-    // --- 2. Password Validation (Strength & Match) ---
-
     const passwordInput = document.getElementById('password');
     const confirmInput = document.getElementById('confirm_password');
     const strengthText = document.getElementById('passwordStrength');
@@ -51,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passwordInput) {
         passwordInput.addEventListener('input', () => {
             const val = passwordInput.value;
-            // Simple logic: Needs 8 chars, 1 number
             const hasLength = val.length >= 8;
             const hasNum = /\d/.test(val);
             
@@ -75,13 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. Form Submission Handler ---
-
     const handleFormSubmit = async (e, url, redirectUrl) => {
         e.preventDefault();
         clearError();
 
-        // Check password match before sending
         if (confirmInput && passwordInput.value !== confirmInput.value) {
             showError("Passwords do not match.");
             return;
@@ -89,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggleLoader(true);
 
-        // Gather Form Data
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData.entries());
 
@@ -98,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') // Secure Django CSRF
+                    'X-CSRFToken': getCookie('csrftoken') 
                 },
                 body: JSON.stringify(data)
             });
@@ -106,14 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (response.ok) {
-                // Success
                 window.location.href = redirectUrl; 
             } else {
-                // Handle Errors
                 let msg = "An error occurred.";
-                // DRF returns errors as objects, e.g. {"email": ["Invalid email"]}
                 if (typeof result === 'object') {
-                    // Grab the first error message found
                     const firstKey = Object.keys(result)[0];
                     const firstError = Array.isArray(result[firstKey]) ? result[firstKey][0] : result[firstKey];
                     msg = `${firstKey}: ${firstError}`;
@@ -128,12 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 4. Bind Events ---
-
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => handleFormSubmit(e, '/api/users/login/', '/')); 
-        // Note: Change '/dashboard/' to wherever you want them to go after login
     }
 
     const studentRegForm = document.getElementById('studentRegisterForm');
@@ -147,14 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Add this helper function to toggle visibility
 function togglePasswordVisibility(inputId, iconSpan) {
     const input = document.getElementById(inputId);
     const svg = iconSpan.querySelector('svg');
     
     if (input.type === "password") {
         input.type = "text";
-        // Optional: Change icon to "slash" eye to indicate it's visible
         svg.style.stroke = "#333"; 
     } else {
         input.type = "password";

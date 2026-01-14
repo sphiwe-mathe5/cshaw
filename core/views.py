@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from rest_framework import generics, permissions
 from .models import VolunteerActivity, ActivitySignup
 from rest_framework.views import APIView
@@ -6,132 +6,194 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
-from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer
-from users.permissions import IsCoordinator # Import from your users app
+from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer, ActivityRSVPSerializer, ActivitySerializer
+from users.permissions import IsCoordinator 
 from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth, ExtractYear
+import calendar
+from users.services import send_new_event_email, send_signup_confirmation_email 
 
 
 def index_page(request):
     return render(request, 'core/index.html')
 
+def about_page(request):
+    return render(request, 'core/about.html')
+
+def privacy(request):
+    return render(request, 'core/privacy.html')
+
+def terms(request):
+    return render(request, 'core/terms.html')
 
 
-# 1. List View (Public/Student can see events)
 class ActivityListView(generics.ListAPIView):
     queryset = VolunteerActivity.objects.all().order_by('-date_time')
     serializer_class = VolunteerActivitySerializer
-    permission_classes = [permissions.AllowAny] # Public can see "Upcoming Events"
+    permission_classes = [permissions.AllowAny] 
 
-# 2. Create View (Only Coordinators)
 class ActivityCreateView(generics.CreateAPIView):
     queryset = VolunteerActivity.objects.all()
-    serializer_class = VolunteerActivitySerializer
-    permission_classes = [IsCoordinator] # Strict permission
+    serializer_class = VolunteerActivitySerializer 
+    permission_classes = [IsCoordinator]
 
     def perform_create(self, serializer):
-        # Auto-assign the creator
-        serializer.save(created_by=self.request.user)
+        activity = serializer.save(created_by=self.request.user)
+        send_new_event_email(activity)
     
-# 3. Additional views like Detail, Update, Delete can be added similarly with appropriate permissions.
+
 class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = VolunteerActivity.objects.all()
     serializer_class = VolunteerActivitySerializer
     permission_classes = [IsCoordinator]
 
     def get_queryset(self):
-        # Optional: Ensure coordinators can only edit/delete their OWN events
-        # Remove this method if you want them to edit ANY event
         return VolunteerActivity.objects.filter(created_by=self.request.user)
 
-# 4. Signup View (Students sign up for events)
+
 class SignupCreateView(generics.CreateAPIView):
     serializer_class = ActivitySignupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        # 1. Get the activity from request data
+        user = self.request.user
         activity_id = self.request.data.get('activity')
-        
-        # 2. Check if already signed up
-        if ActivitySignup.objects.filter(user=self.request.user, activity_id=activity_id).exists():
-            raise ValidationError("You have already signed up for this event.")
+        role_ids = self.request.data.get('selected_roles', [])
+        activity = get_object_or_404(VolunteerActivity, pk=activity_id)
 
-        # 3. Check spots availability (Optional but good practice)
-        activity = VolunteerActivity.objects.get(pk=activity_id)
+        if activity.campus != 'ALL' and activity.campus != user.campus:
+            raise ValidationError(
+                f"You cannot RSVP for {activity.campus} events. You are registered at {user.campus}."
+            )
+        
+        if ActivitySignup.objects.filter(user=user, activity_id=activity_id).exists():
+            raise ValidationError("You have already signed up for this event.")
+        
         if activity.spots_left <= 0:
             raise ValidationError("Sorry, this event is fully booked.")
-
-        # 4. Save
-        serializer.save(user=self.request.user)
         
-        # 5. Update the main activity counters
+        signup_instance = serializer.save(user=user)
+
+        if role_ids:
+            valid_roles = activity.roles.filter(id__in=role_ids)
+            signup_instance.roles.set(valid_roles)
+
         activity.spots_taken += 1
         activity.save()
 
+        send_signup_confirmation_email(user, activity)
+
+    def delete(self, request, pk):
+
+        activity = get_object_or_404(VolunteerActivity, pk=pk)
+        user = request.user
+
+        if activity.date_time.date() <= timezone.now().date():
+            return Response(
+                {"error": "Cancellations are not allowed on the day of the event or for past events."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        signup = ActivitySignup.objects.filter(activity=activity, user=user).first()
+
+        if not signup:
+            return Response(
+                {"error": "You are not signed up for this event."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        signup.delete()
+
+        if activity.spots_taken > 0:
+            activity.spots_taken -= 1
+            activity.save()
+
+        return Response(
+            {"message": "Sign up cancelled successfully."},
+            status=status.HTTP_200_OK
+        )
+
 class AttendanceActionView(APIView):
-    permission_classes = [IsCoordinator]
+    permission_classes = [IsCoordinator] 
 
     def post(self, request, pk):
-        """
-        pk: The ID of the Signup (ActivitySignup), NOT the user or activity.
-        Action: 'signin' or 'signout' passed in body.
-        """
         action = request.data.get('action')
-        
+
         try:
             signup = ActivitySignup.objects.get(pk=pk)
         except ActivitySignup.DoesNotExist:
             return Response({"error": "Signup not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        now = timezone.now()
+        event_start = signup.activity.date_time
+
         if action == 'signin':
             if signup.sign_in_time:
                 return Response({"error": "Student already signed in."}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Record Start Time
-            signup.sign_in_time = timezone.now()
+            if now.date() != event_start.date():
+                 return Response({
+                     "error": f"Cannot sign in. This event is on {event_start.strftime('%d %B')}."
+                 }, status=status.HTTP_400_BAD_REQUEST)
+
+            if now < event_start:
+                return Response({
+                    "error": f"Event hasn't started yet. Starts at {event_start.strftime('%H:%M')}."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            signup.sign_in_time = now
             signup.save()
             return Response({"message": "Signed In", "time": signup.sign_in_time})
 
         elif action == 'signout':
             if not signup.sign_in_time:
                 return Response({"error": "Cannot sign out. Student never signed in."}, status=status.HTTP_400_BAD_REQUEST)
+            
             if signup.sign_out_time:
                 return Response({"error": "Student already signed out."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Record End Time
-            signup.sign_out_time = timezone.now()
+            signup.sign_out_time = now
             
-            # CALCULATE DURATION
-            # Result is a timedelta
             duration = signup.sign_out_time - signup.sign_in_time
-            
-            # Convert to hours (e.g., 1.5 hours)
             total_seconds = duration.total_seconds()
-            hours = round(total_seconds / 3600, 2) # Round to 2 decimal places
             
-            signup.hours_earned = hours
-            signup.attended = True # Mark as officially attended
+            actual_hours = total_seconds / 3600
+            
+            max_allowed = float(signup.activity.duration_hours or 0)
+
+            if max_allowed > 0 and actual_hours > max_allowed:
+                final_hours = max_allowed
+                print(f"⚠️ Capped hours for {signup.user}: Actual {actual_hours:.2f} -> Capped {final_hours}")
+            else:
+                final_hours = actual_hours
+
+            signup.hours_earned = round(final_hours, 2)
+            signup.attended = True
             signup.save()
             
             return Response({
                 "message": "Signed Out", 
                 "time": signup.sign_out_time,
-                "hours": hours
+                "hours": signup.hours_earned
             })
 
         return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
     
 class EventRSVPListView(generics.ListAPIView):
-    serializer_class = ActivitySignupSerializer
-    permission_classes = [IsCoordinator]
+    serializer_class = ActivityRSVPSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Filter by the activity_id passed in the URL
         activity_id = self.kwargs['activity_id']
-        return ActivitySignup.objects.filter(activity_id=activity_id).select_related('user', 'selected_role')
-    
+        return ActivitySignup.objects.filter(activity_id=activity_id).select_related('user', 'activity').prefetch_related('roles') 
+        
 
+class CoordinatorMyEventsView(generics.ListAPIView):
+    serializer_class = ActivitySerializer
+    permission_classes = [permissions.IsAuthenticated, IsCoordinator]
+
+    def get_queryset(self):
+        return VolunteerActivity.objects.filter(created_by=self.request.user).order_by('-date_time')
 
 class StudentStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -139,53 +201,56 @@ class StudentStatsView(APIView):
     def get(self, request):
         user = request.user
         TARGET_HOURS = 80.00
-        
-        # 1. Total Stats
-        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
+        current_year = timezone.now().year 
+        stats = ActivitySignup.objects.filter(
+            user=user, 
+            attended=True, 
+            sign_out_time__year=current_year 
+        ).aggregate(
             total_hours=Sum('hours_earned'),
             total_events=Count('id')
         )
+        
         total_hours = float(stats['total_hours'] or 0.00)
         events_count = stats['total_events'] or 0
-
-        # 2. Motivation Logic
+        
         remaining = max(0, TARGET_HOURS - total_hours)
         progress_percent = min(100, (total_hours / TARGET_HOURS) * 100)
         
         if total_hours >= 80:
-            motivation = "🌟 Incredible! You've reached the 80-hour goal. You are a Super Volunteer!"
-        elif total_hours >= 60:
-            motivation = "🔥 You are on fire! Just a final push to the finish line."
+            motivation = f"🌟 Incredible! You've reached the {current_year} goal. You are a Super Volunteer!"
         elif total_hours >= 40:
-            motivation = "🚀 Halfway there! Your consistency is inspiring."
+            motivation = "🚀 Halfway there! Keep consistency for this year's record."
         elif total_hours >= 10:
-            motivation = "👍 Great start! Keep the momentum going."
+            motivation = f"👍 Great start to {current_year}! Keep the momentum going."
         else:
-            motivation = "👋 Welcome! Every hour counts, let's get started."
+            motivation = f"👋 Welcome to {current_year}! Let's start logging those hours."
 
-        # 3. Calculate Rank (Position)
-        # Count how many users have MORE hours than current user
-        # (This is a simplified ranking, adequate for this stage)
-        user_hours_map = ActivitySignup.objects.filter(attended=True).values('user').annotate(
+        recruits_count = user.recruits.count()
+
+        user_hours_map = ActivitySignup.objects.filter(
+            attended=True,
+            sign_out_time__year=current_year 
+        ).values('user').annotate(
             hours=Sum('hours_earned')
-        )
-        # Find current user's rank
+        ).order_by('-hours')
+        
         rank = 1
         for u in user_hours_map:
+            
             if float(u['hours']) > total_hours:
                 rank += 1
-
-        # 4. Monthly Breakdown (For the first card)
-        # Group by Year/Month
-        monthly_data = ActivitySignup.objects.filter(user=user, attended=True).annotate(
-            month=ExtractMonth('sign_out_time'),
-            year=ExtractYear('sign_out_time')
-        ).values('month', 'year').annotate(
+        
+        monthly_data = ActivitySignup.objects.filter(
+            user=user, 
+            attended=True,
+            sign_out_time__year=current_year 
+        ).annotate(
+            month=ExtractMonth('sign_out_time')
+        ).values('month').annotate(
             hours=Sum('hours_earned')
-        ).order_by('-year', '-month')[:5] # Last 5 months
+        ).order_by('-month')
 
-        # Convert month numbers to names (1 -> January)
-        import calendar
         formatted_months = []
         for item in monthly_data:
             month_name = calendar.month_name[item['month']]
@@ -194,8 +259,18 @@ class StudentStatsView(APIView):
                 'hours': item['hours']
             })
 
-        # 5. Recent Events (For the middle card)
-        recent_events = ActivitySignup.objects.filter(user=user, attended=True).order_by('-sign_out_time')[:5]
+        user_awards = user.awards.all()
+        awards_data = [
+            {'name': a.name, 'icon': a.icon, 'color': a.color} 
+            for a in user_awards
+        ]
+        
+        recent_events = ActivitySignup.objects.filter(
+            user=user, 
+            attended=True,
+            sign_out_time__year=current_year 
+        ).order_by('-sign_out_time')[:5]
+        
         events_list = [{
             'title': e.activity.title,
             'date': e.sign_out_time,
@@ -203,13 +278,17 @@ class StudentStatsView(APIView):
         } for e in recent_events]
 
         return Response({
+            "current_year": current_year, 
             "total_hours": total_hours,
             "events_count": events_count,
+            "recruits_count": recruits_count,
             "target": TARGET_HOURS,
             "remaining": remaining,
             "progress_percent": progress_percent,
             "motivation": motivation,
             "rank": rank,
             "monthly": formatted_months,
-            "history": events_list
+            "history": events_list,
+            "awards": awards_data,
+            "executive_position": user.executive_position,
         })

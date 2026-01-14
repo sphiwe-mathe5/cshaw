@@ -9,23 +9,38 @@ from .serializers import (
     UserLoginSerializer,
     StudentListSerializer,
     UserProfileSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer,
+    AwardSerializer,
+    UserManageSerializer
 )
-from .models import User
+from .services import send_welcome_email
+from .models import User, Award
 
 from .permissions import IsCoordinator
 
-# --- 1. Registration Views ---
+
 
 class StudentRegistrationView(generics.CreateAPIView):
     serializer_class = StudentRegistrationSerializer
     permission_classes = [permissions.AllowAny]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_welcome_email(user, "Student Volunteer")
+
 class CoordinatorRegistrationView(generics.CreateAPIView):
     serializer_class = CoordinatorRegistrationSerializer
     permission_classes = [permissions.AllowAny]
 
-# --- 2. Login View ---
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_welcome_email(user, "Coordinator")
+
+class AwardListView(generics.ListAPIView):
+    queryset = Award.objects.all()
+    serializer_class = AwardSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
 
 class LoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
@@ -36,11 +51,10 @@ class LoginView(views.APIView):
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
             
-            # Authenticate using Email
             user = authenticate(request, email=email, password=password)
             
             if user:
-                login(request, user) # Creates the session for the browser
+                login(request, user) 
                 return Response({
                     "message": "Login successful",
                     "role": user.role,
@@ -56,14 +70,9 @@ class LogoutView(views.APIView):
         logout(request)
         return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
 
-# --- 3. Coordinator Management Views ---
-
 class AssignExecutiveView(views.APIView):
-    """
-    Allows a Coordinator to assign an executive role (e.g., 'Chairperson') to a student.
-    Payload: {"student_id": 1, "position": "Chairperson"}
-    """
-    permission_classes = [IsCoordinator] # Strict permission
+
+    permission_classes = [IsCoordinator]
 
     def post(self, request):
         student_id = request.data.get('student_id')
@@ -76,7 +85,11 @@ class AssignExecutiveView(views.APIView):
             return Response({"message": f"Student assigned as {position}"})
         except User.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
-
+        
+class StudentUpdateView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserManageSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class StudentListView(generics.ListAPIView):
@@ -84,7 +97,6 @@ class StudentListView(generics.ListAPIView):
     permission_classes = [IsCoordinator]
 
     def get_queryset(self):
-        # Return only students, ordered by Campus then Name
         return User.objects.filter(role=User.Roles.STUDENT).order_by('campus', 'first_name')
     
 
@@ -105,13 +117,10 @@ class ChangePasswordView(APIView):
             user = request.user
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            # Note: If using Session Auth, this might log them out. 
-            # If using Tokens, it's usually fine.
             return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-# 2. Delete Account
 class UserDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -120,7 +129,6 @@ class UserDeleteView(APIView):
         user.delete()
         return Response({"message": "Account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
-# --- 4. Simple Page Render Views (if needed) ---
 def login_page(request):
     return render(request, 'users/login.html')
 

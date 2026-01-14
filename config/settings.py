@@ -7,13 +7,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 
-SECRET_KEY = 'django-insecure-&tfp%v7b+z=+#a&4ch7a%na0tgzkpfym1za&!esu2j6))lsgp6'
-
-
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = ['*']
+#ALLOWED_HOSTS = ['cshawhub.com']
+FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
 
 # Application definition
 

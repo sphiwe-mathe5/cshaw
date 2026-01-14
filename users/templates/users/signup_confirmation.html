@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .card { background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #27ae60; }
+        h1 { color: #27ae60; margin-top: 0; }
+        .details-box { background: #f9f9f9; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #eee; }
+        .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Spot Confirmed! 🎉</h1>
+        <p>Hi {{ name }},</p>
+        
+        <p>This email confirms that you are officially signed up for <strong>{{ title }}</strong>.</p>
+        
+        <p>Thank you for stepping up to make a difference! Your time and energy contribute to building a stronger community at UJ. We can't wait to see you there.</p>
+
+        <div class="details-box">
+            <p style="margin: 5px 0;"><strong>📅 When:</strong> {{ date }}</p>
+            <p style="margin: 5px 0;"><strong>📍 Where:</strong> {{ location }}</p>
+            <p style="margin: 5px 0;"><strong>ℹ️ Details:</strong> {{ description }}</p>
+        </div>
+
+        <p style="color: #777; font-size: 0.9rem;">
+            If you can no longer attend, please cancel your signup via the dashboard so another student can take your spot.
+        </p>
+        
+        <center>
+            <a href="{{ dashboard_link }}" class="btn">View My Dashboard</a>
+        </center>
+    </div>
+</body>
+</html>

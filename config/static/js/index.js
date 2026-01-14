@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar Toggle
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
-    const overlay = document.getElementById('sidebarOverlay'); // Get the overlay
+    const overlay = document.getElementById('sidebarOverlay'); 
     
     // Toggle Function
     function toggleSidebar() {
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CLICK: Volunteer Activities
+
     if (linkActivities) {
         linkActivities.addEventListener('click', (e) => {
             e.preventDefault();
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CLICK: Manage Students
+
     if (linkStudents) {
         linkStudents.addEventListener('click', (e) => {
             e.preventDefault();
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CLICK: Create Event (New)
+
     if (linkCreateEvent) {
         linkCreateEvent.addEventListener('click', (e) => {
             e.preventDefault();
@@ -101,19 +101,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setActiveNav(activeItem) {
-        // Remove active class from all items
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        // Add to clicked
         if(activeItem) activeItem.classList.add('active');
     }
 
 
-    // 1. Render Activities (List View)
+    // Render Activities (List View)
     async function renderActivities() {
+        const pageTitle = isUserLoggedIn ? "Volunteer Activities" : "Upcoming Activities";
+        const pageSubtitle = isUserLoggedIn ? "Find your next opportunity." : "See what's happening around campus.";
+
         mainContent.innerHTML = `
             <div class="header-section">
-                <h1>Volunteer Activities</h1>
-                <p>Find your next opportunity.</p>
+                <h1>${pageTitle}</h1>
+                <p>${pageSubtitle}</p>
             </div>
             <div class="loader"></div>
         `;
@@ -121,18 +122,36 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/activities/');
             if (!response.ok) throw new Error('Failed to load events');
-            const activities = await response.json();
+            let activities = await response.json();
+
+            const now = new Date();
+            activities = activities.filter(activity => new Date(activity.date_time) > now);
+
+            const footerHtml = `
+                <footer class="minimal-footer" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div class="footer-links">
+                        <a href="/about/">About Us</a>
+                        <span class="separator">•</span>
+                        <a href="/terms/">Terms of Use</a>
+                        <span class="separator">•</span>
+                        <a href="/privacy/">Privacy Policy</a>
+                    </div>
+                    <div class="footer-copyright">
+                        &copy; 2026 C-SHAW Hub. All rights reserved.
+                    </div>
+                </footer>
+            `;
 
             if (activities.length === 0) {
                 mainContent.innerHTML = `
                     <div class="header-section"><h1>Volunteer Activities</h1><p>Find your next opportunity.</p></div>
                     <div class="cards-grid">
                         <p style="grid-column: 1/-1; text-align: center; color: #7F8C8D;">No upcoming events found. Check back later!</p>
-                    </div>`;
+                    </div>
+                    ${footerHtml} `;
                 return;
             }
 
-            // Build HTML
             let cardsHtml = '';
             activities.forEach(activity => {
                 const imageStyle = activity.image 
@@ -144,10 +163,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 const spotsColor = activity.spots_left > 5 ? '#27ae60' : '#e74c3c';
 
-                // Note: We add a unique ID to the button to attach the listener later
+                const signedUpBadge = activity.is_signed_up 
+                    ? `<div style="
+                        position: absolute; 
+                        top: 10px; 
+                        right: 10px; 
+                        background: #27ae60; 
+                        color: white; 
+                        padding: 4px 10px; 
+                        border-radius: 12px; 
+                        font-size: 0.75rem; 
+                        font-weight: bold; 
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        z-index: 10;
+                       ">
+                        ✓ Signed Up
+                       </div>` 
+                    : '';
+                
                 cardsHtml += `
                     <div class="card">
-                        <div class="card-image" style="${imageStyle}"></div>
+                        <div class="card-image" style="${imageStyle} position: relative;">
+                            ${signedUpBadge}
+                        </div>
+                        
                         <div class="card-body">
                             <div style="display:flex; justify-content:space-between; align-items:start;">
                                 <span class="card-badge">${activity.campus} Campus</span>
@@ -164,24 +203,37 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button id="view-btn-${activity.id}" class="btn-card-action">View Details</button>
                         </div>
                     </div>
+
+                    ${signedUpBadge}
                 `;
             });
 
-            // Inject HTML
             mainContent.innerHTML = `
                 <div class="header-section">
-                    <h1>Volunteer Activities</h1>
-                    <p>Find your next opportunity.</p>
+                    <h1>${pageTitle}</h1>
+                    <p>${pageSubtitle}</p>
                 </div>
                 <div class="cards-grid">${cardsHtml}</div>
+                ${footerHtml}
             `;
 
-            // Attach Event Listeners (This passes the specific activity object to the next view)
             activities.forEach(activity => {
-                document.getElementById(`view-btn-${activity.id}`).addEventListener('click', () => {
-                    renderActivityDetails(activity);
-                });
+                const btn = document.getElementById(`view-btn-${activity.id}`);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        renderActivityDetails(activity);
+                    });
+                }
             });
+            
+            const footerAbout = document.getElementById('footerAboutLink');
+            if (footerAbout) {
+                footerAbout.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const modal = document.getElementById('aboutModal');
+                    if(modal) modal.classList.remove('hidden');
+                });
+            }
 
         } catch (error) {
             console.error(error);
@@ -189,8 +241,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Render Activity Details (Single View)
-    function renderActivityDetails(activity) {
+    // Render Activity Details
+    async function renderActivityDetails(activity) {
+
+        let userCampus = null;
+
+        try {
+            const res = await fetch('/api/users/profile/');
+            if (res.ok) {
+                const userData = await res.json();
+                userCampus = userData.campus;
+            }
+        } catch (err) {
+            console.error("Could not verify campus restriction:", err);
+        }
         // Prepare Data
         const imageStyle = activity.image 
             ? `background-image: url('${activity.image}'); background-size: cover; background-position: center; height: 300px;` 
@@ -199,6 +263,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateObj = new Date(activity.date_time);
         const fullDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        // 3. Logic for Cancellation (Date Check)
+        const today = new Date();
+        const eventDate = new Date(activity.date_time);
+        const isToday = today.toDateString() === eventDate.toDateString();
+        const isPast = today > eventDate;
+
+
+        let actionButtonHtml = '';
+
+        if (activity.is_signed_up) {
+
+            if (isToday || isPast) {
+                actionButtonHtml = `
+                    <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; border-radius:8px; text-align:center;">
+                        <button disabled style="background:#95a5a6; color:white; padding: 12px 30px; font-size:1rem; border:none; border-radius:4px; cursor:not-allowed; opacity: 0.7;">
+                            🚫 Cannot Cancel
+                        </button>
+                        <p style="color:#e74c3c; font-size:0.85rem; margin:10px 0 0 0; font-weight:600;">
+                            Cancellations are not allowed on the day of the event.
+                        </p>
+                    </div>
+                `;
+            } else {
+                actionButtonHtml = `
+                    <div style="background:#fff5f5; border:1px solid #ffcccc; padding:20px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="color:#c0392b; display:block; margin-bottom:4px;">You are attending this event</strong>
+                            <span style="font-size:0.85rem; color:#666;">Need to change plans?</span>
+                        </div>
+                        <button id="cancelBtn" style="background:#fff; border:1px solid #c0392b; color:#c0392b; padding: 10px 20px; font-size:0.9rem; border-radius:4px; cursor:pointer; font-weight:600;">
+                            Cancel Sign Up
+                        </button>
+                    </div>
+                `;
+            }
+        } else {
+
+            if (activity.campus !== 'ALL' && activity.campus !== userCampus) {
+                 actionButtonHtml = `
+                    <div style="background:#fff3cd; border:1px solid #ffeeba; padding:15px; border-radius:8px; text-align:center;">
+                        <button disabled style="background:#e0a800; color:white; padding: 12px 30px; font-size:1rem; border:none; border-radius:4px; cursor:not-allowed; opacity: 0.8;">
+                            🔒 Restricted Event
+                        </button>
+                        <p style="color:#856404; font-size:0.85rem; margin:10px 0 0 0;">
+                            This event is exclusively for <strong>${activity.campus}</strong> students.<br>
+                            (You are registered at ${userCampus})
+                        </p>
+                    </div>
+                `;
+            } 
+
+            else if (activity.spots_left <= 0) {
+                actionButtonHtml = `
+                    <button disabled style="background:#95a5a6; color:white; padding: 15px 40px; font-size:1.1rem; border:none; border-radius:4px; cursor:not-allowed;">
+                        Event Full
+                    </button>
+                `;
+            } 
+
+            else {
+                 actionButtonHtml = `
+                    <button id="signupBtn" class="btn-submit" style="width:auto; padding: 15px 40px; font-size:1.1rem;">
+                        RSVP for Event
+                    </button>
+                `;
+            }
+        }
 
         mainContent.innerHTML = `
             <button id="backToActivities" style="background:none; border:none; cursor:pointer; color:#7F8C8D; font-weight:600; margin-bottom:20px; display:flex; align-items:center;">
@@ -231,39 +363,81 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${activity.details || activity.description}
                     </p>
 
-                    ${activity.additional_details ? `
-                        <div style="background:#FFF4EC; padding:20px; border-radius:8px; margin-bottom:30px;">
-                            <h4 style="margin-bottom:5px; color:#E87A30;">ℹ️ Important Information</h4>
-                            <p style="color:#555;">${activity.additional_details}</p>
-                        </div>
-                    ` : ''}
+                    ${isUserLoggedIn ? `
+                        ${activity.additional_details ? `
+                            <div style="background:#FFF4EC; padding:20px; border-radius:8px; margin-bottom:30px;">
+                                <h4 style="margin-bottom:5px; color:#E87A30;">ℹ️ Important Information</h4>
+                                <p style="color:#555;">${activity.additional_details}</p>
+                            </div>
+                        ` : ''}
 
-                    <button id="signupBtn" class="btn-submit" style="width:auto; padding: 15px 40px; font-size:1.1rem;">
-                        RSVP for Event
-                    </button>
+                        ${actionButtonHtml}
+
+                    ` : `
+                        <div style="background:#f9f9f9; padding:15px; border-radius:6px; text-align:center; color:#666;">
+                            Please <a href="/login" style="color:#E35205; font-weight:bold; text-decoration:none;">log in</a> to sign up for this event.
+                        </div>
+                    `}
                 </div>
             </div>
         `;
 
-        // Attach Event Listeners
+
         document.getElementById('backToActivities').addEventListener('click', () => {
-            renderActivities(); // Go back to the grid
+            renderActivities(); 
         });
 
-        document.getElementById('signupBtn').addEventListener('click', () => {
-            // Open the new modal instead of alerting
-            openSignupModal(activity);
-        });
+        if(document.getElementById('cancelBtn')) {
+             document.getElementById('cancelBtn').addEventListener('click', () => cancelSignup(activity.id));
+        }
+
+        const signupBtn = document.getElementById('signupBtn');
+        
+        if (signupBtn) {
+            signupBtn.addEventListener('click', () => {
+                openSignupModal(activity);
+            });
+        }
     }
 
-    async function renderAttendanceSheet(activityId, activityTitle) {
+    async function cancelSignup(activityId) {
+
+        const confirmed = confirm("Are you sure you want to cancel your sign up for this event?\n\nThis will free up your spot for other students.");
+        
+        if (!confirmed) return;
+        try {
+            const response = await fetch(`/api/activities/${activityId}/signup/`, {
+                method: 'DELETE', 
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') 
+                }
+            });
+
+            if (response.ok) {
+                alert("You have successfully cancelled your sign up.");
+                const updatedActivity = await (await fetch(`/api/activities/${activityId}/`)).json();
+                renderActivityDetails(updatedActivity);
+            } else {
+                const data = await response.json();
+                alert(data.error || "Failed to cancel. Please try again.");
+            }
+        } catch (error) {
+            console.error('Error canceling signup:', error);
+            alert("A network error occurred.");
+        }
+    }
+
+    async function renderAttendanceSheet(activityId) {
         mainContent.innerHTML = `
             <div class="header-section">
                 <button id="backToManage" style="background:none; border:none; color:#666; cursor:pointer; margin-bottom:10px; font-weight: 500;">
                     &larr; Back to Events
                 </button>
                 <h1>Attendance Sheet</h1>
-                <p style="color: var(--primary-orange); font-weight:600;">${activityTitle}</p>
+                <div id="activityHeader" style="margin-top: 5px;">
+                    <span style="color:#ccc;">Loading event details...</span>
+                </div>
             </div>
             
             <div class="attendance-container">
@@ -286,59 +460,91 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
+
         document.getElementById('backToManage').addEventListener('click', renderCreateEventForm);
 
         try {
-            const response = await fetch(`/api/activities/${activityId}/rsvps/`);
-            const rsvps = await response.json();
+
+            const [activityRes, rsvpsRes] = await Promise.all([
+                fetch(`/api/activities/${activityId}/`),      
+                fetch(`/api/activities/${activityId}/rsvps/`) 
+            ]);
+
+            if (!activityRes.ok || !rsvpsRes.ok) throw new Error("Failed to load data");
+
+            const activity = await activityRes.json();
+            const rsvps = await rsvpsRes.json();
+
+            const dateObj = new Date(activity.date_time);
+            const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+            const infoHtml = `
+                <span style="color: var(--primary-orange); font-weight:700; font-size: 1.1rem;">${activity.title}</span>
+                <span style="color: #ccc; margin: 0 8px;">|</span>
+                <span style="color: #666;">${dateStr}</span>
+                <span style="color: #ccc; margin: 0 8px;">|</span>
+                <span style="color: #666;">${timeStr}</span>
+                <span style="color: #ccc; margin: 0 8px;">|</span>
+                <span style="color: #666; font-weight:500;">${activity.campus} Campus</span>
+            `;
+
+
+            document.getElementById('activityHeader').innerHTML = infoHtml;
+
+
             const tbody = document.getElementById('attendanceTableBody');
             
             if (rsvps.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#999;">No students have RSVPed yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center; color:#999; font-style:italic;">No students have RSVPed yet.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = '';
             rsvps.forEach(rsvp => {
-                // Determine Status and Button
+
                 let statusBadge = '<span style="background:#f1f1f1; padding:4px 10px; border-radius:12px; color:#666; font-size:0.85rem;">Pending</span>';
-                let actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Sign In</button>`;
+                let actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(39,174,96,0.2);">Sign In</button>`;
                 let timeLog = '<span style="color:#ccc;">--:--</span>';
 
                 if (rsvp.sign_in_time && !rsvp.sign_out_time) {
-                    // Currently Signed In
+
                     const signInTime = new Date(rsvp.sign_in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    statusBadge = '<span style="background:#e8f5e9; color:#2e7d32; padding:4px 10px; border-radius:12px; font-size:0.85rem;">● In Progress</span>';
+                    statusBadge = '<span style="background:#e8f5e9; color:#2e7d32; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:500;">● In Progress</span>';
                     timeLog = `<span style="color:#2e7d32; font-weight:600;">In: ${signInTime}</span>`;
-                    actionBtn = `<button class="btn-signout" data-id="${rsvp.id}" style="padding:6px 16px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Sign Out</button>`;
+                    actionBtn = `<button class="btn-signout" data-id="${rsvp.id}" style="padding:6px 16px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(231,76,60,0.2);">Sign Out</button>`;
                 } 
                 else if (rsvp.sign_out_time) {
-                    // Completed
-                    statusBadge = '<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:12px; font-size:0.85rem;">✓ Completed</span>';
-                    timeLog = `<strong>${rsvp.hours_earned} Hrs</strong>`;
+
+                    statusBadge = '<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:500;">✓ Completed</span>';
+                    timeLog = `<strong style="color:#333;">${rsvp.hours_earned} Hrs</strong>`;
                     actionBtn = `<span style="color:#27ae60; font-weight:bold; font-size:1.2rem;">✓</span>`;
                 }
 
                 const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #f0f0f0';
                 tr.innerHTML = `
-                    <td>
+                    <td style="padding: 15px;">
                         <div style="font-weight: 600; color: var(--text-main);">${rsvp.student_name} ${rsvp.student_surname}</div>
                         <div style="font-size: 0.8rem; color: #888;">${rsvp.student_email}</div>
                     </td>
-                    <td>${rsvp.role_name || 'General'}</td>
-                    <td>${statusBadge}</td>
-                    <td>${timeLog}</td>
-                    <td style="text-align: right;">${actionBtn}</td>
+                    <td style="padding: 15px;">
+                        <span style="background:#f8f9fa; border:1px solid #eee; padding:2px 8px; border-radius:4px; font-size:0.85rem; color:#555;">
+                            ${rsvp.role_name || 'General'}
+                        </span>
+                    </td>
+                    <td style="padding: 15px;">${statusBadge}</td>
+                    <td style="padding: 15px;">${timeLog}</td>
+                    <td style="padding: 15px; text-align: right;">${actionBtn}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            // Attach Listeners
             document.querySelectorAll('.btn-signin').forEach(btn => {
-                btn.addEventListener('click', () => handleAttendance(btn.dataset.id, 'signin', activityId, activityTitle));
+                btn.addEventListener('click', () => handleAttendance(btn.dataset.id, 'signin', activityId));
             });
             document.querySelectorAll('.btn-signout').forEach(btn => {
-                btn.addEventListener('click', () => handleAttendance(btn.dataset.id, 'signout', activityId, activityTitle));
+                btn.addEventListener('click', () => handleAttendance(btn.dataset.id, 'signout', activityId));
             });
 
         } catch (err) {
@@ -348,14 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function renderStudentStats() {
-        // Initial Loader
         mainContent.innerHTML = `<div class="loader"></div>`;
 
         try {
             const response = await fetch('/api/users/stats/');
             const data = await response.json();
-
-            // 1. Build Monthly Rows
             let monthlyHtml = '';
             if (data.monthly.length === 0) {
                 monthlyHtml = '<p style="color:#999; text-align:center;">No activity yet.</p>';
@@ -370,7 +573,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // 2. Build Events Rows
+            let recruitmentBadge = '';
+    
+            if (data.recruits_count > 0) {
+                recruitmentBadge = `
+                    <div style="margin-top:10px; background: rgba(255,255,255,0.15); padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>🤝</span> 
+                        <span><b>${data.recruits_count}</b> Students Recruited</span>
+                    </div>
+                `;
+            }
+
             let eventsHtml = '';
             if (data.history.length === 0) {
                 eventsHtml = '<p style="color:#999; text-align:center;">No events attended.</p>';
@@ -385,7 +598,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // 3. Render The Dashboard
+            let awardsListHtml = '';
+    
+            if (data.awards && data.awards.length > 0) {
+                awardsListHtml = `<div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">`;
+                
+                data.awards.forEach(award => {
+                    awardsListHtml += `
+                        <div style="
+                            display: flex; 
+                            align-items: center; 
+                            gap: 10px; 
+                            padding: 8px 12px; 
+                            background: ${award.color}10; /* 10% opacity hex */
+                            border-left: 3px solid ${award.color};
+                            border-radius: 4px;
+                            font-size: 0.9rem;
+                            color: #333;
+                        ">
+                            <span style="font-size: 1.2rem;">${award.icon}</span>
+                            <span style="font-weight: 600;">${award.name}</span>
+                        </div>
+                    `;
+                });
+                awardsListHtml += `</div>`;
+            } else {
+                awardsListHtml = `
+                    <div style="text-align: center; margin: 20px 0; color: #aaa;">
+                        <div style="font-size: 2rem; opacity: 0.5; margin-bottom: 5px;">🏆</div>
+                        <div style="font-size: 0.85rem;">No awards yet.</div>
+                    </div>
+                `;
+            }
+
+            const executiveBadgeHtml = data.executive_position 
+            ? `<div style="
+                display: inline-block;
+                background: #fff;
+                color: #E35205; /* UJ Orange */
+                padding: 4px 12px; 
+                border-radius: 15px; 
+                font-size: 0.75rem; 
+                font-weight: 800; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+                ⭐ ${data.executive_position}
+            </div>`
+            : '';
+
             mainContent.innerHTML = `
                 <div class="stats-hero">
                     <div class="hero-content">
@@ -396,8 +659,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="hero-number">${data.total_hours}</div>
                         
                         <div class="hero-text" style="flex-grow: 1;">
+
+                            ${executiveBadgeHtml}
+
                             <h2>Volunteering Hours</h2>
                             <p>${data.motivation}</p>
+
+                            ${recruitmentBadge}
                             
                             <div class="progress-container">
                                 <div class="progress-fill" style="width: ${data.progress_percent}%;"></div>
@@ -429,24 +697,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <div class="stat-card">
-                        <h3>Achievements</h3>
-                        
-                        <div class="stat-list-item">
-                            <span class="stat-label">Most Hours</span>
-                            <span class="stat-val">(${data.total_hours})</span>
-                        </div>
-                        
-                        <div class="stat-list-item">
-                            <span class="stat-label">Total Events</span>
-                            <span class="stat-val">${data.events_count}</span>
-                        </div>
+                            <h3>Achievements</h3>
+                            
+                            <div class="stat-list-item">
+                                <span class="stat-label">Most Hours</span>
+                                <span class="stat-val">(${data.total_hours})</span>
+                            </div>
+                            
+                            <div class="stat-list-item" style="border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 10px;">
+                                <span class="stat-label">Total Events</span>
+                                <span class="stat-val">${data.events_count}</span>
+                            </div>
 
-                        <div style="text-align: center; margin-top: 20px;">
-                            <div style="font-size: 3rem;">🏅</div>
-                            <div class="rank-badge">Current Rank: Position ${data.rank}</div>
-                            <p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Overall Leaderboard</p>
+                            <div style="font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px;">
+                                Honors
+                            </div>
+                            
+                            ${awardsListHtml}
+
+                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                                <div class="rank-badge" style="display:inline-block; font-size: 0.85rem; padding: 4px 12px;">
+                                    Position #${data.rank} on Leaderboard
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
                 </div>
             `;
@@ -463,8 +737,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/users/profile/');
             const user = await response.json();
-
-            // Helper to check campus selection
             const isSelected = (val) => user.campus === val ? 'selected' : '';
 
 
@@ -503,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="form-group form-row">
                             <div>
                                 <label>Campus</label>
-                                <select name="campus">
+                                <select name="campus" disabled style="background-color: #e9ecef; cursor: not-allowed;">
                                     <option value="APB" ${isSelected('APB')}>APB Campus</option>
                                     <option value="DFC" ${isSelected('DFC')}>DFC Campus</option>
                                     <option value="APK" ${isSelected('APK')}>APK Campus</option>
@@ -585,7 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // --- Attach Listeners ---
 
             document.querySelectorAll('.toggle-icon').forEach(icon => {
                 icon.addEventListener('click', () => {
@@ -602,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // A. Update Profile
+
             document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = document.getElementById('saveProfileBtn');
@@ -622,7 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (res.ok) {
                         alert('Profile updated successfully.');
-                        // Update greeting in navbar immediately
+
                         const nameEl = document.querySelector('.user-greeting');
                         if (nameEl) nameEl.textContent = `Hi, ${data.first_name}`;
                     } else {
@@ -639,8 +910,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const confirmPass = document.getElementById('confirmPass').value;
                 const btn = document.getElementById('savePasswordBtn');
                 
-
-                // 1. Frontend Validation
                 if (newPass !== confirmPass) {
                     alert("New passwords do not match!");
                     return;
@@ -657,7 +926,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const formData = new FormData(e.target);
                     const data = Object.fromEntries(formData);
-                    // Remove confirm password from data sent to API (Backend doesn't need it)
                     delete data['confirmPass']; 
 
                     const response = await fetch('/api/users/change-password/', {
@@ -673,9 +941,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (response.ok) {
                         alert("Password changed successfully!");
-                        e.target.reset(); // Clear form
+                        e.target.reset(); 
                     } else {
-                        // Display backend errors (e.g., "Old password incorrect" or "Password too simple")
+
                         let errorMsg = 'Error: ';
                         if (result.old_password) errorMsg += result.old_password + '\n';
                         if (result.new_password) errorMsg += result.new_password + '\n';
@@ -690,9 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // B. Preferences & C. Delete (Same as before)
             document.getElementById('notifToggle').addEventListener('change', async (e) => {
-                 /* ... reuse previous logic ... */
                  const isChecked = e.target.checked;
                  await fetch('/api/users/profile/', {
                      method: 'PATCH',
@@ -702,7 +968,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
-                /* ... reuse previous logic ... */
                 if(confirm("Are you sure?")) {
                      await fetch('/api/users/delete/', {
                          method: 'DELETE',
@@ -718,9 +983,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function handleAttendance(rsvpId, action, activityId, activityTitle) {
+    async function handleAttendance(signupId, action, activityId) {
+        const actionText = action === 'signin' ? "Start Timer" : "Stop Timer & Log Hours";
+        if(!confirm(`Are you sure you want to ${actionText} for this student?`)) return;
+
         try {
-            const response = await fetch(`/api/attendance/${rsvpId}/`, {
+            const response = await fetch(`/api/attendance/${signupId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -729,57 +997,207 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ action: action })
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                // Refresh the table to show new status
-                renderAttendanceSheet(activityId, activityTitle);
+                renderAttendanceSheet(activityId);
             } else {
-                alert('Error updating status');
+                let errorMessage = data.error || "Action failed";
+                
+                if (errorMessage.includes("This event is on")) {
+                    alert("📅 DATE MISMATCH:\n\n" + errorMessage);
+                } else if (errorMessage.includes("starts at")) {
+                    alert("⏰ TOO EARLY:\n\n" + errorMessage);
+                } else {
+                    alert("⚠️ Error:\n" + errorMessage);
+                }
             }
+
         } catch (err) {
-            console.error(err);
-            alert('Network Error');
+            console.error("Attendance Error:", err);
+            alert("Network error. Please check your connection.");
         }
     }
 
     async function renderStudentTable() {
-        // 1. Show Loading State
+        let currentUserCampus = null;
+        try {
+            const userRes = await fetch('/api/users/profile/');
+            const userData = await userRes.json();
+            currentUserCampus = userData.campus;
+        } catch (e) {
+            console.error("Could not fetch user info", e);
+        }
+
         mainContent.innerHTML = `
             <div class="header-section">
                 <h1>Student Volunteers</h1>
-                <p>Manage roles and view volunteer details.</p>
+                <p>Manage roles, view details, and assign annual awards.</p>
             </div>
-            <div style="background:white; border-radius:12px; box-shadow:0 2px 5px rgba(0,0,0,0.05); overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; min-width:600px;">
+
+            <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                <input type="text" id="studentSearchInput" placeholder="Search by name or student no..." 
+                    style="flex: 2; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 200px;">
+                
+                <select id="campusFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                    <option value="">All Campuses</option>
+                    <option value="APB">APB</option>
+                    <option value="DFC">DFC</option>
+                    <option value="APK">APK</option>
+                    <option value="SWC">SWC</option>
+                </select>
+
+                <select id="roleFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                    <option value="">All Roles</option>
+                    <option value="Executive">Executives Only</option>
+                    <option value="Volunteer">Volunteers Only</option>
+                </select>
+
+                <select id="sortFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                    <option value="name">Sort by Name</option>
+                    <option value="hours_desc">Most Hours (High-Low)</option>
+                    <option value="hours_asc">Least Hours (Low-High)</option>
+                </select>
+            </div>
+
+            <div style="background:white; border-radius:12px; box-shadow:0 2px 5px rgba(0,0,0,0.05); overflow-x:auto; margin-bottom: 40px;">
+                <table style="width:100%; border-collapse:collapse; min-width:900px;"> 
                     <thead>
                         <tr style="background:#f9f9f9; text-align:left;">
                             <th style="padding:15px; border-bottom:1px solid #eee;">Name</th>
                             <th style="padding:15px; border-bottom:1px solid #eee;">Student No</th>
-                            <th style="padding:15px; border-bottom:1px solid #eee;">Campus</th>
                             <th style="padding:15px; border-bottom:1px solid #eee;">Role</th>
+                            <th style="padding:15px; border-bottom:1px solid #eee;">Total Hours</th>
+                            <th style="padding:15px; border-bottom:1px solid #eee;">Honors & Awards</th> 
                             <th style="padding:15px; border-bottom:1px solid #eee;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="dynamicStudentBody">
-                        <tr><td colspan="5" style="padding:20px; text-align:center;">Loading students...</td></tr>
+                        <tr><td colspan="6" style="padding:20px; text-align:center;">Loading students...</td></tr>
                     </tbody>
                 </table>
             </div>
+
+            <div class="header-section" style="margin-bottom: 15px;">
+                <h2>Event Qualifiers</h2>
+                <p>Students who have earned enough hours to attend major events.</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; padding-bottom: 40px;">
+                
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 5px solid #27ae60;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="margin:0; color: #27ae60;">🥾 Hiking Trip</h3>
+                        <span style="background:#e8f8f0; color:#27ae60; padding:4px 10px; border-radius:15px; font-size:0.8rem; font-weight:bold;">40+ Hours</span>
+                    </div>
+                    <div id="hikingList" style="max-height: 300px; overflow-y: auto;">
+                        Loading...
+                    </div>
+                </div>
+
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 5px solid #FF8C42;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="margin:0; color: #FF8C42;">🏕️ Annual Camp</h3>
+                        <span style="background:#FFF4EC; color:#FF8C42; padding:4px 10px; border-radius:15px; font-size:0.8rem; font-weight:bold;">80+ Hours</span>
+                    </div>
+                    <div id="campList" style="max-height: 300px; overflow-y: auto;">
+                        Loading...
+                    </div>
+                </div>
+            </div>
         `;
 
-        // 2. Fetch Data
+        let allStudents = [];
         try {
             const response = await fetch('/api/users/students/');
             if (!response.ok) throw new Error('Failed to load');
-            const students = await response.json();
+            allStudents = await response.json();
             
-            // 3. Build Rows
-            const tbody = document.getElementById('dynamicStudentBody');
-            tbody.innerHTML = ''; // Clear loading
+            renderRows(allStudents);
+            renderQualifiers(allStudents);
 
-            students.forEach(student => {
+            const inputs = ['studentSearchInput', 'campusFilter', 'roleFilter', 'sortFilter'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener(id === 'studentSearchInput' ? 'input' : 'change', applyFilters);
+            });
+
+            function applyFilters() {
+                const query = document.getElementById('studentSearchInput').value.toLowerCase();
+                const campus = document.getElementById('campusFilter').value;
+                const roleType = document.getElementById('roleFilter').value;
+                const sortBy = document.getElementById('sortFilter').value;
+
+                let filtered = allStudents.filter(student => {
+                    const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
+                    const studentNo = (student.student_number || '').toLowerCase();
+                    const matchesSearch = fullName.includes(query) || studentNo.includes(query);
+                    const matchesCampus = campus === "" || student.campus === campus;
+                    let matchesRole = true;
+                    if (roleType === 'Executive') matchesRole = !!student.executive_position;
+                    if (roleType === 'Volunteer') matchesRole = !student.executive_position;
+                    return matchesSearch && matchesCampus && matchesRole;
+                });
+
+                filtered.sort((a, b) => {
+                    if (sortBy === 'hours_desc') return b.total_hours - a.total_hours;
+                    if (sortBy === 'hours_asc') return a.total_hours - b.total_hours;
+                    if (a.campus !== b.campus) return a.campus.localeCompare(b.campus);
+                    return a.first_name.localeCompare(b.first_name);
+                });
+
+                renderRows(filtered);
+            };
+
+        } catch (err) {
+            console.error(err);
+            const tbody = document.getElementById('dynamicStudentBody');
+            if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Error loading students.</td></tr>';
+        }
+
+        function renderRows(studentsToRender) {
+            const tbody = document.getElementById('dynamicStudentBody');
+            tbody.innerHTML = ''; 
+
+            if (studentsToRender.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#999;">No matching students found.</td></tr>';
+                return;
+            }
+
+            let lastCampus = null;
+
+            studentsToRender.forEach(student => {
+                if (student.campus !== lastCampus) {
+                    const divider = document.createElement('tr');
+                    divider.innerHTML = `
+                        <td colspan="6" style="background:#f1f4f8; padding:8px 15px; font-weight:bold; color:#444; border-top:1px solid #ddd; border-bottom:1px solid #ddd;">
+                            📍 ${student.campus || 'Unknown Campus'}
+                        </td>
+                    `;
+                    tbody.appendChild(divider);
+                    lastCampus = student.campus;
+                }
+
+
+                const isSameCampus = !currentUserCampus || (student.campus === currentUserCampus);
+                const buttonStyle = isSameCampus 
+                    ? "padding:6px 12px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;"
+                    : "padding:6px 12px; border:1px solid #eee; background:#f9f9f9; color:#aaa; cursor:not-allowed; border-radius:4px;";
+                const buttonAttr = isSameCampus 
+                    ? `onclick="openModal('${student.id}', '${student.first_name} ${student.last_name}', '${student.executive_position || ""}', ${JSON.stringify(student.awards || []).replace(/"/g, "&quot;")})"`
+                    : `disabled title="You can only manage students from ${currentUserCampus}"`;
+
                 const roleBadge = student.executive_position 
                     ? `<span style="background:#FFF4EC; color:#FF8C42; padding:4px 8px; border-radius:4px; font-weight:600; font-size:0.8rem;">${student.executive_position}</span>` 
                     : `<span style="background:#f0f0f0; color:#666; padding:4px 8px; border-radius:4px; font-size:0.8rem;">Volunteer</span>`;
+
+                let awardsHtml = '<span style="color:#ccc; font-size:0.8rem;">-</span>';
+                if (student.awards && student.awards.length > 0) {
+                    awardsHtml = `<div style="display:flex; gap:5px; flex-wrap:wrap;">`;
+                    student.awards.forEach(award => {
+                        awardsHtml += `<div title="${award.name}" style="background: ${award.color}15; border: 1px solid ${award.color}; color: ${award.color === '#FFD700' ? '#B8860B' : award.color}; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; white-space: nowrap;"><span>${award.icon}</span> ${award.name}</div>`;
+                    });
+                    awardsHtml += `</div>`;
+                }
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -788,32 +1206,44 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-size:0.85rem; color:#888;">${student.email}</div>
                     </td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${student.student_number || '-'}</td>
-                    <td style="padding:15px; border-bottom:1px solid #eee;">${student.campus || '-'}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${roleBadge}</td>
+                    <td style="padding:15px; border-bottom:1px solid #eee;"><strong>${student.total_hours.toFixed(1)}</strong> hrs</td>
+                    <td style="padding:15px; border-bottom:1px solid #eee;">${awardsHtml}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">
-                        <button class="manage-btn" data-id="${student.id}" data-name="${student.first_name} ${student.last_name}" 
-                                style="padding:6px 12px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;">
-                            Manage Role
-                        </button>
+                        <button class="manage-btn" style="${buttonStyle}" ${buttonAttr}>Manage Role</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
 
-            // 4. Attach Event Listeners to new Buttons
-            document.querySelectorAll('.manage-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    openModal(btn.dataset.id, btn.dataset.name);
-                });
-            });
+        function renderQualifiers(students) {
+            const hikingQualifiers = students.filter(s => s.total_hours >= 40);
+            const campQualifiers = students.filter(s => s.total_hours >= 80);
 
-        } catch (err) {
-            console.error(err);
-            document.getElementById('dynamicStudentBody').innerHTML = '<tr><td colspan="5" style="color:red; text-align:center;">Error loading students.</td></tr>';
+            const generateList = (list) => {
+                if (list.length === 0) return '<div style="padding:15px; text-align:center; color:#999; font-style:italic;">No students qualified yet.</div>';
+                
+                return list.map(s => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                        <div style="display:flex; align-items:center; gap: 10px;">
+                            <div style="width:32px; height:32px; background:#f0f0f0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:bold; color:#666;">
+                                ${s.first_name.charAt(0)}${s.last_name.charAt(0)}
+                            </div>
+                            <div>
+                                <div style="font-weight:600; font-size:0.9rem;">${s.first_name} ${s.last_name}</div>
+                                <div style="font-size:0.75rem; color:#888;">${s.campus}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:bold; color:#444;">${s.total_hours.toFixed(0)}h</div>
+                    </div>
+                `).join('');
+            };
+
+            document.getElementById('hikingList').innerHTML = generateList(hikingQualifiers);
+            document.getElementById('campList').innerHTML = generateList(campQualifiers);
         }
     }
-
-    // --- MANAGE EVENTS (Create, List, Edit, Delete) ---
 
     async function renderCreateEventForm() {
         
@@ -960,18 +1390,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Load Data & Attach Listeners
         fetchMyEvents();
         document.getElementById('createEventForm').addEventListener('submit', handleEventSubmit);
         document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
     }
 
-    // --- Helper: Fetch and Display List ---
-// --- Helper: Fetch and Display List ---
     async function fetchMyEvents() {
         const tbody = document.getElementById('myEventsTableBody');
         try {
-            const response = await fetch('/api/activities/'); 
+            const response = await fetch('/api/activities/mine/'); 
             const allEvents = await response.json();
             
             if (allEvents.length === 0) {
@@ -1029,24 +1456,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
 
-            // --- Attach Listeners ---
-            
-            // 1. Attendance Listener
             document.querySelectorAll('.attendance-btn').forEach(btn => {
                 btn.addEventListener('click', () => renderAttendanceSheet(btn.dataset.id, btn.dataset.title));
             });
 
-            // 2. Edit Listener
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', () => loadEventIntoForm(allEvents.find(e => e.id == btn.dataset.id)));
             });
 
-            // 3. Delete Listener
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', () => deleteEvent(btn.dataset.id));
             });
 
-            //4. Duplicate
             document.querySelectorAll('.duplicate-btn').forEach(btn => {
                 btn.addEventListener('click', () => duplicateEvent(allEvents.find(e => e.id == btn.dataset.id)));
             });
@@ -1057,34 +1478,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Helper: Duplicate Event (Reuse Details) ---
     function duplicateEvent(event) {
-        // 1. Scroll to form
         document.querySelector('.dashboard-form-wrapper').scrollIntoView({ behavior: 'smooth' });
-
-        // 2. Update UI Text
         document.getElementById('formTitle').textContent = `New Event (Copy of ${event.title})`;
         document.getElementById('submitEventBtn').textContent = 'Publish New Event';
-        document.getElementById('cancelEditBtn').style.display = 'inline-block'; // Allow them to cancel the "copy mode"
-
-        // 3. CRITICAL: Clear the ID so it saves as NEW
+        document.getElementById('cancelEditBtn').style.display = 'inline-block'; 
         document.getElementById('eventIdField').value = '';
-
-        // 4. Fill Reusable Fields
-        document.getElementById('inputTitle').value = event.title; // Keep title (user can edit)
+        document.getElementById('inputTitle').value = event.title; 
         document.getElementById('inputCampus').value = event.campus;
         document.getElementById('inputDuration').value = event.duration_hours;
         document.getElementById('inputSpots').value = event.total_spots;
         document.getElementById('inputDesc').value = event.description;
         document.getElementById('inputDetails').value = event.details;
         document.getElementById('inputAdditional').value = event.additional_details || '';
-
-        // 5. CLEAR Date (User must pick a new date for the new event)
         document.getElementById('inputDate').value = '';
 
-        // 6. Handle Roles (Copy them over)
         const checkboxes = document.querySelectorAll('input[name="role_types"]');
-        checkboxes.forEach(cb => cb.checked = false); // Clear first
+        checkboxes.forEach(cb => cb.checked = false); 
         if (event.roles && Array.isArray(event.roles)) {
             event.roles.forEach(roleObj => {
                 const matching = document.querySelector(`input[name="role_types"][value="${roleObj.role_type}"]`);
@@ -1092,26 +1502,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 7. Handle Image (Reset it)
-        // Browsers block copying file inputs for security, so we clear it.
         document.getElementById('imagePreviewContainer').style.display = 'none';
         document.getElementById('imagePreview').src = '';
         document.getElementById('imageHelpText').style.display = 'none';
         
-        // Optional: Alert the user
-        // alert("Details copied! Please set a new Date and Image.");
     }
-    // --- Helper: Load Data into Form (Edit Mode) ---
-    function loadEventIntoForm(event) {
-        // 1. Scroll to form
-        document.querySelector('.dashboard-form-wrapper').scrollIntoView({ behavior: 'smooth' });
 
-        // 2. Update UI Text
+    function loadEventIntoForm(event) {
+
+        document.querySelector('.dashboard-form-wrapper').scrollIntoView({ behavior: 'smooth' });
         document.getElementById('formTitle').textContent = `Editing: ${event.title}`;
         document.getElementById('submitEventBtn').textContent = 'Update Event';
         document.getElementById('cancelEditBtn').style.display = 'inline-block';
-
-        // 3. Fill Standard Fields
         document.getElementById('eventIdField').value = event.id;
         document.getElementById('inputTitle').value = event.title;
         document.getElementById('inputCampus').value = event.campus;
@@ -1121,19 +1523,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('inputDetails').value = event.details;
         document.getElementById('inputAdditional').value = event.additional_details || '';
 
-        // 4. Format Date (YYYY-MM-DDTHH:MM)
+
         if (event.date_time) {
             const d = new Date(event.date_time);
             d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             document.getElementById('inputDate').value = d.toISOString().slice(0, 16);
         }
 
-        // 5. Handle Roles Checkboxes
-        // Clear all first
         const checkboxes = document.querySelectorAll('input[name="role_types"]');
         checkboxes.forEach(cb => cb.checked = false);
 
-        // Check the ones that exist
         if (event.roles && Array.isArray(event.roles)) {
             event.roles.forEach(roleObj => {
                 const matchingCheckbox = document.querySelector(`input[name="role_types"][value="${roleObj.role_type}"]`);
@@ -1143,35 +1542,42 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 6. Handle Image Preview (Visual Thumbnail)
         const previewContainer = document.getElementById('imagePreviewContainer');
         const previewImg = document.getElementById('imagePreview');
         const helpText = document.getElementById('imageHelpText');
 
         if (event.image) {
-            // Show the thumbnail if image exists
             previewContainer.style.display = 'block';
             previewImg.src = event.image;
-            helpText.style.display = 'block'; // Shows "Leave empty to keep current"
+            helpText.style.display = 'block'; 
         } else {
-            // Hide if no image
             previewContainer.style.display = 'none';
             previewImg.src = '';
             helpText.style.display = 'none';
         }
     }
 
-    // --- Helper: Reset Form ---
     function resetForm() {
-        document.getElementById('createEventForm').reset();
-        document.getElementById('eventIdField').value = ''; // Clear ID
-        document.getElementById('formTitle').textContent = 'Create New Event';
-        document.getElementById('submitEventBtn').textContent = 'Publish Event';
-        document.getElementById('cancelEditBtn').style.display = 'none';
-        document.getElementById('currentImageText').style.display = 'none';
+        const form = document.getElementById('createEventForm');
+        const titleHeading = document.getElementById('formTitle');
+        const cancelBtn = document.getElementById('cancelEditBtn');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imageHelpText = document.getElementById('imageHelpText');
+        
+        form.reset();
+        
+        document.getElementById('eventIdField').value = '';
+
+
+        if(titleHeading) titleHeading.textContent = "Create New Event";
+        if(document.getElementById('submitEventBtn')) document.getElementById('submitEventBtn').textContent = "Publish Event";
+        
+        if(cancelBtn) cancelBtn.style.display = 'none';
+
+        if(imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+        if(imageHelpText) imageHelpText.style.display = 'none';
     }
 
-    // --- Action: Delete Event ---
     async function deleteEvent(id) {
         if (!confirm('Are you sure you want to delete this event?')) return;
 
@@ -1182,8 +1588,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (response.ok) {
-                fetchMyEvents(); // Refresh List
-                resetForm();     // Clear form if we were editing that item
+                fetchMyEvents(); 
+                resetForm();     
             } else {
                 alert('Failed to delete.');
             }
@@ -1193,7 +1599,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Action: Submit (Create OR Update) ---
     async function handleEventSubmit(e) {
         e.preventDefault();
         const btn = document.getElementById('submitEventBtn');
@@ -1202,22 +1607,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
 
         const formData = new FormData(e.target);
-        const eventId = formData.get('event_id'); // Check if we have an ID
+        const eventId = formData.get('event_id');
 
         const checkboxes = document.querySelectorAll('input[name="role_types"]:checked');
         
-        // 2. Remove them from formData to avoid duplicates/confusion
         formData.delete('role_types');
         
-        // 3. Re-append them individually. 
-        // Django DRF ListField expects multiple values with the same key to form a list.
         checkboxes.forEach((checkbox) => {
             formData.append('role_types', checkbox.value);
         });
 
-        // Determine URL and Method
         const url = eventId ? `/api/activities/${eventId}/` : '/api/activities/create/';
-        const method = eventId ? 'PATCH' : 'POST'; // PATCH is safer for partial updates (files)
+        const method = eventId ? 'PATCH' : 'POST'; 
 
         try {
             const response = await fetch(url, {
@@ -1228,8 +1629,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 alert(eventId ? 'Event Updated!' : 'Event Created!');
-                fetchMyEvents(); // Refresh List
-                resetForm();     // Reset Form
+                fetchMyEvents();
+                resetForm();    
             } else {
                 const err = await response.json();
                 alert('Error: ' + JSON.stringify(err));
@@ -1243,27 +1644,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- RSVP Modal Logic ---
-    const signupModal = document.getElementById('signupModal');
-    
-    window.openSignupModal = (activity) => {
+ 
+        window.openSignupModal = (activity) => {
         document.getElementById('signupEventId').value = activity.id;
         document.getElementById('signupEventTitle').textContent = activity.title;
         
-        const roleSelect = document.getElementById('signupRoleSelect');
-        roleSelect.innerHTML = '<option value="" disabled selected>-- Choose a Role --</option>';
+        const container = document.getElementById('rolesCheckboxContainer');
+        container.innerHTML = ''; 
         
-        // Populate Roles
         if (activity.roles && activity.roles.length > 0) {
             activity.roles.forEach(role => {
-                const option = document.createElement('option');
-                option.value = role.id; // We send the Role ID to backend
-                option.textContent = role.get_role_type_display || role.role_type; // Use readable name
-                roleSelect.appendChild(option);
+                const roleLabel = role.get_role_type_display || role.role_type;
+                
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.gap = '10px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'selected_roles'; 
+                checkbox.value = role.id;
+                checkbox.id = `role_${role.id}`;
+                
+                const label = document.createElement('label');
+                label.htmlFor = `role_${role.id}`;
+                label.textContent = roleLabel;
+                label.style.cursor = 'pointer';
+                label.style.fontSize = '0.95rem';
+                label.style.color = '#333';
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                container.appendChild(wrapper);
             });
         } else {
-             // Fallback if no specific roles defined
-             roleSelect.innerHTML = '<option value="">General Volunteer</option>';
+             container.innerHTML = '<p style="color:#666; font-style:italic;">No specific roles. You will be signed up as a General Volunteer.</p>';
         }
 
         signupModal.style.display = 'flex';
@@ -1273,7 +1689,6 @@ document.addEventListener('DOMContentLoaded', () => {
         signupModal.style.display = 'none';
     }
 
-    // Handle RSVP Submit
     const rsvpForm = document.getElementById('rsvpForm');
     if (rsvpForm) {
         rsvpForm.addEventListener('submit', async (e) => {
@@ -1285,6 +1700,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
 
+            const selectedCheckboxes = document.querySelectorAll('input[name="selected_roles"]:checked');
+            const roleIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            
+            data.selected_roles = roleIds; 
+
+            const hasRolesAvailable = document.querySelectorAll('input[name="selected_roles"]').length > 0;
+            if (hasRolesAvailable && roleIds.length === 0) {
+                alert("Please select at least one role to continue.");
+                btn.textContent = 'Confirm & Sign Up';
+                btn.disabled = false;
+                return;
+            }
+
             try {
                 const response = await fetch('/api/activities/signup/', {
                     method: 'POST',
@@ -1292,21 +1720,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data) 
                 });
 
                 if (response.ok) {
                     alert('Successfully Signed Up! See you there.');
                     closeSignupModal();
-                    renderActivities(); // Refresh grid to update spot count
+                    renderActivities(); 
                 } else {
                     const err = await response.json();
-                    // Handle duplicate signup error nicely
-                    if (Array.isArray(err) && err[0].includes("already signed up")) {
-                         alert("You are already signed up for this event!");
-                    } else {
-                        alert('Error: ' + JSON.stringify(err));
-                    }
+                    if (err.detail) alert(err.detail); 
+                    else if (err.non_field_errors) alert(err.non_field_errors[0]);
+                    else alert('Error: ' + JSON.stringify(err));
                 }
             } catch (error) {
                 console.error(error);
@@ -1317,47 +1742,103 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // --- 3. Modal Logic (Global) ---
-    
+
     const modal = document.getElementById('roleModal');
     const form = document.getElementById('assignRoleForm');
+    
+    let cachedAwardsList = null;
 
-    window.openModal = (id, name) => {
+    window.openModal = async (id, name, currentRole, currentAwards = []) => {
         document.getElementById('selectedStudentId').value = id;
         document.getElementById('modalStudentName').textContent = `For: ${name}`;
-        modal.style.display = 'flex'; // Show flex to center
+        document.getElementById('roleSelect').value = currentRole || ""; 
+
+        modal.style.display = 'flex';
+
+        const container = document.getElementById('awardsCheckboxContainer');
+        
+        if (!cachedAwardsList) {
+            try {
+                const res = await fetch('/api/awards/');
+                if (res.ok) cachedAwardsList = await res.json();
+            } catch (err) {
+                console.error("Error loading awards", err);
+                container.innerHTML = '<span style="color:red">Error loading awards.</span>';
+                return;
+            }
+        }
+
+        if (!cachedAwardsList || cachedAwardsList.length === 0) {
+            container.innerHTML = '<span style="color:#999">No awards found in system.</span>';
+        } else {
+            container.innerHTML = ''; 
+            
+            const studentAwardIds = currentAwards.map(a => a.id);
+
+            cachedAwardsList.forEach(award => {
+                const isChecked = studentAwardIds.includes(award.id) ? 'checked' : '';
+                
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '8px';
+                
+                div.innerHTML = `
+                    <input type="checkbox" 
+                           id="award_${award.id}" 
+                           name="selected_awards_ids" 
+                           value="${award.id}" 
+                           ${isChecked}>
+                    <label for="award_${award.id}" style="cursor:pointer; font-size:0.9rem;">
+                        ${award.icon} ${award.name}
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
     }
 
     window.closeModal = () => {
         modal.style.display = 'none';
     }
 
-    // Handle Form Submit
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const studentId = document.getElementById('selectedStudentId').value;
             const position = document.getElementById('roleSelect').value;
+            
+            const checkboxes = document.querySelectorAll('input[name="selected_awards_ids"]:checked');
+            const awardIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
             const csrfToken = getCookie('csrftoken');
 
             try {
-                const response = await fetch('/api/users/assign-executive/', {
-                    method: 'POST',
+
+                const response = await fetch(`/api/users/students/${studentId}/update/`, {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrfToken
                     },
-                    body: JSON.stringify({ student_id: studentId, position: position })
+                    body: JSON.stringify({ 
+                        executive_position: position,
+                        awards: awardIds
+                    })
                 });
 
                 if (response.ok) {
                     closeModal();
-                    renderStudentTable(); // Refresh table immediately
+                    renderStudentTable(); 
+                    alert("Student updated successfully");
                 } else {
-                    alert('Error updating role');
+                    const err = await response.json();
+                    alert('Error updating: ' + JSON.stringify(err));
                 }
             } catch (err) {
                 console.error(err);
+                alert("Network Error");
             }
         });
     }

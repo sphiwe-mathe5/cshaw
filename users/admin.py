@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Award, User
+
+admin.site.register(Award)
+admin.site.register(User)

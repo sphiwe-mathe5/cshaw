@@ -944,3 +944,44 @@ ul { list-style: none; }
         display: none !important;
     }
 }
+
+/* --- Minimal Footer --- */
+.minimal-footer {
+    text-align: center;
+    padding: 30px 20px;
+    margin-top: 40px; /* Space above footer */
+
+}
+
+.footer-links {
+    margin-bottom: 12px;
+}
+
+.footer-links a {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: #E35205; /* UJ Orange Hover */
+    text-decoration: underline;
+}
+
+.separator {
+    margin: 0 10px;
+    color: #ccc;
+    font-size: 0.8rem;
+}
+
+.footer-copyright {
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+/* Mobile Tweak: Stack links on very small screens if needed */
+@media (max-width: 400px) {
+    .separator { display: none; }
+    .footer-links a { display: block; margin: 5px 0; }
+}

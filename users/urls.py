@@ -1,7 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
-    # API Views (Logic)
     StudentRegistrationView, 
     CoordinatorRegistrationView, 
     LoginView, 
@@ -11,16 +10,16 @@ from .views import (
     UserProfileView,
     UserDeleteView, 
     ChangePasswordView,   
-    # HTML Page Views (Templates)
+    AwardListView,
+    StudentUpdateView,
+    
     login_page,
     student_register_page,
     coordinator_register_page
 )
 
 urlpatterns = [
-    # --- 1. API Endpoints (These talk to your auth.js) ---
-    # We explicitly add 'api/users/' here because your main urls.py includes this file at root ''
-    
+
     path('api/users/register/student/', StudentRegistrationView.as_view(), name='api-register-student'),
     path('api/users/register/coordinator/', CoordinatorRegistrationView.as_view(), name='api-register-coordinator'),
     path('api/users/login/', LoginView.as_view(), name='api-login'),
@@ -30,11 +29,13 @@ urlpatterns = [
     path('api/users/profile/', UserProfileView.as_view(), name='user-profile'),
     path('api/users/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('api/users/delete/', UserDeleteView.as_view(), name='user-delete'),
+    path('api/awards/', AwardListView.as_view(), name='award-list'),
+    path('api/users/students/<int:pk>/update/', StudentUpdateView.as_view(), name='student-update'),
 
     path('password-reset/', 
          auth_views.PasswordResetView.as_view(
-             template_name='users/password_reset.html',       # The form page
-             html_email_template_name='users/password_reset_email.html' # <--- ADD THIS LINE
+             template_name='users/password_reset.html',       
+             html_email_template_name='users/password_reset_email.html' 
          ), 
          name='password_reset'),
          
@@ -50,8 +51,8 @@ urlpatterns = [
          auth_views.PasswordResetCompleteView.as_view(template_name='users/password_reset_complete.html'), 
          name='password_reset_complete'),
 
-    # --- 2. HTML Pages (These show the forms) ---
     path('login/', login_page, name='login-page'),
     path('register/student/', student_register_page, name='student-register-page'),
     path('register/coordinator/', coordinator_register_page, name='coordinator-register-page'),
+    
 ]

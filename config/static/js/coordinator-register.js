@@ -1,6 +1,3 @@
-// static/js/coordinator-register.js
-
-// Sanitize functions
 function sanitizeHTML(str) {
     const temp = document.createElement('div');
     temp.textContent = str;
@@ -31,7 +28,6 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Password toggle
 document.querySelectorAll('.toggle-password').forEach(button => {
     button.addEventListener('click', function(e) {
         e.preventDefault();
@@ -58,7 +54,6 @@ document.querySelectorAll('.toggle-password').forEach(button => {
     });
 });
 
-// Password strength
 function checkPasswordStrength(password) {
     let strength = 0;
     const feedback = [];
@@ -122,7 +117,6 @@ passwordInput.addEventListener('input', function() {
     }
 });
 
-// Form submission
 document.getElementById('coordinatorRegisterForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -132,7 +126,6 @@ document.getElementById('coordinatorRegisterForm').addEventListener('submit', as
     errorDiv.textContent = '';
     successDiv.textContent = '';
     
-    // Get and sanitize inputs
     const name = sanitizeInput(document.getElementById('name').value);
     const surname = sanitizeInput(document.getElementById('surname').value);
     const staffNumber = sanitizeInput(document.getElementById('staff_number').value);
@@ -142,7 +135,6 @@ document.getElementById('coordinatorRegisterForm').addEventListener('submit', as
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
     
-    // Validation
     if (!name || !surname) {
         errorDiv.textContent = 'Name and surname are required';
         return;
