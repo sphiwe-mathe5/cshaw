@@ -27,6 +27,8 @@ class VolunteerActivity(models.Model):
     image = models.ImageField(upload_to='activity_images/', blank=True, null=True)
     additional_details = models.TextField(blank=True, null=True, help_text="What to bring, dress code, etc.")
     
+    ai_insight = models.TextField(blank=True, null=True, help_text="Cached AI analysis for reporting")
+    
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -54,6 +56,20 @@ class ActivityRole(models.Model):
 
 class ActivitySignup(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    sign_in_facilitator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        related_name='facilitated_signins',
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    sign_out_facilitator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        related_name='facilitated_signouts',
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
     activity = models.ForeignKey(VolunteerActivity, related_name='signups', on_delete=models.CASCADE)
     roles = models.ManyToManyField(ActivityRole, blank=True) 
     signup_at = models.DateTimeField(auto_now_add=True)

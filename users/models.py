@@ -35,6 +35,11 @@ class User(AbstractUser):
     
     executive_position = models.CharField(max_length=100, null=True, blank=True, help_text="E.g., Chairperson, Secretary. Leave empty if regular volunteer.")
     receive_notifications = models.BooleanField(default=True, help_text="Receive email updates about events")
+    
+    can_manage_attendance = models.BooleanField(
+        default=False, 
+        help_text="Designates whether this executive can scan/manage student attendance."
+    )
 
     recruited_by = models.ForeignKey(
         'self', 

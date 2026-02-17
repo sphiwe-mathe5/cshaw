@@ -1,109 +1,104 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>New Volunteer Opportunity</title>
-    <style type="text/css">
-        /* Client-specific resets */
-        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
-        
-        /* General styles */
-        body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .wrapper { width: 100%; table-layout: fixed; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #f4f4f4; }
-        .webkit { max-width: 600px; margin: 0 auto; }
-        
-        /* Button hover (won't work in all clients but nice to have) */
-        .btn:hover { background-color: #c44302 !important; }
-    </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
 
-    <center class="wrapper">
-        <div class="webkit">
-            <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px;">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f4f4f4;">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
                 
-                <tr>
-                    <td align="center" style="background-color: #1a1a2e; padding: 15px;">
-                        <span style="color: #ffffff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">C-SHAW Volunteering Hub</span>
-                    </td>
-                </tr>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-collapse: collapse;">
+                    
+                    <tr>
+                        <td align="center" style="background-color: #1a1a2e; padding: 15px;">
+                            <span style="color: #ffffff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: sans-serif;">
+                                C-SHAW Volunteering Hub
+                            </span>
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center" style="padding: 40px 30px 20px 30px; border-bottom: 4px solid #E35205;">
-                        <h1 style="color: #E35205; font-size: 28px; font-weight: 800; margin: 0; line-height: 1.2;">New Opportunity! 📢</h1>
-                        <h2 style="color: #333333; font-size: 20px; font-weight: 600; margin: 15px 0 0 0;">{{ title }}</h2>
-                    </td>
-                </tr>
+                    <tr>
+                        <td align="center" style="padding: 40px 30px 20px 30px; border-bottom: 4px solid #E35205;">
+                            <h1 style="color: #E35205; font-size: 28px; font-weight: 800; margin: 0; line-height: 1.2; font-family: sans-serif;">
+                                New Opportunity! 📢
+                            </h1>
+                            <h2 style="color: #333333; font-size: 20px; font-weight: 600; margin: 15px 0 0 0; font-family: sans-serif;">
+                                {{ title }}
+                            </h2>
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td style="padding: 30px;">
-                        
-                        <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-top: 0;">
-                            Hi there,
-                        </p>
-                        <p style="color: #555555; font-size: 16px; line-height: 1.6;">
-                            A new event has just been posted that matches your profile. We need volunteers to help make this a success!
-                        </p>
+                    <tr>
+                        <td style="padding: 30px; font-family: sans-serif;">
+                            
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-top: 0;">
+                                Hi there,
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                               New Event Alert! 📢 We need hands on deck. Come join us to make a difference and stack up your volunteer hours.
+                            </p>
 
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #FFF4EC; border-radius: 6px; margin: 25px 0;">
-                            <tr>
-                                <td style="padding: 20px;">
-                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                        <tr>
-                                            <td width="30" valign="top" style="padding-bottom: 15px; font-size: 20px;">📅</td>
-                                            <td style="padding-bottom: 15px; font-size: 15px; color: #333; font-weight: bold;">
-                                                <span style="color: #888; font-weight: normal; font-size: 13px; display: block; text-transform: uppercase;">When</span>
-                                                {{ date }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td width="30" valign="top" style="font-size: 20px;">📍</td>
-                                            <td style="font-size: 15px; color: #333; font-weight: bold;">
-                                                <span style="color: #888; font-weight: normal; font-size: 13px; display: block; text-transform: uppercase;">Where</span>
-                                                {{ location }}
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </td>
-                            </tr>
-                        </table>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #FFF4EC; border-radius: 6px; margin: 25px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                            <tr>
+                                                <td width="30" valign="top" style="padding-bottom: 15px; font-size: 20px;">📅</td>
+                                                <td style="padding-bottom: 15px; font-size: 15px; color: #333; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">When</span>
+                                                    {{ date }}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td width="30" valign="top" style="font-size: 20px;">📍</td>
+                                                <td style="font-size: 15px; color: #333; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Where</span>
+                                                    {{ location }}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
 
-                        <p style="color: #555555; font-size: 15px; line-height: 1.6; margin-bottom: 30px;">
-                            <strong>About this event:</strong><br>
-                            {{ description }}
-                        </p>
+                            <p style="color: #555555; font-size: 15px; line-height: 1.6; margin-bottom: 30px; font-family: sans-serif;">
+                                <strong style="color: #333;">About this event:</strong><br>
+                                {{ description }}
+                            </p>
 
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                                <td align="center">
-                                    <a href="{{ link }}" class="btn" style="background-color: #E35205; color: #ffffff; padding: 14px 30px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 5px; display: inline-block; mso-padding-alt: 0;">
-                                        <span style="mso-text-raise: 15pt;">👉 Sign Up Now</span>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ link }}" style="background-color: #E35205; color: #ffffff; padding: 14px 30px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 5px; display: inline-block; font-family: sans-serif;">
+                                            👉 Sign Up Now
                                         </a>
-                                </td>
-                            </tr>
-                        </table>
+                                    </td>
+                                </tr>
+                            </table>
 
-                        <p style="color: #999999; font-size: 13px; text-align: center; margin-top: 30px;">
-                            Click the button above to view details and secure your spot.
-                        </p>
+                            <p style="color: #999999; font-size: 13px; text-align: center; margin-top: 30px; font-family: sans-serif;">
+                                Click the button above to view details and secure your spot.
+                            </p>
 
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center" style="background-color: #f8f8f8; padding: 20px; border-top: 1px solid #eeeeee;">
-                        <p style="color: #888888; font-size: 12px; line-height: 1.4; margin: 0;">
-                            &copy; {% now "Y" %} UJ Community Engagement<br>
-                            You received this email because you are a registered student volunteer.
-                        </p>
-                    </td>
-                </tr>
+                    <tr>
+                        <td align="center" style="background-color: #f8f8f8; padding: 20px; border-top: 1px solid #eeeeee; font-family: sans-serif;">
+                            <p style="color: #888888; font-size: 12px; line-height: 1.4; margin: 0;">
+                                &copy; {% now "Y" %} Centre For Students Health and Wellness<br>
+                                You received this email because you are a registered student volunteer.
+                            </p>
+                        </td>
+                    </tr>
 
-            </table>
-        </div>
-    </center>
-</body>
+                </table>
+                </td>
+        </tr>
+    </table>
+    </body>
 </html>

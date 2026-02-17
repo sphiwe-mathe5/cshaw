@@ -49,16 +49,12 @@ def send_new_event_email(activity):
     """
     subject = f"New Event: {activity.title} 📅"
 
-    
     if activity.campus == 'ALL':
-        
         students = User.objects.filter(role=User.Roles.STUDENT)
         print("📢 Sending email to ALL campuses.")
     else:
-        
         students = User.objects.filter(role=User.Roles.STUDENT, campus=activity.campus)
         print(f"📢 Sending email only to {activity.campus} students.")
-    
     
     student_emails = list(students.values_list('email', flat=True))
 
@@ -66,7 +62,6 @@ def send_new_event_email(activity):
         print("⚠️ No matching students found for email notification.")
         return 
 
-    
     context = {
         'title': activity.title,
         'date': activity.date_time.strftime('%d %B %Y at %H:%M'),
@@ -78,18 +73,17 @@ def send_new_event_email(activity):
     html_content = render_to_string('users/new_event_email.html', context)
     text_content = strip_tags(html_content)
 
-    messages = []
-    for email_addr in student_emails:
-        message = (
-            subject,
-            text_content,
-            settings.DEFAULT_FROM_EMAIL,
-            [email_addr]
-        )
-        messages.append(message)
-
     try:
-        send_mass_mail(tuple(messages), fail_silently=True)
+        for email_addr in student_emails:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,  # Plain text fallback
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email_addr]
+            )
+            msg.attach_alternative(html_content, "text/html")  # Attach HTML version
+            msg.send(fail_silently=True)
+        
         print(f"✅ Sent email to {len(student_emails)} students.")
     except Exception as e:
         print(f"❌ Failed to send event emails: {e}")

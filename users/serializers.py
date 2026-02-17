@@ -16,7 +16,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'student_number', 'password', 'campus', 'recruiter_student_number']
+        fields = ['first_name', 'last_name', 'email', 'student_number', 'password', 'campus', 'recruiter_student_number', 'can_manage_attendance']
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, attrs):
@@ -70,7 +70,7 @@ class StudentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'student_number', 'campus', 'executive_position', 'awards', 'total_hours']
+        fields = ['id', 'first_name', 'last_name', 'email', 'student_number', 'campus', 'executive_position', 'awards', 'total_hours', 'can_manage_attendance']
 
     def get_total_hours(self, obj):
         # Calculate sum of hours from attended activities
@@ -137,7 +137,7 @@ class UserManageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['executive_position', 'awards'] # Only fields coordinators can change
+        fields = ['executive_position', 'awards', 'can_manage_attendance'] # Only fields coordinators can change
         
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
@@ -153,3 +153,6 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Current password is incorrect.")
         return value
+    
+    
+    

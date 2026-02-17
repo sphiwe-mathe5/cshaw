@@ -11,6 +11,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = ['*']
 #ALLOWED_HOSTS = ['cshawhub.com']
+OPENAI_API_KEY = config('OPENAI_API_KEY')
 FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
 
 # Application definition
@@ -43,6 +44,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    "https://*.ngrok-free.app",
+    "https://*.ngrok.io",
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -144,7 +147,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Johannesburg'
 
 USE_I18N = True
 

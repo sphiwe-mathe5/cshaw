@@ -15,9 +15,7 @@ from .serializers import (
 )
 from .services import send_welcome_email
 from .models import User, Award
-
 from .permissions import IsCoordinator
-
 
 
 class StudentRegistrationView(generics.CreateAPIView):
@@ -71,18 +69,28 @@ class LogoutView(views.APIView):
         return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
 
 class AssignExecutiveView(views.APIView):
-
     permission_classes = [IsCoordinator]
 
     def post(self, request):
         student_id = request.data.get('student_id')
         position = request.data.get('position')
+        
+        # 1. Capture the checkbox value
+        can_manage = request.data.get('can_manage_attendance')
 
         try:
             student = User.objects.get(id=student_id, role=User.Roles.STUDENT)
+            
+            # 2. Update fields
             student.executive_position = position
+            
+            # 3. Handle the Boolean (Check if it was sent)
+            if can_manage is not None:
+                student.can_manage_attendance = bool(can_manage)
+
             student.save()
             return Response({"message": f"Student assigned as {position}"})
+            
         except User.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
         
