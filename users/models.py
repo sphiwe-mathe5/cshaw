@@ -27,6 +27,13 @@ class User(AbstractUser):
 
     username = None
     email = models.EmailField(_('email address'), unique=True)
+    
+    manual_bonus_hours = models.DecimalField(
+        max_digits=6, 
+        decimal_places=2, 
+        default=0.00,
+        help_text="Admins can use this to manually add or subtract hours from the student's total."
+    )
 
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.STUDENT)
     campus = models.CharField(max_length=10, choices=Campuses.choices, null=True, blank=True)

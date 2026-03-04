@@ -21,7 +21,10 @@ from .utils import render_to_pdf
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.http import HttpResponse
-
+from django.core.mail import EmailMultiAlternatives
+from users.models import User
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 
 def index_page(request):
@@ -217,23 +220,29 @@ class SignupCreateView(generics.CreateAPIView):
         role_ids = self.request.data.get('selected_roles', [])
         activity = get_object_or_404(VolunteerActivity, pk=activity_id)
 
+        # 1. Campus Check (Unchanged)
         if activity.campus != 'ALL' and activity.campus != user.campus:
             raise ValidationError(
                 f"You cannot RSVP for {activity.campus} events. You are registered at {user.campus}."
             )
         
+        # 2. Duplicate Check (Unchanged)
         if ActivitySignup.objects.filter(user=user, activity_id=activity_id).exists():
             raise ValidationError("You have already signed up for this event.")
         
-        if activity.spots_left <= 0:
+        # 3. UPDATED: Capacity Check
+        # Only check if full IF total_spots is set (not None)
+        if activity.total_spots is not None and activity.spots_taken >= activity.total_spots:
             raise ValidationError("Sorry, this event is fully booked.")
         
+        # 4. Save Signup
         signup_instance = serializer.save(user=user)
 
         if role_ids:
             valid_roles = activity.roles.filter(id__in=role_ids)
             signup_instance.roles.set(valid_roles)
 
+        # 5. Update Counter
         activity.spots_taken += 1
         activity.save()
 
@@ -281,9 +290,13 @@ class AttendanceActionView(views.APIView):
         except ActivitySignup.DoesNotExist:
             return Response({"error": "Signup not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user.role == 'STUDENT' and signup.activity.campus != request.user.campus:
-            return Response({"error": "You can only manage attendance for your own campus."}, 
-                          status=status.HTTP_403_FORBIDDEN)
+        # --- PERMISSION CHECK UPDATE ---
+        if request.user.role == 'STUDENT':
+            # Block ONLY if the campus is NOT 'ALL' AND NOT their own campus
+            if signup.activity.campus != 'ALL' and signup.activity.campus != request.user.campus:
+                return Response(
+                    {"error": "You can only manage attendance for your own campus or 'All Campus' events."}, 
+                    status=status.HTTP_403_FORBIDDEN)
 
         # --- TIME HANDLING ---
         # 1. Get current real-world time in SAST
@@ -433,8 +446,11 @@ class ExecutiveCampusEventsView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        # Remove the minus sign (-) to sort ascending (soonest first)
-        return VolunteerActivity.objects.filter(campus=user.campus).order_by('date_time')
+        
+        # Filter: Matches the user's campus OR matches 'ALL'
+        return VolunteerActivity.objects.filter(
+            Q(campus=user.campus) | Q(campus='ALL')
+        ).order_by('date_time')
     
 class EventRSVPListView(generics.ListAPIView):
     serializer_class = ActivityRSVPSerializer
@@ -459,6 +475,7 @@ class StudentStatsView(APIView):
         user = request.user
         TARGET_HOURS = 80.00
         current_year = timezone.now().year 
+        
         stats = ActivitySignup.objects.filter(
             user=user, 
             attended=True, 
@@ -468,11 +485,18 @@ class StudentStatsView(APIView):
             total_events=Count('id')
         )
         
-        total_hours = float(stats['total_hours'] or 0.00)
+        # 👇 ADD BONUS HOURS LOGIC HERE 👇
+        activity_hours = float(stats['total_hours'] or 0.00)
+        bonus_hours = float(getattr(user, 'manual_bonus_hours', 0.00)) 
+        
+        total_hours = activity_hours + bonus_hours # Combined Total
+        # 👆 -------------------------- 👆
+        
         events_count = stats['total_events'] or 0
         
-        remaining = max(0, TARGET_HOURS - total_hours)
-        progress_percent = min(100, (total_hours / TARGET_HOURS) * 100)
+
+        remaining = round(max(0, TARGET_HOURS - total_hours), 2)
+        progress_percent = round(min(100, (total_hours / TARGET_HOURS) * 100), 1)
         
         if total_hours >= 80:
             motivation = "👑 GOAT STATUS! 80+ hours? You really left no crumbs. Absolute legend."
@@ -549,10 +573,12 @@ class StudentStatsView(APIView):
         return Response({
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "campus": user.campus,  # Assuming your User model has a 'campus' field
+            "campus": user.campus,  
             "is_executive": bool(user.executive_position),
             "current_year": current_year, 
             "total_hours": total_hours,
+            "activity_hours": activity_hours, # Sending raw activity hours
+            "bonus_hours": bonus_hours,       # Sending raw bonus hours
             "events_count": events_count,
             "recruits_count": recruits_count,
             "target": TARGET_HOURS,
@@ -721,3 +747,53 @@ def email_quarterly_pdf(request):
     except Exception as e:
         print(f"Email Error: {e}")
         return Response({"error": "Failed to send email."}, status=500)
+    
+
+
+class SendAnnouncementView(APIView):
+    permission_classes = [IsAuthorizedExecutiveOrCoordinator] # Only Admins can send
+
+    def post(self, request):
+        subject = request.data.get('subject')
+        message = request.data.get('message')
+        target_campus = request.data.get('campus', 'ALL') # Default to ALL
+
+        if not subject or not message:
+            return Response({"error": "Subject and Message are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Select Recipients
+        if target_campus == 'ALL':
+            recipients = User.objects.filter(is_active=True).values_list('email', flat=True)
+        else:
+            recipients = User.objects.filter(campus=target_campus, is_active=True).values_list('email', flat=True)
+        
+        recipient_list = list(recipients)
+        
+        if not recipient_list:
+            return Response({"error": "No users found for this selection."}, status=status.HTTP_404_NOT_FOUND)
+
+        # 2. Render HTML Email
+        html_content = render_to_string('core/announcement.html', {
+            'subject': subject,
+            'message': message
+        })
+        text_content = strip_tags(html_content) # Fallback for old email clients
+
+        try:
+            # 3. Send Email (Using BCC to hide emails from each other)
+            # We send ONE email with everyone in BCC to save resources.
+            msg = EmailMultiAlternatives(
+                subject=f"[C-SHAW] {subject}",
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[settings.DEFAULT_FROM_EMAIL], # Send TO yourself
+                bcc=recipient_list # Blind Copy everyone else
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+
+            return Response({"message": f"Announcement sent successfully to {len(recipient_list)} volunteers."})
+
+        except Exception as e:
+            print(f"Email Error: {e}")
+            return Response({"error": "Failed to send emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

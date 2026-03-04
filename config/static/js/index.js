@@ -49,6 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 1. SHOW THE BUTTON (Only for Coordinators)
+
+    const announceLink = document.getElementById('nav-announcements');
+
+    // We just check if the link exists in the DOM 
+    // (If a Student is logged in, Django removes it, so announceLink will be null)
+    if (announceLink) {
+        announceLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Update active state in sidebar
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            announceLink.querySelector('a').classList.add('active');
+
+            // Render the page
+            renderAnnouncementPage(); 
+        });
+    }
+
     // Sidebar Toggle
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
@@ -264,12 +283,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const groups = {};
             
             allActivities.forEach(activity => {
-                const seriesName = activity.title.replace(/\s\(Day\s\d+\)$/i, '').trim();
+                // REGEX: strictly checks if the title ends with "(Day X)"
+                // This assumes your multi-day creator always appends this string.
+                const isSeriesIdentifier = /\s\(Day\s\d+\)$/i.test(activity.title);
                 
-                if (!groups[seriesName]) {
-                    groups[seriesName] = [];
+                let groupKey;
+
+                if (isSeriesIdentifier) {
+                    // CASE A: It is a Series
+                    // Clean the name (remove "Day 1") and use that as the key
+                    // This allows "Event (Day 1)" and "Event (Day 2)" to merge.
+                    groupKey = activity.title.replace(/\s\(Day\s\d+\)$/i, '').trim();
+                } else {
+                    // CASE B: It is a Single Event
+                    // Use a UNIQUE key (like the ID) so it NEVER merges with anything else.
+                    // Even if two events are named "Garden Cleanup", they will stay separate.
+                    groupKey = `__SINGLE__${activity.id}`; 
                 }
-                groups[seriesName].push(activity);
+                
+                if (!groups[groupKey]) {
+                    groups[groupKey] = [];
+                }
+                groups[groupKey].push(activity);
             });
 
             // 3. SORTING LOGIC (The Fix)
@@ -313,8 +348,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="cards-grid">
                     ${cardsHtml}
                 </div>
-                <footer class="minimal-footer" style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-                    <div class="footer-copyright">&copy; 2026 C-SHAW Hub. All rights reserved.</div>
+                
+                <footer class="minimal-footer" style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 25px; text-align: center;">
+                    
+                    <div style="margin-bottom: 15px;">
+                        <a href="/about/" style="color: #666; text-decoration: none; margin: 0 10px; font-weight: 500;">About</a>
+                        <span style="color: #ccc;">|</span>
+                        <a href="/privacy/" style="color: #666; text-decoration: none; margin: 0 10px; font-weight: 500;">Privacy Policy</a>
+                        <span style="color: #ccc;">|</span>
+                        <a href="/terms/" style="color: #666; text-decoration: none; margin: 0 10px; font-weight: 500;">Terms of Use</a>
+                    </div>
+
+                    <div class="footer-copyright" style="color: #999; font-size: 0.85rem;">
+                        &copy; 2026 C-SHAW Hub. All rights reserved.
+                    </div>
                 </footer>
             `;
 
@@ -382,7 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-body">
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <span class="card-badge">${activity.campus} Campus</span>
-                        <span style="font-size:0.8rem; font-weight:700; color:${spotsColor};">${activity.spots_left} spots left</span>
+                        <span style="font-size:0.8rem; font-weight:700; color:${activity.spots_left === null ? '#27ae60' : spotsColor};">
+                            ${activity.spots_left === null ? 'Open (Unlimited Spots)' : activity.spots_left + ' spots left'}
+                        </span>
                     </div>
                     <h3>${activity.title}</h3>
                     <p style="font-size: 0.85rem; color: #95a5a6; margin-bottom: 10px;">
@@ -578,13 +627,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            else if (activity.spots_left <= 0) {
+            else if (activity.spots_left !== null && activity.spots_left <= 0) {
                 actionButtonHtml = `
                     <button disabled style="background:#95a5a6; color:white; padding: 15px 40px; font-size:1.1rem; border:none; border-radius:4px; cursor:not-allowed;">
                         Event Full
                     </button>
                 `;
-            } 
+            }
 
             else {
                  actionButtonHtml = `
@@ -613,9 +662,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 📅 ${fullDate} &nbsp;|&nbsp; ⏰ ${startTimeStr} - ${endTimeStr} &nbsp;|&nbsp; ⏳ ${activity.duration_hours} Hours
                             </p>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:1.5rem; font-weight:700; color:var(--primary-orange);">${activity.spots_left}</div>
-                            <div style="color:#7F8C8D; font-size:0.9rem;">Spots Remaining</div>
+                    <div style="text-align:right;">
+                            <div style="font-size:1.5rem; font-weight:700; color:${activity.spots_left === null ? '#27ae60' : 'var(--primary-orange)'};">
+                                ${activity.spots_left === null ? 'Open' : activity.spots_left}
+                            </div>
+                            
+                            <div style="color:#7F8C8D; font-size:0.9rem;">
+                                ${activity.spots_left === null ? 'Unlimited Spots' : 'Spots Remaining'}
+                            </div>
                         </div>
                     </div>
 
@@ -694,8 +748,36 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderAttendanceSheet(activityId, backHandler) {
         const goBack = backHandler || renderCreateEventForm; 
         
-        // --- 1. SETUP HEADER WITH BULK BUTTON ---
+        // --- 1. SETUP HEADER, TABLE, AND ***MODAL*** ---
         document.getElementById('mainContent').innerHTML = `
+            <style>
+                /* Scoped CSS for the Attendance View */
+                .attendance-container { padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+                .table-scroll-wrapper { overflow-x: auto; }
+                .attendance-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+                .attendance-table th { text-align: left; padding: 12px 15px; color: #7f8c8d; font-weight: 600; border-bottom: 2px solid #eee; background: #f9f9f9; }
+                .attendance-table td { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+
+                /* Filter controls CSS */
+                .filters-wrapper { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+                .search-input { flex: 1; min-width: 250px; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;}
+                .search-input:focus { border-color: #E35205; }
+                .status-select { padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: #fff; cursor: pointer; outline: none; }
+                
+                /* MODAL CSS */
+                .modal-overlay {
+                    display: none; 
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.5); z-index: 9999;
+                    justify-content: center; align-items: center;
+                }
+                .modal-box {
+                    background: white; padding: 25px; border-radius: 8px;
+                    width: 90%; max-width: 400px;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                }
+            </style>
+
             <div class="header-section">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <button id="backToManage" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 500;">
@@ -714,6 +796,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             
             <div class="attendance-container">
+                <div class="filters-wrapper">
+                    <input type="text" id="attendanceSearch" class="search-input" placeholder="🔍 Search by student name or surname...">
+                </div>
                 <div class="table-scroll-wrapper">
                     <table class="attendance-table">
                         <thead>
@@ -731,7 +816,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     </table>
                 </div>
             </div>
-        `;
+
+            <div id="actionModal" class="custom-modal-overlay">
+                <div class="modal-box">
+                    <h3 id="modalTitle" style="margin-top:0;">Action</h3>
+                    <p>Student: <strong id="modalStudentName"></strong></p>
+                    
+                    <div style="margin: 15px 0;">
+                        <label style="display:block; margin-bottom:5px; font-size:0.9rem;">Time Recorded:</label>
+                        <input type="time" id="manualTimeInput" style="padding:8px; border:1px solid #ddd; border-radius:4px; width:100%;">
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                        <button onclick="document.getElementById('actionModal').style.display='none'" 
+                                style="padding:8px 16px; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer;">
+                            Cancel
+                        </button>
+                        <button id="confirmActionBtn" 
+                                style="padding:8px 16px; background:#E35205; color:white; border:none; border-radius:4px; cursor:pointer;">
+                            Confirm
+                        </button>
+                    </div>
+                </div>
+            </div>
+            `;
 
         document.getElementById('backToManage').onclick = goBack;
 
@@ -866,8 +974,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(39,174,96,0.2);">Sign In</button>`;
                 }
 
+                const fullNameLower = `${rsvp.student_name} ${rsvp.student_surname}`.toLowerCase();
+
                 const tr = document.createElement('tr');
+                tr.className = 'rsvp-row'; // Identifies rows for filtering
+                tr.dataset.searchName = fullNameLower; // Store name in DOM
                 tr.style.borderBottom = '1px solid #f0f0f0';
+
                 tr.innerHTML = `
                     <td style="padding: 15px;">
                         <div style="font-weight: 600; color: var(--text-main);">${rsvp.student_name} ${rsvp.student_surname}</div>
@@ -884,6 +997,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tbody.appendChild(tr);
             });
+
+            // --- FILTER LOGIC ---
+            const searchInput = document.getElementById('attendanceSearch');
+            const allRows = document.querySelectorAll('.rsvp-row');
+
+            function applyFilters() {
+                const searchTerm = searchInput.value.toLowerCase();
+
+                allRows.forEach(row => {
+                    const matchesSearch = row.dataset.searchName.includes(searchTerm);
+
+
+                    if (matchesSearch) {
+                        row.style.display = ''; // Show row
+                    } else {
+                        row.style.display = 'none'; // Hide row instantly
+                    }
+                });
+            }
+
+            // Trigger filters instantly when typing or selecting
+            searchInput.addEventListener('input', applyFilters);
 
             // --- ATTACH LISTENERS ---
             document.querySelectorAll('.btn-signin').forEach(btn => {
@@ -1774,9 +1909,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <label>Calculated Duration (Hours)</label>
                                         <input type="number" name="duration_hours" id="inputDuration" step="0.1" readonly style="background-color: #e9ecef; cursor: not-allowed; color: #E35205; font-weight: bold;">
                                     </div>
-                                    <div>
-                                        <label>Spots (Per Day)</label>
-                                        <input type="number" name="total_spots" id="inputSpots" min="1" required>
+                                    <div class="form-group">
+                                        <label for="total_spots">Total Spots (Optional)</label>
+                                        <input type="number" id="total_spots" name="total_spots" placeholder="Leave empty for unlimited">
                                     </div>
                                 </div>
                             </div>
@@ -1964,9 +2099,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             
             <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.95rem;">
-                <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
-                <span style="color: #ccc;">/</span> 
-                ${event.total_spots}
+                ${event.total_spots === null 
+                    ? `<span style="color: #27ae60; font-weight: bold;">Unlimited</span>` 
+                    : `
+                        <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
+                        <span style="color: #ccc;">/</span> 
+                        ${event.total_spots}
+                    `
+                }
             </td>
             
             <td style="padding: 15px; text-align: right;">
@@ -2022,35 +2162,55 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderExecutiveAttendancePage() {
         mainContent.innerHTML = `
             <style>
-                /* Scoped styles for this view */
-                .responsive-table-wrapper {
-                    width: 100%;
-                    overflow-x: auto; /* Enables horizontal scroll on mobile */
-                    -webkit-overflow-scrolling: touch;
-                    padding-bottom: 10px;
-                }
+                /* ... (Your existing Table CSS) ... */
+                .responsive-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
+                .styled-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+                .styled-table thead tr { background-color: #f8f9fa; color: #666; text-align: left; font-weight: 600; }
+                .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #eee; }
                 
-                .styled-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    min-width: 600px; /* CRITICAL: Forces table to be wide enough so it doesn't squish text */
+                /* --- NEW: MODAL CSS --- */
+                .modal-overlay {
+                    display: none; /* Hidden by default */
+                    position: fixed; 
+                    z-index: 1000; 
+                    left: 0;
+                    top: 0;
+                    width: 100%; 
+                    height: 100%; 
+                    overflow: auto; 
+                    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+                    justify-content: center;
+                    align-items: center;
                 }
 
-                .styled-table thead tr {
-                    background-color: #f8f9fa;
-                    color: #666;
-                    text-align: left;
-                    font-weight: 600;
+                .modal-content {
+                    background-color: #fefefe;
+                    margin: auto;
+                    padding: 20px;
+                    border: 1px solid #888;
+                    width: 90%;
+                    max-width: 500px;
+                    border-radius: 8px;
+                    position: relative;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 }
 
-                .styled-table th, 
-                .styled-table td {
-                    padding: 12px 15px; /* More breathing room */
-                    border-bottom: 1px solid #eee;
+                .close-modal {
+                    color: #aaa;
+                    float: right;
+                    font-size: 28px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    position: absolute;
+                    right: 15px;
+                    top: 5px;
                 }
 
-                .styled-table tbody tr:last-of-type {
-                    border-bottom: 2px solid #E35205; /* Orange accent at bottom of list */
+                .close-modal:hover,
+                .close-modal:focus {
+                    color: black;
+                    text-decoration: none;
+                    cursor: pointer;
                 }
             </style>
 
@@ -2074,6 +2234,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             <tr><td colspan="4" style="padding: 20px; text-align: center; color: #888;">Loading events...</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div id="actionModal" class="modal-overlay">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('actionModal').style.display='none'">&times;</span>
+                    <div id="modalBody">
+                        </div>
                 </div>
             </div>
         `;
@@ -2262,9 +2430,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             
             <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.95rem;">
-                <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
-                <span style="color: #ccc;">/</span> 
-                ${event.total_spots}
+                ${event.total_spots === null 
+                    ? `<span style="color: #27ae60; font-weight: bold;">Unlimited</span>` 
+                    : `
+                        <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
+                        <span style="color: #ccc;">/</span> 
+                        ${event.total_spots}
+                    `
+                }
             </td>
             
             <td style="padding: 15px; text-align: right;">
@@ -3292,6 +3465,118 @@ document.addEventListener('DOMContentLoaded', () => {
             durationInput.value = '';
         }
     };
+
+    function renderAnnouncementPage() {
+        mainContent.innerHTML = `
+            <div class="header-section">
+                <h1>📢 Make an Announcement</h1>
+                <p>Send a bulk email to all registered volunteers.</p>
+            </div>
+
+            <div class="cards-grid" style="display: block; max-width: 700px; margin: 0 auto;">
+                <div class="card" style="padding: 30px; border-top: 4px solid #E35205;">
+                    
+                    <form id="announcementForm">
+                        <div class="form-group">
+                            <label for="announceTarget">Recipients</label>
+                            <select id="announceTarget" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="ALL">All Volunteers (Entire Database)</option>
+                                <option value="APB">APB Campus Only</option>
+                                <option value="DFC">DFC Campus Only</option>
+                                <option value="APK">APK Campus Only</option>
+                                <option value="SWC">SWC Campus Only</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="announceSubject">Subject Line</label>
+                            <input type="text" id="announceSubject" placeholder="e.g. Important Update regarding Weekend Hiking" 
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" required>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="announceMessage">Message Body</label>
+                            <textarea id="announceMessage" rows="8" placeholder="Type your announcement here..." 
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;" required></textarea>
+                            <small style="color: #888;">The email will automatically include the C-SHAW header and footer.</small>
+                        </div>
+
+                        <div id="announceError" class="error-message hidden" style="margin-top: 15px; color: red;"></div>
+
+                        <button type="submit" id="sendAnnounceBtn" 
+                            style="margin-top: 20px; width: 100%; background-color: #2c3e50; color: white; padding: 12px; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer;">
+                            🚀 Send Announcement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        // Attach Listener
+        document.getElementById('announcementForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('sendAnnounceBtn');
+            const errorDiv = document.getElementById('announceError');
+            
+            // Get Values
+            const target = document.getElementById('announceTarget').value;
+            const subject = document.getElementById('announceSubject').value;
+            const message = document.getElementById('announceMessage').value;
+
+            if(!subject || !message) {
+                errorDiv.textContent = "Please fill in all fields.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Confirm
+            if(!confirm(`Are you sure you want to send this email to ${target === 'ALL' ? 'EVERYONE' : target + ' Campus'}?`)) {
+                return;
+            }
+
+            // Loading State
+            btn.textContent = "Sending... (This may take a moment)";
+            btn.disabled = true;
+            btn.style.backgroundColor = "#95a5a6";
+            errorDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/communications/announce/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        campus: target,
+                        subject: subject,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(data.message);
+                    // Reset Form
+                    document.getElementById('announceSubject').value = '';
+                    document.getElementById('announceMessage').value = '';
+                } else {
+                    errorDiv.textContent = data.error || "Failed to send.";
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.textContent = "Network error occurred.";
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.textContent = "🚀 Send Announcement";
+                btn.disabled = false;
+                btn.style.backgroundColor = "#2c3e50";
+            }
+        });
+    }
 
 
 

@@ -73,11 +73,16 @@ class StudentListSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'email', 'student_number', 'campus', 'executive_position', 'awards', 'total_hours', 'can_manage_attendance']
 
     def get_total_hours(self, obj):
-        # Calculate sum of hours from attended activities
-        # We use 'activitysignup_set' (or whatever your related_name is, likely 'signups' or default)
-        # Assuming model is ActivitySignup with 'hours_earned'
-        total = obj.activitysignup_set.filter(attended=True).aggregate(sum=Sum('hours_earned'))['sum']
-        return float(total or 0.0)
+        # 1. Get the sum of all attended events
+        activity_total = obj.activitysignup_set.filter(attended=True).aggregate(sum=Sum('hours_earned'))['sum']
+        
+        # 2. Convert to float (default to 0.0 if None)
+        calculated_hours = float(activity_total or 0.0)
+        
+        # 3. Add the manual bonus hours from the Admin panel
+        bonus_hours = float(obj.manual_bonus_hours or 0.0)
+        
+        return calculated_hours + bonus_hours
 
 class UserSerializer(serializers.ModelSerializer):
     awards = AwardSerializer(many=True, read_only=True) # Nested serializer

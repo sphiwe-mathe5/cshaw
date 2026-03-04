@@ -7,7 +7,8 @@
     <h2>Coordinator Registration</h2>
     <p class="subtitle">Staff and Leadership Sign Up</p>
 
-    <form id="coordinatorRegisterForm">
+    <form id="coordinatorRegisterForm" data-sitekey="{{ RECAPTCHA_SITE_KEY }}">
+        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
         <div class="form-group">
             <label for="first_name">First Name</label>
             <input type="text" id="first_name" name="first_name" required>

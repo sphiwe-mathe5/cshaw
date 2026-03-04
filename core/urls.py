@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/reports/event/<int:pk>/email/', views.email_report_pdf, name='report-email'),
     path('api/reports/quarterly/download/', views.download_quarterly_pdf, name='quarterly-download'),
     path('api/reports/quarterly/email/', views.email_quarterly_pdf, name='quarterly-email'),
+    path('api/communications/announce/', views.SendAnnouncementView.as_view(), name='send-announcement'),
 ]

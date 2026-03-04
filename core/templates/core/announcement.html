@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .header { background-color: #E35205; padding: 25px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .content { padding: 30px; color: #333333; line-height: 1.6; font-size: 16px; }
+        .footer { background-color: #1a1a2e; padding: 20px; text-align: center; color: #888888; font-size: 12px; }
+        .footer a { color: #E35205; text-decoration: none; margin: 0 5px; }
+        .btn { display: inline-block; background-color: #E35205; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>C-SHAW Announcement</h1>
+        </div>
+
+        <div class="content">
+            <h2 style="color: #2c3e50; margin-top: 0;">{{ subject }}</h2>
+            
+            <p style="white-space: pre-line;">{{ message }}</p>
+            
+            <p style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; font-style: italic; color: #7f8c8d; font-size: 0.9rem;">
+                This is an official announcement from the C-SHAW Volunteer Hub.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <a href="https://cshaw.co.za/about/">About</a> | 
+                <a href="https://cshaw.co.za/privacy/">Privacy</a> | 
+                <a href="https://cshaw.co.za/terms/">Terms</a>
+            </p>
+            &copy; {% now "Y" %} Centre for Student Health & Wellness<br>
+        </div>
+    </div>
+</body>
+</html>

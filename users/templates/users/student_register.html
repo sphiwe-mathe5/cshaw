@@ -7,7 +7,8 @@
     <h2>Student Registration</h2>
     <p class="subtitle">Join the volunteer community</p>
 
-    <form id="studentRegisterForm">
+    <form id="studentRegisterForm" data-sitekey="{{ RECAPTCHA_SITE_KEY }}">
+        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
         <div class="form-group">
             <label for="first_name">First Name</label>
             <input type="text" id="first_name" name="first_name" required>
@@ -24,7 +25,7 @@
         </div>
 
         <div class="form-group">
-            <label for="email">Student Email</label>
+            <label for="email">Email</label>
             <input type="email" id="email" name="email" required>
         </div>
         
@@ -68,6 +69,13 @@
         </div>
 
         <div id="formError" class="error-message hidden"></div>
+
+        <p class="terms-notice" style="font-size: 0.85rem; color: #666; margin-bottom: 15px; line-height: 1.4;">
+            By creating an account, you agree to our 
+            <a href="/terms/" target="_blank" style="color: #E35205; text-decoration: none; font-weight: 500;">Terms of Use</a> 
+            and 
+            <a href="/privacy/" target="_blank" style="color: #E35205; text-decoration: none; font-weight: 500;">Privacy Policy</a>.
+        </p>
 
         <button type="submit" id="submitBtn">Register</button>
         <div id="loader" class="loader hidden"></div>

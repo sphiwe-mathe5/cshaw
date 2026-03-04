@@ -4,11 +4,12 @@
     <style>
         body { font-family: Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .header { background-color: #E35205; padding: 20px; text-align: center; }
-        .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
-        .content { padding: 30px; color: #333333; line-height: 1.6; }
-        .btn { display: inline-block; background-color: #E35205; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
-        .footer { background-color: #1a1a2e; padding: 15px; text-align: center; color: #888888; font-size: 12px; }
+        .header { background-color: #E35205; padding: 25px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 0.5px; }
+        .content { padding: 35px 30px; color: #333333; line-height: 1.6; }
+        .btn { display: inline-block; background-color: #E35205; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; margin-top: 25px; box-shadow: 0 4px 6px rgba(227, 82, 5, 0.2); }
+        .footer { background-color: #1a1a2e; padding: 20px; text-align: center; color: #888888; font-size: 12px; }
+        .highlight-box { background-color: #fff8f5; border-left: 4px solid #E35205; padding: 15px; margin: 20px 0; font-size: 0.95rem; }
     </style>
 </head>
 <body>
@@ -17,20 +18,33 @@
             <h1>Welcome to C-SHAW Hub!</h1>
         </div>
         <div class="content">
-            <h2>Hi {{ first_name }},</h2>
-            <p>Welcome to the UJ Community Engagement family! 🎉</p>
-            <p>You have successfully registered as a <strong>{{ role_name }}</strong>.</p>
-            <p>You can now log in to the portal to view upcoming volunteer opportunities, track your hours, and manage your profile.</p>
+            <h2 style="color: #2c3e50;">Hi {{ first_name }},</h2>
+            
+            <p>Welcome to the C-SHAW family! 🎉 We are incredibly excited to have you on board.</p>
+            
+            <p>You have successfully registered as a <strong>{{ role_name }}</strong>. Get ready to jump in, volunteer, and become a key <strong>advocate for student health and wellness</strong> on campus.</p>
+            
+            <p>From health campaigns to <strong>fun activities like hiking</strong>, there are plenty of exciting ways for you to get involved and make a difference.</p>
+
+            <div class="highlight-box">
+                <strong>💡 Pro Tip:</strong> Keep track of your time! If you reach <strong>80 volunteer hours</strong>, you will receive an official Certificate of Service to boost your CV.
+            </div>
+            
+            <p>Log in to the portal now to view upcoming opportunities and start your journey.</p>
             
             <div style="text-align: center;">
                 <a href="{{ login_url }}" class="btn">Log In to Portal</a>
             </div>
             
-            <p style="margin-top: 30px;">If the button above doesn't work, copy this link:<br>
-            <small><a href="{{ login_url }}">{{ login_url }}</a></small></p>
+            <p style="margin-top: 30px; font-weight: bold; color: #E35205;">Good Luck!</p>
+
+            <p style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; font-size: 0.85rem; color: #999;">
+                If the button above doesn't work, copy this link:<br>
+                <a href="{{ login_url }}" style="color: #E35205;">{{ login_url }}</a>
+            </p>
         </div>
         <div class="footer">
-            &copy; {% now "Y" %} University of Johannesburg - Community Engagement<br>
+            &copy; {% now "Y" %} Centre for Student Health & Wellness<br>
             C-SHAW Volunteering Hub
         </div>
     </div>

@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
-from decouple import config # Assuming you use python-decouple
+from decouple import config
+from google.oauth2 import service_account
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = ['*']
-#ALLOWED_HOSTS = ['cshawhub.com']
+#ALLOWED_HOSTS = ['cshaw.co.za']
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
 
@@ -169,14 +170,19 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 # 2. SMTP Configuration (Example for Gmail)
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.postmarkapp.com'
 EMAIL_PORT = 587
-EMAIL_USE_TLS = True  # Encrypts the connection
+EMAIL_USE_TLS = True
 
 # 3. Your Credentials (Load these from .env file for security!)
 
-EMAIL_HOST_USER = config('EMAIL_HOST_USER') 
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = '894fe146-a518-49be-934b-52d5e96a0bf7'
+EMAIL_HOST_PASSWORD = '894fe146-a518-49be-934b-52d5e96a0bf7'
 
 # 4. Default Sender
-DEFAULT_FROM_EMAIL = 'UJ Volunteer Portal <noreply@yourdomain.com>'
+DEFAULT_FROM_EMAIL = 'info@cshaw.co.za'
+
+RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY')
+RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY')
+

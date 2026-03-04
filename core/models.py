@@ -14,7 +14,7 @@ class VolunteerActivity(models.Model):
     description = models.TextField(help_text="Short summary of the event")
     details = models.TextField(help_text="Full detailed explanation")
     
-    total_spots = models.PositiveIntegerField()
+    total_spots = models.PositiveIntegerField(null=True, blank=True, help_text="Leave blank for unlimited spots")
     spots_taken = models.PositiveIntegerField(default=0)
     
     date_time = models.DateTimeField()
@@ -37,6 +37,11 @@ class VolunteerActivity(models.Model):
 
     @property
     def spots_left(self):
+        # If total_spots is None (Unlimited), return None
+        if self.total_spots is None:
+            return None
+            
+        # Otherwise, calculate normally
         return self.total_spots - self.spots_taken
     
 

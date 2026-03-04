@@ -7,7 +7,8 @@
     <h2>Welcome Back</h2>
     <p class="subtitle">Log in to your account</p>
 
-    <form id="loginForm">
+    <form id="loginForm" data-sitekey="{{ RECAPTCHA_SITE_KEY }}">
+        <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response">
         <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" name="email" required>
@@ -38,8 +39,8 @@
     </form>
 
     <p class="switch-link">
-        New Student? <a href="/register/student/">Register here</a><br>
-        Coordinator? <a href="/register/coordinator/">Register here</a>
+        New Volunter? <a href="/register/student/">Register here</a><br>
+        Back <a href="/">Home</a>
     </p>
 </div>
 {% endblock %}
