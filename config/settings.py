@@ -12,7 +12,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 #ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['cshaw.co.za', 'www.cshaw.co.za', 'https://cshaw-production.up.railway.app/']
+ALLOWED_HOSTS = [
+    'cshaw.co.za', 
+    'www.cshaw.co.za', 
+    'cshaw-production.up.railway.app', # 👈 Removed https:// and the trailing slash
+    'localhost',                       # 👈 Add these so it doesn't break locally if DEBUG=False
+    '127.0.0.1'
+]
 
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
