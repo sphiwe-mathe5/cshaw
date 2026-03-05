@@ -13,7 +13,7 @@ from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth, ExtractYear
 import calendar
 from datetime import date, timedelta, datetime
-from users.services import send_new_event_email, send_signup_confirmation_email 
+from users.services import send_new_event_email, send_signup_confirmation_email , send_series_event_email
 from django.db.models import Q
 from .reports import get_event_stats, get_comparative_stats, get_or_create_ai_insight, get_detailed_quarterly_stats
 from django.db.models.functions import TruncQuarter
@@ -139,46 +139,41 @@ class ActivityCreateView(generics.CreateAPIView):
             start_date = date.fromisoformat(start_date_str)
             end_date = date.fromisoformat(end_date_str)
             
-            # Calculate number of days
             delta = end_date - start_date
-            created_events = []
+            
+            created_events_data = [] # For the API response
+            saved_activities = []    # For the Email function
 
-            # Loop through every day in the range
             for i in range(delta.days + 1):
                 current_day = start_date + timedelta(days=i)
-
-                # Skip Weekends? (Optional: Uncomment to enforce)
-                # if current_day.weekday() >= 5: continue 
-
-                # Combine Day + Fixed Start Time
                 full_datetime = f"{current_day}T{start_time_str}"
 
-                # Copy data
                 data = request.data.copy()
                 
-                # Update Title to include Day Number
                 original_title = request.data.get('title')
                 data['title'] = f"{original_title} (Day {i+1})"
                 
-                # Set specific fields
                 data['date_time'] = full_datetime
                 data['duration_hours'] = duration
 
-                # Clean up
                 if 'start_date' in data: del data['start_date']
                 if 'end_date' in data: del data['end_date']
 
-                # Save
                 serializer = self.get_serializer(data=data)
                 serializer.is_valid(raise_exception=True)
                 activity = serializer.save(created_by=request.user)
                 
-                # Email Logic (Send individual emails or rely on a different bulk notification)
-                send_new_event_email(activity) 
+                # ❌ REMOVED: send_new_event_email(activity) from here
                 
-                created_events.append(serializer.data)
+                saved_activities.append(activity)
+                created_events_data.append(serializer.data)
 
-            return Response(created_events, status=status.HTTP_201_CREATED)
+            # ✅ ADDED: Send ONE email for the entire series after the loop finishes
+            if saved_activities:
+                # You will need to import this new function at the top of your views.py
+                send_series_event_email(saved_activities, original_title) 
+
+            return Response(created_events_data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -371,11 +366,24 @@ class AttendanceActionView(views.APIView):
                 return Response({"error": "Sign-out time cannot be before Sign-in time."}, 
                               status=status.HTTP_400_BAD_REQUEST)
 
+            # Record the actual time they were signed out (for audit purposes)
             signup.sign_out_time = action_time
 
-            # Calculate & Cap Hours
-            duration = signup.sign_out_time - signup.sign_in_time
-            actual_hours = duration.total_seconds() / 3600
+            # --- STRICT TIME BOUNDING CALCULATION ---
+            # 1. If they sign in early, start counting at event_start
+            effective_sign_in = max(signup.sign_in_time, event_start_local)
+            
+            # 2. If they sign out late (e.g., 20:16), stop counting at event_end (19:00)
+            effective_sign_out = min(signup.sign_out_time, event_end_local)
+
+            # 3. Calculate the valid overlapped hours
+            if effective_sign_out > effective_sign_in:
+                duration = effective_sign_out - effective_sign_in
+                actual_hours = duration.total_seconds() / 3600
+            else:
+                actual_hours = 0.00 # Failsafe if times don't overlap the event at all
+
+            # 4. Failsafe max-cap just in case
             max_allowed = float(signup.activity.duration_hours or 0)
             final_hours = max_allowed if (max_allowed > 0 and actual_hours > max_allowed) else actual_hours
 
@@ -751,23 +759,29 @@ def email_quarterly_pdf(request):
 
 
 class SendAnnouncementView(APIView):
-    permission_classes = [IsAuthorizedExecutiveOrCoordinator] # Only Admins can send
+    permission_classes = [IsAuthorizedExecutiveOrCoordinator] # Or IsCoordinator based on your latest setup
 
     def post(self, request):
         subject = request.data.get('subject')
         message = request.data.get('message')
-        target_campus = request.data.get('campus', 'ALL') # Default to ALL
+        target_campus = request.data.get('campus', 'ALL')
+        custom_emails_raw = request.data.get('custom_emails', '') # Get custom emails
 
         if not subject or not message:
             return Response({"error": "Subject and Message are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 1. Select Recipients
-        if target_campus == 'ALL':
-            recipients = User.objects.filter(is_active=True).values_list('email', flat=True)
+        if target_campus == 'CUSTOM':
+            if not custom_emails_raw.strip():
+                return Response({"error": "No custom emails provided."}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Split by comma and strip empty spaces (e.g., " a@a.com , b@b.com " -> ["a@a.com", "b@b.com"])
+            recipient_list = [email.strip() for email in custom_emails_raw.split(',') if email.strip()]
+            
+        elif target_campus == 'ALL':
+            recipient_list = list(User.objects.filter(is_active=True).values_list('email', flat=True))
         else:
-            recipients = User.objects.filter(campus=target_campus, is_active=True).values_list('email', flat=True)
-        
-        recipient_list = list(recipients)
+            recipient_list = list(User.objects.filter(campus=target_campus, is_active=True).values_list('email', flat=True))
         
         if not recipient_list:
             return Response({"error": "No users found for this selection."}, status=status.HTTP_404_NOT_FOUND)
@@ -777,23 +791,24 @@ class SendAnnouncementView(APIView):
             'subject': subject,
             'message': message
         })
-        text_content = strip_tags(html_content) # Fallback for old email clients
+        text_content = strip_tags(html_content)
 
         try:
-            # 3. Send Email (Using BCC to hide emails from each other)
-            # We send ONE email with everyone in BCC to save resources.
+            # 3. Send Email
             msg = EmailMultiAlternatives(
                 subject=f"[C-SHAW] {subject}",
                 body=text_content,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[settings.DEFAULT_FROM_EMAIL], # Send TO yourself
-                bcc=recipient_list # Blind Copy everyone else
+                to=[settings.DEFAULT_FROM_EMAIL], 
+                bcc=recipient_list 
             )
             msg.attach_alternative(html_content, "text/html")
             msg.send()
 
-            return Response({"message": f"Announcement sent successfully to {len(recipient_list)} volunteers."})
+            return Response({"message": f"Announcement sent successfully to {len(recipient_list)} recipient(s)."})
 
         except Exception as e:
             print(f"Email Error: {e}")
             return Response({"error": "Failed to send emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#hlatshwayosp735@gmail.com, kmakgatho7@gmail.com, kamogeloshai24@gmail.com, lihlemdhluli082@gmail.com, nothembam57@gmail.com, thabisomsomi520@gmail.com, thulimbuduma@gmail.com, nompumelelochiliza54@gmail.com, chamanesphesihle961@gmail.com, xoliswamanopole@gmail.com, mokoenalindokuhle84@gmail.com, makgotsomaake23@gmail.com, masangotsepo7@gmail.com, nhlavutelondlovu49@gmail.com, nemufulwimukundi@gmail.com, nmsiza155@gmail.com, hlungwanenadine@gmail.com, vuyiswa.mbena@gmail.com, nobuhleangel23@gmail.com, maibelodivine17@gmail.com, nqekee@uj.ac.za, nazireemathe@gmail.com

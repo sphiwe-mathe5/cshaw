@@ -239,6 +239,141 @@
         </div>
     </div>
 
+    <style>
+        .alert-modal-overlay {
+            display: none; /* Hidden by default */
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); 
+            z-index: 10000; /* Extremely high so it sits above your actionModal (9999) */
+            justify-content: center; 
+            align-items: center;
+            backdrop-filter: blur(2px); /* Adds a nice modern blur effect */
+        }
+        
+        .alert-modal-box {
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px;
+            width: 90%; 
+            max-width: 350px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            /* A smooth pop-in animation */
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .alert-icon-wrapper {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            line-height: 1;
+        }
+        
+        .alert-title {
+            margin: 0 0 10px 0;
+            font-size: 1.25rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        
+        .alert-message {
+            margin: 0 0 25px 0;
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .alert-btn {
+            background: #E35205; /* Your C-SHAW Orange */
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        
+        .alert-btn:hover {
+            background: #c24404;
+        }
+    </style>
+
+    <div id="alertModal" class="alert-modal-overlay">
+        <div class="alert-modal-box">
+            <div id="alertIcon" class="alert-icon-wrapper">⚠️</div>
+            <h3 id="alertTitle" class="alert-title">Error</h3>
+            <p id="alertMessage" class="alert-message">Something went wrong.</p>
+            
+            <button onclick="closeCustomAlert()" class="alert-btn">Got it</button>
+        </div>
+    </div>
+
+    <style>
+        .confirm-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .confirm-btn-cancel {
+            background: #f1f1f1;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            transition: background 0.2s;
+        }
+        
+        .confirm-btn-cancel:hover {
+            background: #e4e4e4;
+        }
+
+        .confirm-btn-yes {
+            background: #2c3e50; /* Dark blue for action */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            transition: background 0.2s;
+        }
+        
+        .confirm-btn-yes:hover {
+            background: #1a252f;
+        }
+    </style>
+
+    <div id="confirmModal" class="alert-modal-overlay">
+        <div class="alert-modal-box">
+            <div id="confirmIcon" class="alert-icon-wrapper">⚡</div>
+            <h3 id="confirmTitle" class="alert-title">Confirm Action</h3>
+            <p id="confirmMessage" class="alert-message" style="white-space: pre-wrap;"></p>
+            
+            <div class="confirm-btn-group">
+                <button id="btnConfirmCancel" class="confirm-btn-cancel">Cancel</button>
+                <button id="btnConfirmYes" class="confirm-btn-yes">Yes, proceed</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     const isUserLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
     </script>

@@ -177,8 +177,8 @@ EMAIL_USE_TLS = True
 
 # 3. Your Credentials (Load these from .env file for security!)
 
-EMAIL_HOST_USER = '894fe146-a518-49be-934b-52d5e96a0bf7'
-EMAIL_HOST_PASSWORD = '894fe146-a518-49be-934b-52d5e96a0bf7'
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 # 4. Default Sender
 DEFAULT_FROM_EMAIL = 'info@cshaw.co.za'

@@ -92,6 +92,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             'date_time',    
             'spots_left',   
             'is_signed_up', 
+            'duration_hours',
             'date',         
             'start_time',   
             'details',      

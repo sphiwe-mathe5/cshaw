@@ -201,7 +201,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Submit Logic (Attached to window to be safe)
     window.submitAttendanceAction = async function() {
         const manualTime = document.getElementById('manualTimeInput').value;
-        window.closeActionModal(); // Close immediately for better UX
+        const confirmBtn = document.getElementById('confirmActionBtn'); // Grab the button
+        
+        if (!manualTime) {
+            window.showCustomAlert("Missing Info", "Please provide a valid time.", "⚠️");
+            return;
+        }
+
+        // Disable button to prevent accidental double-clicks while loading
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Processing...";
         
         try {
             const csrfToken = getCookie('csrftoken');
@@ -221,14 +230,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok) {
-                // Refresh the table using the global render function
+                // ✅ SUCCESS: Now it is safe to close the modal and refresh
+                window.closeActionModal();
+                
+                // Optional: You could show a success alert here if you want!
+                // window.showCustomAlert("Success", "Time recorded successfully!", "✅");
+                
                 renderAttendanceSheet(currentActivityId);
             } else {
+                // ❌ FAILED: Show the error, but keep the actionModal open!
                 window.showCustomAlert("Action Failed", data.error || "Unknown error occurred", "❌");
+                
+                // Reset the button so they can try again
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "Confirm";
             }
         } catch (err) {
             console.error(err);
             window.showCustomAlert("Network Error", "Please check your connection.", "⚠️");
+            
+            // Reset the button
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Confirm";
         }
     }
 
@@ -244,6 +267,41 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('alertMessage').textContent = message;
         document.getElementById('alertIcon').textContent = icon;
         document.getElementById('alertModal').style.display = 'flex';
+    }
+
+    // 5. Close Alert Function
+    window.closeCustomAlert = function() {
+        document.getElementById('alertModal').style.display = 'none';
+    }
+
+    // 6. Custom Confirm Function
+    window.showCustomConfirm = function(title, message, icon, onConfirm) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmIcon').textContent = icon;
+        
+        const modal = document.getElementById('confirmModal');
+        const btnYes = document.getElementById('btnConfirmYes');
+        const btnCancel = document.getElementById('btnConfirmCancel');
+
+        // Clear out old event listeners so it doesn't fire multiple times
+        btnYes.onclick = null;
+        btnCancel.onclick = null;
+
+        // If they click Cancel, just close it
+        btnCancel.onclick = () => {
+            modal.style.display = 'none';
+        };
+
+        // If they click Yes, close it AND run the fetch logic
+        btnYes.onclick = () => {
+            modal.style.display = 'none';
+            if (onConfirm && typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        };
+
+        modal.style.display = 'flex';
     }
 
 
@@ -464,10 +522,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Generate Mini-Rows
         const rowsHtml = events.map(ev => {
             const dayDate = new Date(ev.date_time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+            
+            // 👇 NEW: Check if spots are unlimited 👇
+            const spotsDisplay = ev.total_spots === null 
+                ? '<span style="color:#27ae60; font-weight:600;">Unlimited</span>' 
+                : `${ev.spots_left} spots`;
+
             return `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                     <div style="font-size: 0.85rem; color: #333;">
-                        <strong>${dayDate}</strong> <span style="color:#7f8c8d; font-size:0.8rem;">(${ev.spots_left} spots)</span>
+                        <strong>${dayDate}</strong> <span style="color:#7f8c8d; font-size:0.8rem;">(${spotsDisplay})</span>
                     </div>
                     <button id="view-btn-${ev.id}" style="font-size: 0.75rem; padding: 4px 8px; border: 1px solid #3498db; background: transparent; color: #3498db; border-radius: 4px; cursor: pointer;">
                         View Details
@@ -567,9 +631,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Logic for Cancellation (Date Check)
         const today = new Date();
+        const now = new Date();
         const eventDate = new Date(activity.date_time);
         const isToday = today.toDateString() === eventDate.toDateString();
         const isPast = today > eventDate;
+        const hasEventEnded = now > endDate;
 
 
         let actionButtonHtml = '';
@@ -616,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } 
 
-            else if (isPast) {
+        else if (hasEventEnded) {
                 actionButtonHtml = `
                     <button disabled style="background:#bdc3c7; color:white; padding: 15px 40px; font-size:1.1rem; border:none; border-radius:4px; cursor:not-allowed;">
                         Event Ended
@@ -746,7 +812,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function renderAttendanceSheet(activityId, backHandler) {
-        const goBack = backHandler || renderCreateEventForm; 
+        
+        // 1. Check who is logged in
+        const userRole = localStorage.getItem('user_role'); 
+        
+        // 2. Set the default page based on their role
+        const defaultBackPage = (userRole === 'COORDINATOR') 
+            ? renderCreateEventForm 
+            : renderExecutiveAttendancePage;
+            
+        // 3. Apply the handler
+        const goBack = backHandler || defaultBackPage;
         
         // --- 1. SETUP HEADER, TABLE, AND ***MODAL*** ---
         document.getElementById('mainContent').innerHTML = `
@@ -779,6 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </style>
 
             <div class="header-section">
+
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <button id="backToManage" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 500;">
                         &larr; Back to Events
@@ -894,24 +971,42 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (hasPendingStudents) {
                 bulkBtn.style.display = 'block';
-                bulkBtn.onclick = async () => {
+                bulkBtn.onclick = () => {
                     const confirmMsg = `Are you sure you want to sign out all remaining students?\n\nThey will be signed out at the official end time (${endTimeStr}).`;
-                    if (confirm(confirmMsg)) {
+                    
+                    // 👇 Trigger the Custom Confirm Modal 👇
+                    window.showCustomConfirm("Bulk Sign Out", confirmMsg, "⚡", async () => {
+                        // This block only runs if they click "Yes, proceed"
+                        
+                        // Optional: Show a loading state on the button
+                        bulkBtn.textContent = "Processing...";
+                        bulkBtn.disabled = true;
+
                         try {
                             const csrfToken = getCookie('csrftoken');
                             const res = await fetch(`/api/activities/${activityId}/bulk_signout/`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
                             });
+                            
                             const data = await res.json();
-                            if(res.ok) {
-                                alert(data.message);
+                            
+                            if (res.ok) {
+                                // Re-use your custom alert for success!
+                                window.showCustomAlert("Success", data.message, "✅");
                                 renderAttendanceSheet(activityId, backHandler); // Refresh table
                             } else {
-                                alert("Error: " + data.error);
+                                window.showCustomAlert("Action Failed", data.error || "Failed to bulk sign out.", "❌");
+                                bulkBtn.textContent = "⚡ Sign Out Remaining";
+                                bulkBtn.disabled = false;
                             }
-                        } catch(e) { console.error(e); alert("Network error"); }
-                    }
+                        } catch (e) { 
+                            console.error(e); 
+                            window.showCustomAlert("Network Error", "Please check your connection.", "⚠️");
+                            bulkBtn.textContent = "⚡ Sign Out Remaining";
+                            bulkBtn.disabled = false;
+                        }
+                    });
                 };
             }
 
@@ -3470,7 +3565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent.innerHTML = `
             <div class="header-section">
                 <h1>📢 Make an Announcement</h1>
-                <p>Send a bulk email to all registered volunteers.</p>
+                <p>Send a bulk email to all registered volunteers, a specific campus, or custom email addresses.</p>
             </div>
 
             <div class="cards-grid" style="display: block; max-width: 700px; margin: 0 auto;">
@@ -3485,7 +3580,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <option value="DFC">DFC Campus Only</option>
                                 <option value="APK">APK Campus Only</option>
                                 <option value="SWC">SWC Campus Only</option>
+                                <option value="CUSTOM">Custom Emails (Enter manually) ✍️</option>
                             </select>
+                        </div>
+
+                        <div class="form-group" id="customEmailGroup" style="display: none; margin-top: 15px;">
+                            <label for="customEmails">Email Addresses</label>
+                            <input type="text" id="customEmails" placeholder="e.g. john@test.com, mary@test.com" 
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            <small style="color: #888;">Separate multiple emails with a comma.</small>
                         </div>
 
                         <div class="form-group" style="margin-top: 15px;">
@@ -3512,7 +3615,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Attach Listener
+        // --- Toggle Custom Email Input ---
+        document.getElementById('announceTarget').addEventListener('change', (e) => {
+            const customGroup = document.getElementById('customEmailGroup');
+            if (e.target.value === 'CUSTOM') {
+                customGroup.style.display = 'block';
+            } else {
+                customGroup.style.display = 'none';
+            }
+        });
+
+        // --- Handle Form Submission ---
         document.getElementById('announcementForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -3521,6 +3634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Get Values
             const target = document.getElementById('announceTarget').value;
+            const customEmails = document.getElementById('customEmails').value;
             const subject = document.getElementById('announceSubject').value;
             const message = document.getElementById('announceMessage').value;
 
@@ -3530,8 +3644,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if(target === 'CUSTOM' && !customEmails.trim()) {
+                errorDiv.textContent = "Please enter at least one email address.";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
             // Confirm
-            if(!confirm(`Are you sure you want to send this email to ${target === 'ALL' ? 'EVERYONE' : target + ' Campus'}?`)) {
+            const confirmText = target === 'CUSTOM' ? 'these specific emails' : (target === 'ALL' ? 'EVERYONE' : target + ' Campus');
+            if(!confirm(`Are you sure you want to send this email to ${confirmText}?`)) {
                 return;
             }
 
@@ -3550,6 +3671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     body: JSON.stringify({
                         campus: target,
+                        custom_emails: customEmails, // Send custom emails to backend
                         subject: subject,
                         message: message
                     })
@@ -3562,6 +3684,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Reset Form
                     document.getElementById('announceSubject').value = '';
                     document.getElementById('announceMessage').value = '';
+                    document.getElementById('customEmails').value = '';
                 } else {
                     errorDiv.textContent = data.error || "Failed to send.";
                     errorDiv.classList.remove('hidden');
