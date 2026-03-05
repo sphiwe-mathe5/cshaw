@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ['*']
-#ALLOWED_HOSTS = ['cshaw.co.za', 'www.cshaw.co.za']
+#ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['cshaw.co.za', 'www.cshaw.co.za', 'https://cshaw-production.up.railway.app/']
 
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
@@ -51,6 +51,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8000',
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
+    'https://cshaw-production.up.railway.app',
 ]
 
 
@@ -89,6 +90,7 @@ CSRF_TRUSTED_ORIGINS = [  # ADD THIS - This was missing!
     'http://127.0.0.1:8000',
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
+    'https://cshaw-production.up.railway.app',
 ]
 
 SESSION_COOKIE_AGE = 86400  # 24 hours
