@@ -1,17 +1,33 @@
-
-from django.core.mail import EmailMultiAlternatives
+import threading
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from .models import User
-from django.core.mail import send_mass_mail, send_mail
 
+# 👇 1. Create the Threading Decorator 👇
+def send_in_background(function):
+    """
+    A decorator that runs the wrapped function in a separate background thread.
+    This prevents email sending from blocking the main web request.
+    """
+    def wrapper(*args, **kwargs):
+        thread = threading.Thread(target=function, args=args, kwargs=kwargs)
+        thread.daemon = True # Allows the thread to exit if the main program exits
+        thread.start()
+    return wrapper
+
+# 👇 2. Apply the decorator to all your email functions 👇
+
+@send_in_background
 def send_welcome_email(user, role_name):
     """
     Sends a multipart (HTML + Text) welcome email to the newly registered user.
     """
     subject = "Welcome to C-SHAW Hub! 🎉"
-    login_url = "http://localhost:8000/login/" 
+    
+    # TIP: Consider changing localhost to your actual Railway domain in production!
+    login_url = "https://cshaw.co.za/login/" 
     
     context = {
         'first_name': user.first_name,
@@ -20,11 +36,9 @@ def send_welcome_email(user, role_name):
     }
 
     html_content = render_to_string('users/welcome_email.html', context)
-
     text_content = strip_tags(html_content)
 
     try:
-        
         email = EmailMultiAlternatives(
             subject,
             text_content,           
@@ -32,20 +46,16 @@ def send_welcome_email(user, role_name):
             [user.email]            
         )
         email.attach_alternative(html_content, "text/html") 
-        
-        
         email.send()
-        
+        print(f"✅ Welcome email sent to {user.email}")
     except Exception as e:
-        
         print(f"❌ Failed to send welcome email to {user.email}: {e}")
 
 
+@send_in_background
 def send_new_event_email(activity):
     """
     Sends an email notification.
-    - If event is for specific campus (e.g., 'APB'), only those students get it.
-    - If event is 'ALL', everyone gets it.
     """
     subject = f"New Event: {activity.title} 📅"
 
@@ -67,7 +77,7 @@ def send_new_event_email(activity):
         'date': activity.date_time.strftime('%d %B %Y at %H:%M'),
         'location': activity.campus,
         'description': activity.description,
-        'link': "http://localhost:8000/" 
+        'link': "https://cshaw.co.za/" 
     }
     
     html_content = render_to_string('users/new_event_email.html', context)
@@ -77,11 +87,11 @@ def send_new_event_email(activity):
         for email_addr in student_emails:
             msg = EmailMultiAlternatives(
                 subject=subject,
-                body=text_content,  # Plain text fallback
+                body=text_content,  
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[email_addr]
             )
-            msg.attach_alternative(html_content, "text/html")  # Attach HTML version
+            msg.attach_alternative(html_content, "text/html")  
             msg.send(fail_silently=True)
         
         print(f"✅ Sent email to {len(student_emails)} students.")
@@ -89,6 +99,7 @@ def send_new_event_email(activity):
         print(f"❌ Failed to send event emails: {e}")
 
 
+@send_in_background
 def send_signup_confirmation_email(user, activity):
     """
     Sends a confirmation email to the student after they RSVP.
@@ -101,7 +112,7 @@ def send_signup_confirmation_email(user, activity):
         'date': activity.date_time.strftime('%d %B %Y at %H:%M'),
         'location': activity.campus or f"{activity.campus} Campus",
         'description': activity.description,
-        'dashboard_link': "http://localhost:8000/" 
+        'dashboard_link': "https://cshaw.co.za/" 
     }
     
     html_content = render_to_string('users/signup_confirmation.html', context)
@@ -121,6 +132,7 @@ def send_signup_confirmation_email(user, activity):
         print(f"❌ Failed to send confirmation email: {e}")
         
         
+@send_in_background
 def send_series_event_email(activities, original_title):
     """
     Sends a single email summarizing a multi-day event series.
@@ -128,13 +140,10 @@ def send_series_event_email(activities, original_title):
     if not activities:
         return
 
-    # Grab info from the first event to use for the general details
     first_event = activities[0]
     last_event = activities[-1]
-    
     campus = first_event.campus
     
-    # 1. Gather Recipients (Same logic as your single events)
     if campus == 'ALL':
         recipients = list(User.objects.filter(is_active=True).values_list('email', flat=True))
     else:
@@ -143,7 +152,6 @@ def send_series_event_email(activities, original_title):
     if not recipients:
         return
 
-    # 2. Prepare context for the HTML template
     context = {
         'title': original_title,
         'campus': campus,
@@ -156,13 +164,10 @@ def send_series_event_email(activities, original_title):
         'days_count': len(activities)
     }
 
-    # 3. Render HTML
     html_content = render_to_string('users/series_event.html', context)
     text_content = strip_tags(html_content)
-    
     subject = f"[C-SHAW] New Multi-Day Event: {original_title}"
 
-    # 4. Send Email
     try:
         msg = EmailMultiAlternatives(
             subject=subject,
@@ -173,5 +178,6 @@ def send_series_event_email(activities, original_title):
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send()
+        print(f"✅ Sent series email to {len(recipients)} students.")
     except Exception as e:
-        print(f"Failed to send series email: {e}")
+        print(f"❌ Failed to send series email: {e}")
