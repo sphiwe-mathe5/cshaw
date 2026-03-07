@@ -1,3 +1,28 @@
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function getValidCsrfToken() {
+    let token = getCookie('__Host-csrftoken');
+    if (!token) token = getCookie('csrftoken');
+    if (!token) {
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (input) token = input.value;
+    }
+    return token;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. Sidebar Navigation Logic ---
@@ -3778,23 +3803,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    function getValidCsrfToken() {
-        // 1. Try to grab the production __Host cookie first
-        let token = getCookie('__Host-csrftoken');
-        
-        // 2. If it's empty, grab the local cookie
-        if (!token) {
-            token = getValidCsrfToken();
-        }
-        
-        // 3. Absolute fallback: look for the hidden HTML input 
-        if (!token) {
-            const input = document.querySelector('[name=csrfmiddlewaretoken]');
-            if (input) token = input.value;
-        }
-        
-        return token;
-    }
 
     renderActivities();
 });
