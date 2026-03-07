@@ -287,7 +287,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) {
                     console.error("❌ Server rejected registration:", data);
-                    showError(data.error || 'Registration failed. Please try again.');
+                    
+                    let errorMessage = 'Registration failed. Please try again.';
+                    
+                    if (data.error) {
+                        // Catch our custom Python errors (like reCAPTCHA)
+                        errorMessage = data.error;
+                    } else if (typeof data === 'object') {
+                        // Catch DRF Serializer errors and grab the very first one
+                        const firstField = Object.keys(data)[0];
+                        const firstError = data[firstField][0];
+                        
+                        // Format it nicely (e.g., "Student number: This field must be unique.")
+                        const cleanFieldName = firstField.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        errorMessage = `${cleanFieldName}: ${firstError}`;
+                    }
+
+                    showError(errorMessage);
                     submitBtn.disabled = false;
                     loader.classList.add('hidden');
                     return;

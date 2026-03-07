@@ -18,6 +18,7 @@ from .serializers import (
     AwardSerializer,
     UserManageSerializer
 )
+from django.db import transaction
 from .services import send_welcome_email
 from .models import User, Award
 from .permissions import IsCoordinator
@@ -84,7 +85,12 @@ class StudentRegistrationView(generics.CreateAPIView):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        user = serializer.save()
+        # transaction.atomic() ensures that if anything in this block crashes, 
+        # the database instantly deletes the partial user and rolls back.
+        with transaction.atomic():
+            user = serializer.save()
+            
+        # The email is outside the transaction so it fires AFTER the user is safely saved
         send_welcome_email(user, "Student Volunteer")
 
 class CoordinatorRegistrationView(generics.CreateAPIView):
