@@ -3729,13 +3729,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
+            
+            // 1. Try to grab it directly from the hidden HTML input first (most reliable)
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            
+            // 2. If not in the DOM, check the prod cookie, then the local cookie
+            const csrfToken = csrfInput ? csrfInput.value : 
+                              (getCookie('__Host-csrftoken') || getCookie('csrftoken'));
+
+            if (!csrfToken) {
+                console.error("❌ Could not find CSRF token for logout.");
+                return;
+            }
+
             try {
                 const response = await fetch('/api/users/logout/', {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                    headers: { 'X-CSRFToken': csrfToken }
                 });
-                if (response.ok) window.location.href = '/login/';
-            } catch (err) { console.error(err); }
+                
+                if (response.ok) {
+                    // Optional: Clear out any local storage you are using for the user
+                    localStorage.removeItem('user_role'); 
+                    
+                    window.location.href = '/login/';
+                } else {
+                    console.error("❌ Logout failed with status:", response.status);
+                }
+            } catch (err) { 
+                console.error("Network error during logout:", err); 
+            }
         });
     }
 
