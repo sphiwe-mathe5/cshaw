@@ -6,7 +6,7 @@ import requests
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
 from django.urls import reverse_lazy
 from rest_framework.views import APIView
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from rest_framework.response import Response
 from .serializers import (
     StudentRegistrationSerializer, 
@@ -179,7 +179,8 @@ class LoginView(views.APIView):
 class LogoutView(views.APIView):
     def post(self, request):
         logout(request)
-        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+        # Instead of returning JSON, redirect the browser straight to login!
+        return redirect('/login/')
 
 class AssignExecutiveView(views.APIView):
     permission_classes = [IsCoordinator]
