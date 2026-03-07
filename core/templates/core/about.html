@@ -38,7 +38,7 @@
 <body>
 
     <nav class="navbar">
-        <a href="{% url 'index' %}" class="logo">Volunteer<span> Hub</span></a>
+        <a href="{% url 'index' %}" class="logo">C-SHAW</span></a>
         <div>
             {% if user.is_authenticated %}
                 <a href="{% url 'index' %}" class="btn-primary">Go to Dashboard</a>
@@ -51,7 +51,7 @@
 
     <section class="hero">
         <h1>Connecting Campus & Community</h1>
-        <p>The UJ Volunteer Portal bridges the gap between students and meaningful community engagement. We track impact, manage events, and empower students to make a difference.</p>
+        <p>The C-SHAW Volunteer Portal bridges the gap between students and meaningful community engagement. We track impact, manage events, and empower students to make a difference.</p>
     </section>
 
     <div class="grid-container">
@@ -73,7 +73,7 @@
                 <li><strong>Create Events:</strong> Post new opportunities in seconds.</li>
                 <li><strong>Digital Attendance:</strong> Say goodbye to paper. Manage RSVPs and attendance digitally.</li>
                 <li><strong>Live Stats:</strong> Monitor how many spots are left in real-time.</li>
-                <li><strong>Reports:</strong> Generate automated reports for university compliance.</li>
+                <li><strong>Reports:</strong> Generate automated reports.</li>
             </ul>
         </div>
     </div>
@@ -83,7 +83,6 @@
         <h3>Ready to get started?</h3>
         <p style="margin-bottom: 30px; color: #666;">Join the community today.</p>
         <a href="/register/student/" class="btn-primary">Register as Student</a>
-        <a href="/register/coordinator/" class="btn-outline">Coordinator Access</a>
     </section>
     {% endif %}
 

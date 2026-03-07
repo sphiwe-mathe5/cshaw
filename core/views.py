@@ -398,6 +398,23 @@ class AttendanceActionView(views.APIView):
                 "hours": signup.hours_earned
             })
 
+        elif action == 'resignin':
+            if not signup.sign_out_time:
+                return Response({"error": "Student must be signed out first before re-signing in."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if action_time < event_start_local or action_time > event_end_local:
+                return Response({"error": "Cannot re-sign in outside of official event hours."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if action_time <= signup.sign_out_time:
+                return Response({"error": "Re-sign in time must be after their last sign-out time."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Start a new session (hours_earned stays safe in the DB)
+            signup.sign_in_time = action_time
+            signup.sign_out_time = None  # Resets them to "In Progress"
+            signup.save()
+
+            return Response({"message": "Re-Signed In", "time": signup.sign_in_time})
+
         return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['POST'])

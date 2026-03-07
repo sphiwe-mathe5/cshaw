@@ -943,6 +943,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateStr = startDate.toLocaleDateString('en-GB', dateOptions);
             const startTimeStr = startDate.toLocaleTimeString('en-GB', timeOptions);
             const endTimeStr = endDate.toLocaleTimeString('en-GB', timeOptions);
+
+            const now = new Date();
+            const hasEventEnded = now > endDate;
             
             // Note: We need the Start Time String (HH:MM) for manual sign-ins later
             const rawStartTime = startDate.toLocaleTimeString('en-GB', { ...timeOptions }); 
@@ -1043,26 +1046,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         style="padding:6px 16px; background:#e74c3c; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(231,76,60,0.2);">Sign Out</button>`;
                 } 
                 else if (rsvp.sign_out_time) {
-                    // --- CASE B: COMPLETED (UPDATED) ---
+                    // --- CASE B: COMPLETED ---
                     
-                    // 1. Get readable In/Out times
                     const inTime = new Date(rsvp.sign_in_time).toLocaleTimeString('en-GB', timeFmt);
                     const outTime = new Date(rsvp.sign_out_time).toLocaleTimeString('en-GB', timeFmt);
 
                     statusBadge = '<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:500;">✓ Completed</span>';
                     
-                    // 2. Format the Time Log Column
                     timeLog = `
                         <div style="line-height:1.2;">
                             <strong style="color:#333; font-size:1rem;">${rsvp.hours_earned} Hrs</strong>
                             <div style="font-size:0.75rem; color:#888; margin-top:2px;">
-                                (${inTime} - ${outTime})
+                                (Last out: ${outTime})
                             </div>
                         </div>
                     `;
                     
-                    actionBtn = `<span style="color:#27ae60; font-weight:bold; font-size:1.2rem;">✓</span>`;
+                    // 👇 NEW: If event is still going, show the Re-Sign In button 👇
+                    if (!hasEventEnded) {
+                        actionBtn = `
+                            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end;">
+                                <span style="color:#27ae60; font-weight:bold; font-size:1.2rem;">✓</span>
+                                <button class="btn-resignin" data-id="${rsvp.id}" data-name="${rsvp.student_name}" data-min="${outTime}"
+                                    style="padding:4px 10px; background:#f39c12; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem; font-weight:600;">
+                                    Re-Sign In
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        actionBtn = `<span style="color:#27ae60; font-weight:bold; font-size:1.2rem;">✓</span>`;
+                    }
                 }
+
                 else {
                     // --- CASE C: NOT STARTED ---
                     actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" data-name="${rsvp.student_name}" ${minTimeAttr}
@@ -1125,6 +1140,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.btn-signout').forEach(btn => {
                 btn.addEventListener('click', () => {
                       openActionModal(btn.dataset.id, btn.dataset.name, 'signout', activityId, btn.dataset.min);
+                });
+            });
+
+            document.querySelectorAll('.btn-resignin').forEach(btn => {
+                btn.addEventListener('click', () => {
+                     openActionModal(btn.dataset.id, btn.dataset.name, 'resignin', activityId, btn.dataset.min);
                 });
             });
 
@@ -1219,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     background: rgba(255, 107, 53, 0.1);
                     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
                 ">
-                    ★ ${data.executive_position || 'Executive Member'}
+                 ${data.executive_position || 'Executive Member'}
                 </div>
             ` : '';
 
