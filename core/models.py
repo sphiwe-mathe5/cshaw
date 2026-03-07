@@ -1,5 +1,12 @@
+import uuid
+
 from django.db import models
 from django.conf import settings
+from config.gcloud import GoogleCloudMediaFileStorage
+
+def secure_profile_path(instance, filename):
+    ext = filename.split('.')[-1].lower()
+    return f"images/{uuid.uuid4()}.{ext}"
 
 class VolunteerActivity(models.Model):
     class Campuses(models.TextChoices):
@@ -24,7 +31,7 @@ class VolunteerActivity(models.Model):
         help_text="Duration in hours (e.g. 2.5)",
         null=True, blank=True
     )
-    image = models.ImageField(upload_to='activity_images/', blank=True, null=True)
+    image = models.ImageField(storage=GoogleCloudMediaFileStorage(), upload_to=secure_profile_path, blank=True, null=True)
     additional_details = models.TextField(blank=True, null=True, help_text="What to bring, dress code, etc.")
     
     ai_insight = models.TextField(blank=True, null=True, help_text="Cached AI analysis for reporting")
