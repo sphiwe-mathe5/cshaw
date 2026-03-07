@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') 
+                    'X-CSRFToken': getValidCsrfToken() 
                 },
                 body: JSON.stringify(data)
             });

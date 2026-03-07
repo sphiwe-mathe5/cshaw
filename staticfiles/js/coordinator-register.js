@@ -184,7 +184,7 @@ document.getElementById('coordinatorRegisterForm').addEventListener('submit', as
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getValidCsrfToken()
             },
             body: JSON.stringify(formData)
         });

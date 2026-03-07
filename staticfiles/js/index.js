@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmBtn.textContent = "Processing...";
         
         try {
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = getValidCsrfToken();
             
             const response = await fetch(`/api/attendance/${currentSignupId}/`, {
                 method: 'POST',
@@ -793,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'DELETE', 
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken') 
+                    'X-CSRFToken': getValidCsrfToken() 
                 }
             });
 
@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bulkBtn.disabled = true;
 
                         try {
-                            const csrfToken = getCookie('csrftoken');
+                            const csrfToken = getValidCsrfToken();
                             const res = await fetch(`/api/activities/${activityId}/bulk_signout/`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
@@ -1570,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
+                            'X-CSRFToken': getValidCsrfToken()
                         },
                         body: JSON.stringify(data)
                     });
@@ -1615,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
+                            'X-CSRFToken': getValidCsrfToken()
                         },
                         body: JSON.stringify(data)
                     });
@@ -1645,7 +1645,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  const isChecked = e.target.checked;
                  await fetch('/api/users/profile/', {
                      method: 'PATCH',
-                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getValidCsrfToken()},
                      body: JSON.stringify({ receive_notifications: isChecked })
                  });
             });
@@ -1654,7 +1654,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(confirm("Are you sure?")) {
                      await fetch('/api/users/delete/', {
                          method: 'DELETE',
-                         headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                         headers: { 'X-CSRFToken': getValidCsrfToken() }
                      });
                      window.location.href = '/login/';
                 }
@@ -1675,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': getValidCsrfToken()
                 },
                 body: JSON.stringify({ action: action })
             });
@@ -2919,7 +2919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
 
         try {
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = getValidCsrfToken();
             let url, bodyData;
 
             // DYNAMIC URL SELECTION
@@ -3235,7 +3235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`/api/activities/${id}/`, {
                 method: 'DELETE',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                headers: { 'X-CSRFToken': getValidCsrfToken() }
             });
 
             if (response.ok) {
@@ -3298,7 +3298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, {
                 method: method,
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                headers: { 'X-CSRFToken': getValidCsrfToken() },
                 body: formData
             });
 
@@ -3403,7 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': getValidCsrfToken()
                     },
                     body: JSON.stringify(data) 
                 });
@@ -3509,7 +3509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const checkboxes = document.querySelectorAll('input[name="selected_awards_ids"]:checked');
             const awardIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
             
-            const csrfToken = getCookie('csrftoken');
+            const csrfToken = getValidCsrfToken();
 
             try {
                 const response = await fetch(`/api/users/students/${studentId}/update/`, {
@@ -3688,7 +3688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': getValidCsrfToken()
                     },
                     body: JSON.stringify({
                         campus: target,
@@ -3735,7 +3735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 2. If not in the DOM, check the prod cookie, then the local cookie
             const csrfToken = csrfInput ? csrfInput.value : 
-                              (getCookie('__Host-csrftoken') || getCookie('csrftoken'));
+                              (getCookie('__Host-csrftoken') || getValidCsrfToken());
 
             if (!csrfToken) {
                 console.error("❌ Could not find CSRF token for logout.");
