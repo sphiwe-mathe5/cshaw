@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'storages',
     'corsheaders',
     'core',
-    'users'
+    'users',
     'anymail',
 ]
 
