@@ -1559,9 +1559,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="profile-section danger-zone">
                     <h3>Danger Zone</h3>
                     <p style="color: #c0392b; margin-bottom: 20px;">
-                        Deleting your account is permanent. All your volunteer hours, history, and signups will be erased immediately.
+                        To protect your account from unauthorized changes, direct deletion is disabled. Deleting your account is permanent and will erase all your volunteer hours and history. 
+                        <br><br>
+                        If you wish to proceed, please contact support to verify your identity.
                     </p>
-                    <button id="deleteAccountBtn" class="btn-danger">Delete My Account</button>
+                    <a href="mailto:support@cshaw.co.za?subject=Account Deletion Request" class="btn-danger" style="display: inline-block; text-align: center; text-decoration: none;">
+                        Request Account Deletion
+                    </a>
                 </div>
             `;
 
@@ -1675,15 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  });
             });
 
-            document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
-                if(confirm("Are you sure?")) {
-                     await fetch('/api/users/delete/', {
-                         method: 'DELETE',
-                         headers: { 'X-CSRFToken': getValidCsrfToken() }
-                     });
-                     window.location.href = '/login/';
-                }
-            });
 
         } catch (err) {
             console.error(err);
