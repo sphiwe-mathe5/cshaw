@@ -23,6 +23,7 @@ multidict==6.1.0
 django_storages==1.14.6
 google_cloud_storage==3.4.1
 django-anymail[sendgrid]
+django-anymail[postmark]
 gunicorn==23.0.0
 django-csp
 dj-database-url==3.1.0

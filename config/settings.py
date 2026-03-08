@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'core',
     'users'
+    'anymail',
 ]
 
 MIDDLEWARE = [
@@ -230,13 +231,18 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.postmarkapp.com'
-EMAIL_PORT = 2525 
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = 'info@cshaw.co.za'
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+
+ANYMAIL = {
+    # Postmark uses your Server API Token for authentication. 
+    # If you used EMAIL_HOST_PASSWORD before, it's the exact same token!
+    "POSTMARK_SERVER_TOKEN": config('EMAIL_HOST_PASSWORD'), 
+}
+
+# Construct the beautiful sender name
+FROM_EMAIL_ADDRESS = 'info@cshaw.co.za'
+DEFAULT_FROM_EMAIL = f"C-SHAW Hub <{FROM_EMAIL_ADDRESS}>"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY')
 RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY')
