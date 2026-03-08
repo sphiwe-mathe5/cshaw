@@ -13,7 +13,7 @@ from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth, ExtractYear
 import calendar
 from datetime import date, timedelta, datetime
-from users.services import send_new_event_email, send_signup_confirmation_email , send_series_event_email
+from users.services import BackgroundEmailService, send_new_event_email, send_signup_confirmation_email , send_series_event_email
 from django.db.models import Q
 from .reports import get_event_stats, get_comparative_stats, get_or_create_ai_insight, get_detailed_quarterly_stats
 from django.db.models.functions import TruncQuarter
@@ -776,23 +776,21 @@ def email_quarterly_pdf(request):
 
 
 class SendAnnouncementView(APIView):
-    permission_classes = [IsAuthorizedExecutiveOrCoordinator] # Or IsCoordinator based on your latest setup
+    permission_classes = [IsAuthorizedExecutiveOrCoordinator] 
 
     def post(self, request):
         subject = request.data.get('subject')
         message = request.data.get('message')
         target_campus = request.data.get('campus', 'ALL')
-        custom_emails_raw = request.data.get('custom_emails', '') # Get custom emails
+        custom_emails_raw = request.data.get('custom_emails', '') 
 
         if not subject or not message:
             return Response({"error": "Subject and Message are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Select Recipients
+        # 1. Select Recipients (DB Queries stay in the main thread)
         if target_campus == 'CUSTOM':
             if not custom_emails_raw.strip():
                 return Response({"error": "No custom emails provided."}, status=status.HTTP_400_BAD_REQUEST)
-                
-            # Split by comma and strip empty spaces (e.g., " a@a.com , b@b.com " -> ["a@a.com", "b@b.com"])
             recipient_list = [email.strip() for email in custom_emails_raw.split(',') if email.strip()]
             
         elif target_campus == 'ALL':
@@ -803,29 +801,25 @@ class SendAnnouncementView(APIView):
         if not recipient_list:
             return Response({"error": "No users found for this selection."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 2. Render HTML Email
+        # 2. Render HTML Email (Rendering stays in the main thread)
         html_content = render_to_string('core/announcement.html', {
             'subject': subject,
             'message': message
         })
-        text_content = strip_tags(html_content)
 
+        # 3. Offload the actual sending to the Background Thread!
         try:
-            # 3. Send Email
-            msg = EmailMultiAlternatives(
+            BackgroundEmailService._send_async(
                 subject=f"[C-SHAW] {subject}",
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[settings.DEFAULT_FROM_EMAIL], 
-                bcc=recipient_list 
+                to_emails=[settings.DEFAULT_FROM_EMAIL], 
+                html_content=html_content,
+                bcc_emails=recipient_list 
             )
-            msg.attach_alternative(html_content, "text/html")
-            msg.send()
 
-            return Response({"message": f"Announcement sent successfully to {len(recipient_list)} recipient(s)."})
+            # Instantly return success to the frontend while emails send in the background
+            return Response({"message": f"Announcement queued to send to {len(recipient_list)} recipient(s)."})
 
         except Exception as e:
-            print(f"Email Error: {e}")
-            return Response({"error": "Failed to send emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            print(f"Announcement Queue Error: {e}")
+            return Response({"error": "Failed to queue emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #hlatshwayosp735@gmail.com, kmakgatho7@gmail.com, kamogeloshai24@gmail.com, lihlemdhluli082@gmail.com, nothembam57@gmail.com, thabisomsomi520@gmail.com, thulimbuduma@gmail.com, nompumelelochiliza54@gmail.com, chamanesphesihle961@gmail.com, xoliswamanopole@gmail.com, mokoenalindokuhle84@gmail.com, makgotsomaake23@gmail.com, masangotsepo7@gmail.com, nhlavutelondlovu49@gmail.com, nemufulwimukundi@gmail.com, nmsiza155@gmail.com, hlungwanenadine@gmail.com, vuyiswa.mbena@gmail.com, nobuhleangel23@gmail.com, maibelodivine17@gmail.com, nqekee@uj.ac.za, nazireemathe@gmail.com

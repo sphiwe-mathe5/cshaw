@@ -4,6 +4,8 @@ from decouple import config
 from rest_framework import status, generics, permissions, views
 import requests
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
+from django.contrib.auth.forms import PasswordResetForm
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from rest_framework.views import APIView
 from django.shortcuts import redirect, render
@@ -19,7 +21,7 @@ from .serializers import (
     UserManageSerializer
 )
 from django.db import transaction
-from .services import send_welcome_email
+from .services import BackgroundEmailService, send_welcome_email
 from .models import User, Award
 from .permissions import IsCoordinator
 
@@ -242,11 +244,37 @@ class ChangePasswordView(APIView):
             return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+class AsyncPasswordResetForm(PasswordResetForm):
+    def send_mail(self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None):
+        """
+        Overrides Django's default synchronous email send to use our background thread.
+        """
+        # 1. Render the subject and remove any accidental newlines
+        subject = render_to_string(subject_template_name, context)
+        subject = "".join(subject.splitlines())
+
+        # 2. Render the HTML body (Fallback to plain text if HTML template is missing)
+        if html_email_template_name:
+            html_content = render_to_string(html_email_template_name, context)
+        else:
+            # Wrap plain text in simple tags so our service can strip it normally
+            plain_text = render_to_string(email_template_name, context)
+            html_content = f"<p>{plain_text}</p>"
+
+        # 3. Fire and forget!
+        BackgroundEmailService._send_async(
+            subject=subject,
+            to_emails=[to_email],
+            html_content=html_content
+        )  
     
 class CustomPasswordResetView(PasswordResetView):
     template_name = 'users/password_reset.html'
     html_email_template_name = 'users/password_reset_email.html'
+    
+    # 👇 ADD THIS LINE 👇
+    form_class = AsyncPasswordResetForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

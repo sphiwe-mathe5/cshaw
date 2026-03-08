@@ -1308,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </h1>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; color: #6b6b90; font-weight: 500;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                <span>${data.campus || 'UJ'} Volunteer</span>
+                                <span>${data.campus || 'C-SHAW'} Volunteer</span>
                             </div>
                         </div>
 
