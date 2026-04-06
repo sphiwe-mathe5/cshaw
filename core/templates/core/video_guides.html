@@ -1,0 +1,384 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hub Tutorials | C-SHAW</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- GLOBAL DARK THEME --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            font-family: 'Poppins', sans-serif;
+            height: 100vh;
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- NAVIGATION --- */
+        .top-nav {
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .back-btn {
+            color: #bdc3c7;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color 0.2s;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+        .back-btn:hover { color: #FF8C42; background: rgba(255, 140, 66, 0.1); }
+
+        .header-title {
+            margin: 0 0 0 25px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- REELS CONTAINER --- */
+        .reels-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding-left: 5vw;
+        }
+
+        .reels-container { 
+            display: flex; 
+            gap: 30px; 
+            overflow-x: auto; 
+            padding: 20px 5vw 40px 0; 
+            scroll-snap-type: x mandatory; 
+            scroll-behavior: smooth;
+            width: 100%;
+        }
+        
+        .reels-container::-webkit-scrollbar { display: none; }
+        .reels-container { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* --- REEL CARD STYLING --- */
+        .reel-card { 
+            position: relative; 
+            width: 340px; 
+            height: 70vh; 
+            max-height: 650px;
+            border-radius: 24px; 
+            overflow: hidden; 
+            background: #000; 
+            flex-shrink: 0; 
+            scroll-snap-align: center; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4); 
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: border-radius 0.3s;
+        }
+        
+        /* FULLSCREEN STATE */
+        .reel-card:fullscreen, .reel-card:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 0;
+            border: none;
+        }
+
+        .reel-video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            cursor: pointer; 
+        }
+        
+        .reel-card:fullscreen .reel-video, .reel-card:-webkit-full-screen .reel-video {
+            object-fit: contain; /* Prevents zooming/cropping when on widescreen monitors */
+            background: #000;
+        }
+
+        /* --- OVERLAYS & TITLES --- */
+        .reel-overlay { 
+            position: absolute; 
+            bottom: 0; left: 0; 
+            width: 100%; 
+            padding: 80px 25px 30px; 
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%); 
+            color: white; 
+            pointer-events: none; 
+            box-sizing: border-box;
+        }
+        
+        .reel-title { 
+            margin: 0; 
+            font-size: 1.3rem; 
+            font-weight: 800; 
+            line-height: 1.3;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .reel-subtitle {
+            margin: 5px 0 0 0;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            font-weight: 400;
+        }
+        
+        /* --- CUSTOM CONTROLS --- */
+        .custom-controls { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            display: flex; gap: 15px; 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            pointer-events: none; 
+        }
+        
+        .reel-card:hover .custom-controls, .reel-card.paused .custom-controls { 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
+        
+        .play-btn { 
+            background: rgba(255, 255, 255, 0.2); 
+            backdrop-filter: blur(10px); 
+            border: 2px solid rgba(255,255,255,0.6); 
+            border-radius: 50%; 
+            width: 80px; height: 80px; 
+            color: white; 
+            font-size: 2rem; 
+            cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: all 0.2s ease;
+        }
+        .play-btn:hover { background: #FF8C42; border-color: #FF8C42; transform: scale(1.05); }
+        
+        .progress-bar-container { 
+            position: absolute; bottom: 0; left: 0; 
+            width: 100%; height: 6px; 
+            background: rgba(255,255,255,0.2); 
+            cursor: pointer; 
+            z-index: 10;
+        }
+        .progress-bar { 
+            height: 100%; 
+            background: #FF8C42; 
+            width: 0%; 
+            transition: width 0.1s linear; 
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 0 10px rgba(255, 140, 66, 0.8);
+        }
+        
+        /* TOP BUTTONS (Mute & Fullscreen) */
+        .top-btn { 
+            position: absolute; top: 20px; 
+            background: rgba(0,0,0,0.5); 
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: white; border-radius: 50%; 
+            width: 45px; height: 45px; 
+            cursor: pointer; z-index: 10; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        .top-btn:hover { background: rgba(0,0,0,0.8); border-color: white; }
+        .mute-btn { right: 20px; }
+        .fullscreen-btn { left: 20px; }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            .top-nav { padding: 15px 20px; }
+            .header-title { font-size: 1.2rem; margin-left: 15px; }
+            .back-btn span { display: none; } /* Hide "Back to Hub" text on tiny screens, keep icon */
+            
+            .reels-wrapper { padding-left: 0; }
+            
+            /* Center the cards and make them full mobile height */
+            .reels-container { 
+                padding: 10px 5vw; 
+                gap: 20px; 
+            }
+            .reel-card {
+                width: 88vw; /* Leaves just enough room to see the next video */
+                height: calc(100vh - 120px); /* Fill screen minus the header */
+                max-height: none;
+                border-radius: 18px;
+            }
+            .reel-overlay { padding-bottom: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <a href="{% url 'index' %}" class="back-btn">
+            <i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span>
+        </a>
+        <h1 class="header-title">📱 Interactive Tutorials</h1>
+    </div>
+
+    <div class="reels-wrapper">
+        <div class="reels-container">
+            
+            {% for video in videos %}
+            <div class="reel-card paused" id="card-{{ video.id }}">
+                
+                <video class="reel-video" id="video-{{ video.id }}" loop playsinline src="{% static video.filename %}"></video>
+                
+                <button class="top-btn fullscreen-btn" onclick="toggleFullscreen('{{ video.id }}')">
+                    <i class="fa-solid fa-expand" id="fullscreen-icon-{{ video.id }}"></i>
+                </button>
+
+                <button class="top-btn mute-btn" onclick="toggleMute('{{ video.id }}')">
+                    <i class="fa-solid fa-volume-xmark" id="mute-icon-{{ video.id }}"></i>
+                </button>
+
+                <div class="custom-controls">
+                    <button class="play-btn" onclick="togglePlay('{{ video.id }}')">
+                        <i class="fa-solid fa-play" id="play-icon-{{ video.id }}" style="margin-left: 6px;"></i>
+                    </button>
+                </div>
+
+                <div class="reel-overlay">
+                    <h3 class="reel-title">{{ video.title }}</h3>
+                    <p class="reel-subtitle">C-SHAW Hub Guide</p>
+                </div>
+
+                <div class="progress-bar-container" onclick="seekVideo(event, '{{ video.id }}')">
+                    <div class="progress-bar" id="progress-{{ video.id }}"></div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    <script>
+        // --- VIDEO CONTROLS ---
+        function togglePlay(id) {
+            const video = document.getElementById(`video-${id}`);
+            const icon = document.getElementById(`play-icon-${id}`);
+            const card = document.getElementById(`card-${id}`);
+
+            document.querySelectorAll('.reel-video').forEach(v => {
+                if (v.id !== `video-${id}`) {
+                    v.pause();
+                    const otherId = v.id.split('-')[1];
+                    document.getElementById(`play-icon-${otherId}`).className = 'fa-solid fa-play';
+                    document.getElementById(`play-icon-${otherId}`).style.marginLeft = '6px'; 
+                    document.getElementById(`card-${otherId}`).classList.add('paused');
+                }
+            });
+
+            if (video.paused) {
+                video.play();
+                icon.className = 'fa-solid fa-pause';
+                icon.style.marginLeft = '0'; 
+                card.classList.remove('paused');
+            } else {
+                video.pause();
+                icon.className = 'fa-solid fa-play';
+                icon.style.marginLeft = '6px';
+                card.classList.add('paused');
+            }
+        }
+
+        function toggleMute(id) {
+            const video = document.getElementById(`video-${id}`);
+            const icon = document.getElementById(`mute-icon-${id}`);
+            video.muted = !video.muted;
+            icon.className = video.muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+        }
+
+        function seekVideo(e, id) {
+            const video = document.getElementById(`video-${id}`);
+            const container = e.currentTarget;
+            const rect = container.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / container.offsetWidth;
+            video.currentTime = pos * video.duration;
+        }
+
+        // --- FULLSCREEN LOGIC ---
+        function toggleFullscreen(id) {
+            const card = document.getElementById(`card-${id}`);
+            const video = document.getElementById(`video-${id}`);
+
+            // Check if ANY element is currently fullscreen
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                // Request Fullscreen on the Container (Keeps UI visible)
+                if (card.requestFullscreen) {
+                    card.requestFullscreen();
+                } else if (card.webkitRequestFullscreen) { /* Safari */
+                    card.webkitRequestFullscreen();
+                } else if (video.webkitEnterFullscreen) { /* Fallback for older iOS Safari */
+                    video.webkitEnterFullscreen();
+                }
+            } else {
+                // Exit Fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // Listen for fullscreen changes globally to update the correct icon
+        // This is important because users might press "ESC" to exit fullscreen!
+        document.addEventListener('fullscreenchange', updateFullscreenIcons);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcons);
+
+        function updateFullscreenIcons() {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+            
+            // If fullscreen, find the active card and change its icon to 'compress'
+            document.querySelectorAll('.fullscreen-btn i').forEach(icon => {
+                if (isFullscreen) {
+                    // Make all icons compress just to be safe
+                    icon.className = 'fa-solid fa-compress';
+                } else {
+                    icon.className = 'fa-solid fa-expand';
+                }
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        document.querySelectorAll('.reel-video').forEach(video => {
+            const id = video.id.split('-')[1];
+            
+            video.addEventListener('timeupdate', () => {
+                const bar = document.getElementById(`progress-${id}`);
+                if (video.duration) {
+                    const percent = (video.currentTime / video.duration) * 100;
+                    bar.style.width = `${percent}%`;
+                }
+            });
+
+            video.addEventListener('click', () => {
+                togglePlay(id);
+            });
+        });
+    </script>
+</body>
+</html>

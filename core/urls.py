@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.views.generic import TemplateView
 
 urlpatterns = [
 
@@ -7,6 +8,8 @@ urlpatterns = [
     path('about/', views.about_page, name='about'),
     path('privacy/', views.privacy, name='privacy'),
     path('terms/', views.terms, name='terms'),
+    path('guides/', views.VideoGuidesView.as_view(), name='video-guides'),
+    path('404-test/', TemplateView.as_view(template_name='404.html')),
     path('api/activities/', views.ActivityListView.as_view(), name='activity-list'),
     path('api/activities/create/', views.ActivityCreateView.as_view(), name='activity-create'),
     path('api/activities/<int:pk>/', views.ActivityDetailView.as_view(), name='activity-detail'),
@@ -24,5 +27,6 @@ urlpatterns = [
     path('api/reports/event/<int:pk>/email/', views.email_report_pdf, name='report-email'),
     path('api/reports/quarterly/download/', views.download_quarterly_pdf, name='quarterly-download'),
     path('api/reports/quarterly/email/', views.email_quarterly_pdf, name='quarterly-email'),
+    path('api/users/leaderboard/', views.LeaderboardAPIView.as_view(), name='api-leaderboard'),
     path('api/communications/announce/', views.SendAnnouncementView.as_view(), name='send-announcement'),
 ]

@@ -74,6 +74,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- LEADERBOARD TAB CLICK HANDLER ---
+    const leaderboardLink = document.getElementById('link-leaderboard');
+    
+    if (leaderboardLink) {
+        leaderboardLink.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // 1. Remove 'active' from ALL sidebar items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // 2. Add 'active' to THIS item
+            const parentLi = leaderboardLink.closest('.nav-item');
+            if (parentLi) parentLi.classList.add('active');
+            leaderboardLink.classList.add('active');
+
+            // 3. Render the View
+            renderLeaderboard();
+        });
+    }
+
     // 1. SHOW THE BUTTON (Only for Coordinators)
 
     const announceLink = document.getElementById('nav-announcements');
@@ -1780,34 +1805,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tbody>
                 </table>
             </div>
-
-            <div class="header-section" style="margin-bottom: 15px;">
-                <h2>Event Qualifiers</h2>
-                <p>Students who have earned enough hours to attend major events.</p>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; padding-bottom: 40px;">
-                
-                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 5px solid #27ae60;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="margin:0; color: #27ae60;">🥾 Hiking Trip</h3>
-                        <span style="background:#e8f8f0; color:#27ae60; padding:4px 10px; border-radius:15px; font-size:0.8rem; font-weight:bold;">40+ Hours</span>
-                    </div>
-                    <div id="hikingList" style="max-height: 300px; overflow-y: auto;">
-                        Loading...
-                    </div>
-                </div>
-
-                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 5px solid #FF8C42;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="margin:0; color: #FF8C42;">🏕️ Annual Camp</h3>
-                        <span style="background:#FFF4EC; color:#FF8C42; padding:4px 10px; border-radius:15px; font-size:0.8rem; font-weight:bold;">80+ Hours</span>
-                    </div>
-                    <div id="campList" style="max-height: 300px; overflow-y: auto;">
-                        Loading...
-                    </div>
-                </div>
-            </div>
         `;
 
         let allStudents = [];
@@ -1817,7 +1814,6 @@ document.addEventListener('DOMContentLoaded', () => {
             allStudents = await response.json();
             
             renderRows(allStudents);
-            renderQualifiers(allStudents);
 
             const inputs = ['studentSearchInput', 'campusFilter', 'roleFilter', 'sortFilter'];
             inputs.forEach(id => {
@@ -1869,6 +1865,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let lastCampus = null;
 
             studentsToRender.forEach(student => {
+                
+                // 👇 --- PRIVACY MASK LOGIC ADDED HERE --- 👇
+                const rawNo = student.student_number || '';
+                // Shows first 2 digits, ****, then last 2 digits
+                const maskedStudentNo = rawNo.length > 4 
+                    ? rawNo.substring(0, 2) + '****' + rawNo.slice(-2) 
+                    : rawNo; 
+                // 👆 --------------------------------------- 👆
+
                 if (student.campus !== lastCampus) {
                     const divider = document.createElement('tr');
                     divider.innerHTML = `
@@ -1904,7 +1909,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-weight:600;">${student.first_name} ${student.last_name}</div>
                         <div style="font-size:0.85rem; color:#888;">${student.email}</div>
                     </td>
-                    <td style="padding:15px; border-bottom:1px solid #eee;">${student.student_number || '-'}</td>
+                    <td style="padding:15px; border-bottom:1px solid #eee;">${maskedStudentNo || '-'}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${roleBadge}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;"><strong>${student.total_hours.toFixed(1)}</strong> hrs</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${awardsHtml}</td>
@@ -1914,33 +1919,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tbody.appendChild(tr);
             });
-        }
-
-        function renderQualifiers(students) {
-            const hikingQualifiers = students.filter(s => s.total_hours >= 40);
-            const campQualifiers = students.filter(s => s.total_hours >= 80);
-
-            const generateList = (list) => {
-                if (list.length === 0) return '<div style="padding:15px; text-align:center; color:#999; font-style:italic;">No students qualified yet.</div>';
-                
-                return list.map(s => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
-                        <div style="display:flex; align-items:center; gap: 10px;">
-                            <div style="width:32px; height:32px; background:#f0f0f0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:bold; color:#666;">
-                                ${s.first_name.charAt(0)}${s.last_name.charAt(0)}
-                            </div>
-                            <div>
-                                <div style="font-weight:600; font-size:0.9rem;">${s.first_name} ${s.last_name}</div>
-                                <div style="font-size:0.75rem; color:#888;">${s.campus}</div>
-                            </div>
-                        </div>
-                        <div style="font-weight:bold; color:#444;">${s.total_hours.toFixed(0)}h</div>
-                    </div>
-                `).join('');
-            };
-
-            document.getElementById('hikingList').innerHTML = generateList(hikingQualifiers);
-            document.getElementById('campList').innerHTML = generateList(campQualifiers);
         }
     }
 
@@ -3741,6 +3719,399 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+
+    
+    async function renderLeaderboard() {
+        const mainContent = document.getElementById('mainContent');
+        
+        // Helper function to extract initials (e.g., "John Doe" -> "JD")
+        const getInitials = (firstName, lastName) => {
+            return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+        };
+
+        // 1. Inject CSS and the main dark UI structure
+        mainContent.innerHTML = `
+            <style>
+                /* Base dark theme & animations */
+                .leaderboard-container {
+                    background: linear-gradient(135deg, #101524 0%, #161c2e 100%);
+                    color: #e2e8f0;
+                    font-family: 'Poppins', sans-serif;
+                    border-radius: 20px;
+                    padding: 40px;
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+                }
+
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+                /* Summary metrics styling */
+                .summary-label { font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+                .summary-value { font-size: 2.2rem; font-weight: bold; color: #FF8C42; line-height: 1; margin-bottom: 5px; }
+
+                /* --- PODIUM STYLES --- */
+                .podium-container { display: flex; justify-content: center; align-items: flex-end; gap: 30px; margin-top: 60px; margin-bottom: 70px; animation: fadeIn 0.8s ease; }
+                .podium-spot { text-align: center; }
+                
+                /* Avatar Circle Base */
+                .podium-avatar { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.8rem; color: #101524; background: #e2e8f0; position: relative; border: 4px solid #1c243a; margin-bottom: 20px; transition: transform 0.2s; cursor: pointer; }
+                .podium-avatar:hover { transform: scale(1.05); }
+
+                /* Rank Specific Avatar Styling */
+                .rank-1 .podium-avatar { width: 140px; height: 140px; font-size: 2.5rem; background: #FF8C42; box-shadow: 0 0 25px rgba(255, 140, 66, 0.4); border-color: #FF8C42; }
+                
+                /* The Rank Number Box below the podium */
+                .rank-num-box { padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 1.5rem; color: #101524; display: inline-block; background: #bdc3c7; }
+                .rank-1 .rank-num-box { background: #FF8C42; color: #ffffff; }
+
+                /* Text Styling on Podium */
+                .podium-name { font-weight: bold; font-size: 1.1rem; color: #ffffff; margin-top: 10px; }
+                .podium-hours { color: #FF8C42; font-weight: bold; font-size: 0.9rem; margin-bottom: 15px; }
+
+                /* --- RANK CARD STYLES (4-10) --- */
+                .rankings-list { display: flex; flex-direction: column; gap: 15px; animation: slideUp 0.6s ease 0.4s forwards; opacity: 0; }
+                .rank-card { background: #1c243a; border-radius: 12px; padding: 18px 25px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; transition: all 0.2s ease-in-out; cursor: pointer; }
+                .rank-card:hover { border-color: rgba(255, 140, 66, 0.5); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
+                /* Initials in the card */
+                .card-initials { width: 45px; height: 45px; border-radius: 50%; background: #e2e8f0; color: #101524; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; margin-right: 20px; }
+                
+                /* Punctuality Icon in card */
+                .card-perf { font-size: 0.8rem; color: #27ae60; background: #e8f8f0; padding: 3px 8px; border-radius: 10px; font-weight: bold; margin-top: 5px; display: inline-block;}
+                .card-perf.late { color: #c0392b; background: #fadbd8; }
+
+                .btn-export { background: #1e293b; color: #bdc3c7; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+                .btn-export:hover { background: #334155; color: #ffffff; }
+                .btn-export.hike:hover { border-color: #10b981; color: #10b981; }
+                .btn-export.camp:hover { border-color: #FF8C42; color: #FF8C42; }
+            </style>
+
+            <div class="leaderboard-container">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+                        <div>
+                            <span style="background: rgba(255, 140, 66, 0.15); color: #FF8C42; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 10px;">
+                                🏆 SEASON 2026
+                            </span>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 2.2rem;">Volunteer Leaderboard</h1>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button class="btn-export" onclick="window.exportToPDF('ALL')">📄 Export All</button>
+                                <button class="btn-export hike" onclick="window.exportToPDF('HIKE')">🥾 Hike List (40+)</button>
+                                <button class="btn-export camp" onclick="window.exportToPDF('CAMP')">🏕️ Camp List (80+)</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 30px; text-align: right;">
+                            <div>
+                                <div id="totalVolunteers" class="summary-value">0</div>
+                                <div class="summary-label">Volunteers</div>
+                            </div>
+                            <div>
+                                <div id="totalHours" class="summary-value">0</div>
+                                <div class="summary-label">Total Hours</div>
+                            </div>
+                        </div>
+                    </div>
+
+                <div id="podiumContainer" class="podium-container">
+                    <div style="color: #bdc3c7; text-align: center; width: 100%; padding: 40px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                        Calculating impact...
+                    </div>
+                </div>
+
+                <div id="rankingsList" class="rankings-list"></div>
+                
+                <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 0.85rem;">
+                    Updated in real-time • <a href="#" style="color: #FF8C42; text-decoration: none; font-weight: bold;">View Full Rankings</a>
+                </div>
+            </div>
+        `;
+
+        // Add CSS for modal (make sure this isn't duplicated in your main CSS file)
+        if (!document.getElementById('modalGlobalStyles')) {
+            const styleTag = document.createElement('style');
+            styleTag.id = 'modalGlobalStyles';
+            styleTag.innerHTML = `
+                @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                .glass-modal { background: rgba(16, 21, 36, 0.85); backdrop-filter: blur(5px); animation: fadeIn 0.3s ease; }
+                .modal-content { background: #1c243a; border-radius: 16px; width: 90%; max-width: 450px; padding: 30px; position: relative; border: 1px solid #FF8C42; animation: popIn 0.3s ease-out; color: #e2e8f0;}
+                .modal-stat-card { background: #101524; padding: 20px; border-radius: 12px; text-align: center; }
+                .modal-stat-value { font-size: 2.2rem; font-weight: bold; color: #FF8C42; line-height: 1; }
+                .btn-modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #bdc3c7; transition: color 0.2s; }
+                .btn-modal-close:hover { color: #FF8C42; }
+            `;
+            document.head.appendChild(styleTag);
+        }
+
+        // Add the hidden Modal skeleton to the body if it doesn't exist
+        if (!document.getElementById('statsModal')) {
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'statsModal';
+            modalDiv.className = 'glass-modal';
+            modalDiv.style.cssText = "display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; align-items: center; justify-content: center;";
+            modalDiv.innerHTML = `
+                <div class="modal-content">
+                    <button onclick="window.closeStatsModal()" class="btn-modal-close">&times;</button>
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <h2 id="modalStudentName" style="margin-top: 0; color: #ffffff;">Student Name</h2>
+                        <div style="width: 60px; height: 3px; background: #FF8C42; margin: 0 auto; border-radius: 2px;"></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                        <div class="modal-stat-card">
+                            <div class="summary-label">Total Hours</div>
+                            <div id="modalTotalHours" class="modal-stat-value">0</div>
+                        </div>
+                        <div class="modal-stat-card">
+                            <div class="summary-label">Events</div>
+                            <div id="modalTotalEvents" class="modal-stat-value">0</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 10px; color: #ffffff;">⏱️ Punctuality Stats</h4>
+                    <div style="background: #101524; padding: 15px; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>On Time / Early:</span>
+                            <span id="modalOnTime" style="font-weight: bold; color: #27ae60;">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Late Arrivals:</span>
+                            <span id="modalLate" style="font-weight: bold; color: #c0392b;">0</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalDiv);
+        }
+
+        // 2. Fetch the updated data from backend
+        try {
+            const response = await fetch('/api/users/leaderboard/', {
+                headers: { 'X-CSRFToken': getValidCsrfToken() }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch leaderboard');
+            
+            const data = await response.json();
+
+            window.currentLeaderboardData = data.rankings;
+            
+            // Populate header summary metrics
+            document.getElementById('totalVolunteers').textContent = data.summary.volunteers.toLocaleString();
+            document.getElementById('totalHours').textContent = data.summary.hours.toLocaleString();
+
+            let students = data.rankings;
+
+            // 3. Sort students from most hours to least
+            students.sort((a, b) => b.total_hours - a.total_hours);
+
+            const podium = document.getElementById('podiumContainer');
+            podium.innerHTML = ''; // Clear loading text
+
+            const list = document.getElementById('rankingsList');
+            list.innerHTML = '';
+
+            if (students.length === 0) {
+                podium.innerHTML = '<div style="color: #bdc3c7; text-align: center; width: 100%; padding: 40px;">No volunteer data available yet.</div>';
+                return;
+            }
+
+            // --- RENDER PODIUM (TOP 3) ---
+            // We use a custom flex order to put Rank 1 in the middle
+            const podiumSpots = students.slice(0, 3);
+            
+            // Define specific layouts for Rank 2, 1, 3
+            const layout = [
+                { rank: 2, order: 1, data: podiumSpots[1] }, // Left side
+                { rank: 1, order: 2, data: podiumSpots[0] }, // Middle (Largest)
+                { rank: 3, order: 3, data: podiumSpots[2] }  // Right side
+            ];
+
+            layout.forEach(spot => {
+                if (!spot.data) return; // Handle if less than 3 students exist
+                
+                const student = spot.data;
+                const initials = getInitials(student.first_name, student.last_name);
+                const safeStudentJSON = JSON.stringify(student).replace(/"/g, '&quot;');
+
+                const spotDiv = document.createElement('div');
+                spotDiv.className = `podium-spot rank-${spot.rank}`;
+                spotDiv.style.order = spot.order; // Controls flex placement
+
+                spotDiv.innerHTML = `
+                    ${spot.rank === 1 ? '<i class="fa-solid fa-crown" style="font-size: 1.5rem; color: #f1c40f; margin-bottom: 5px; display: block;"></i>' : ''}
+                    <div class="podium-avatar" onclick="window.openStatsModal(${safeStudentJSON})">
+                        ${initials}
+                    </div>
+                    <div class="podium-name">${student.first_name} ${student.last_name}</div>
+                    <div class="podium-hours">${student.total_hours} hrs</div>
+                    <div class="rank-num-box">${spot.rank}</div>
+                `;
+                podium.appendChild(spotDiv);
+            });
+
+
+            // --- RENDER REMAINING RANKS (4-10) ---
+            const otherStudents = students.slice(3, 10);
+            
+            if (otherStudents.length === 0) {
+                list.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 20px;">More rankings will appear as students earn hours.</div>';
+            } else {
+                otherStudents.forEach((student, index) => {
+                    const rank = index + 4;
+                    const initials = getInitials(student.first_name, student.last_name);
+                    const safeStudentJSON = JSON.stringify(student).replace(/"/g, '&quot;');
+                    
+                    // Determine Punctuality class for simple card display
+                    let punctualityHTML = student.late_count > student.on_time_count ? 
+                        `<span class="card-perf late"><i class="fa-solid fa-clock"></i> Usually Late</span>` :
+                        `<span class="card-perf"><i class="fa-solid fa-circle-check"></i> Usually On Time</span>`;
+                    
+                    // Skip icons if no history
+                    if (student.late_count === 0 && student.on_time_count === 0) punctualityHTML = '';
+
+                    const card = document.createElement('div');
+                    card.className = 'rank-card';
+                    card.onclick = () => window.openStatsModal(JSON.parse(safeStudentJSON.replace(/&quot;/g, '"')));
+                    
+                    card.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            <span style="border: 2px solid #FF8C42; color: #FF8C42; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; margin-right: 20px;">
+                                ${rank}
+                            </span>
+                            <div class="card-initials">${initials}</div>
+                            <div>
+                                <div style="font-weight: bold; color: #ffffff; font-size: 1rem;">${student.first_name} ${student.last_name}</div>
+                                <div style="color: #7f8c8d; font-size: 0.85rem; margin-top: 2px;">${student.campus}</div>
+                                ${punctualityHTML}
+                            </div>
+                        </div>
+                        <div style="text-align: right; border-right: 3px solid #FF8C42; padding-right: 15px;">
+                            <div style="font-size: 1.6rem; font-weight: bold; color: #FF8C42; line-height: 1;">${student.total_hours}</div>
+                            <div style="font-size: 0.75rem; color: #bdc3c7; text-transform: uppercase;">Hours</div>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            }
+
+        } catch (error) {
+            console.error(error);
+            podium.innerHTML = '<div style="color: #e74c3c; text-align: center; width: 100%; padding: 40px;">Error calculating leaderboard. Please try again later.</div>';
+        }
+    }
+
+    // --- MODAL LOGIC ---
+
+    window.openStatsModal = function(student) {
+        document.getElementById('modalStudentName').textContent = `${student.first_name} ${student.last_name}`;
+        document.getElementById('modalTotalHours').textContent = student.total_hours;
+        document.getElementById('modalTotalEvents').textContent = student.events_attended;
+        document.getElementById('modalOnTime').textContent = student.on_time_count;
+        document.getElementById('modalLate').textContent = student.late_count;
+
+        // Show the modal
+        document.getElementById('statsModal').style.display = 'flex';
+    };
+
+    window.closeStatsModal = function() {
+        document.getElementById('statsModal').style.display = 'none';
+    };
+
+
+    // --- PDF EXPORT GENERATOR ---
+// --- INSTANT PDF EXPORT GENERATOR ---
+window.exportToPDF = function(filterType) {
+    // 1. Check if the jsPDF library has loaded
+    if (!window.jspdf) {
+        alert("PDF engine is still loading. Please try again in a moment.");
+        return;
+    }
+
+    // Initialize the document
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    if (!window.currentLeaderboardData || window.currentLeaderboardData.length === 0) {
+        alert("No data available to export.");
+        return;
+    }
+
+    // 2. Filter the data based on the button clicked
+    let filteredData = window.currentLeaderboardData;
+    let title = "Full Volunteer Leaderboard";
+    let filename = "Volunteer_Leaderboard.pdf";
+    
+    if (filterType === 'HIKE') {
+        filteredData = window.currentLeaderboardData.filter(s => s.total_hours >= 40);
+        title = "Hike Qualified Volunteers (40+ Hours)";
+        filename = "Hike_Qualified_Volunteers.pdf";
+    } else if (filterType === 'CAMP') {
+        filteredData = window.currentLeaderboardData.filter(s => s.total_hours >= 80);
+        title = "Camp Certified Volunteers (80+ Hours)";
+        filename = "Camp_Certified_Volunteers.pdf";
+    }
+
+    if (filteredData.length === 0) {
+        alert("No volunteers have reached this tier yet.");
+        return;
+    }
+
+    // Sort from highest to lowest
+    filteredData.sort((a, b) => b.total_hours - a.total_hours);
+
+    // 3. Prepare the data arrays for the table
+    const tableColumns = ["Rank", "Student Name", "Campus", "Total Hours", "Events"];
+    const tableRows = [];
+
+    filteredData.forEach((student, index) => {
+        const rowData = [
+            index + 1,
+            `${student.first_name} ${student.last_name}`,
+            student.campus,
+            `${student.total_hours} hrs`,
+            student.events_attended
+        ];
+        tableRows.push(rowData);
+    });
+
+    // 4. Style and draw the PDF
+    // Add Title
+    doc.setFontSize(18);
+    doc.setTextColor(28, 36, 58); // Dark slate matching your UI
+    doc.text(title, 14, 22);
+
+    // Add Date
+    doc.setFontSize(10);
+    doc.setTextColor(127, 140, 141);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // Draw the styled table
+    doc.autoTable({
+        head: [tableColumns],
+        body: tableRows,
+        startY: 36,
+        theme: 'striped',
+        headStyles: { 
+            fillColor: [255, 140, 66], // Your #FF8C42 Orange
+            textColor: 255,
+            fontStyle: 'bold'
+        },
+        styles: { 
+            fontSize: 10, 
+            cellPadding: 6 
+        },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 20 },
+            3: { halign: 'right', fontStyle: 'bold', textColor: [255, 140, 66] }, // Make hours orange
+            4: { halign: 'center' }
+        }
+    });
+
+    // 5. Instantly trigger the file download
+    doc.save(filename);
+};
 
 
 

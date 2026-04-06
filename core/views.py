@@ -21,10 +21,11 @@ from .utils import render_to_pdf
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.http import HttpResponse
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from users.models import User
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.views.generic import TemplateView
 
 
 def index_page(request):
@@ -822,4 +823,88 @@ class SendAnnouncementView(APIView):
         except Exception as e:
             print(f"Announcement Queue Error: {e}")
             return Response({"error": "Failed to queue emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-#hlatshwayosp735@gmail.com, kmakgatho7@gmail.com, kamogeloshai24@gmail.com, lihlemdhluli082@gmail.com, nothembam57@gmail.com, thabisomsomi520@gmail.com, thulimbuduma@gmail.com, nompumelelochiliza54@gmail.com, chamanesphesihle961@gmail.com, xoliswamanopole@gmail.com, mokoenalindokuhle84@gmail.com, makgotsomaake23@gmail.com, masangotsepo7@gmail.com, nhlavutelondlovu49@gmail.com, nemufulwimukundi@gmail.com, nmsiza155@gmail.com, hlungwanenadine@gmail.com, vuyiswa.mbena@gmail.com, nobuhleangel23@gmail.com, maibelodivine17@gmail.com, nqekee@uj.ac.za, nazireemathe@gmail.com
+        
+        
+class LeaderboardAPIView(APIView):
+    # Only let coordinators and executives see the stats
+    permission_classes = [IsAuthorizedExecutiveOrCoordinator] 
+
+    def get(self, request):
+        # 1. Grab all active students
+        students = User.objects.filter(role=User.Roles.STUDENT, is_active=True)
+        leaderboard_data = []
+
+        # We will need some summary metrics for the header
+        total_volunteers = students.count()
+        total_calculated_hours = 0.0
+
+        for student in students:
+            # Grab all signups where the student actually attended
+            attended_records = ActivitySignup.objects.filter(user=student, attended=True).select_related('activity')
+            
+            events_count = attended_records.count()
+            on_time_count = 0
+            late_count = 0
+            calculated_hours = 0.0
+
+            for record in attended_records:
+                calculated_hours += float(record.hours_earned)
+                
+                if record.sign_in_time and record.activity.date_time:
+                    grace_period = record.activity.date_time + timedelta(minutes=5)
+                    if record.sign_in_time <= grace_period:
+                        on_time_count += 1
+                    else:
+                        late_count += 1
+
+            # 👇 FIXED: Add the manual bonus hours from your User model
+            manual_bonus = float(getattr(student, 'manual_bonus_hours', 0.00))
+            student_total_hours = calculated_hours + manual_bonus
+            
+            total_calculated_hours += student_total_hours
+
+            # 2. Package it up for the Javascript, adding the student's campus
+            leaderboard_data.append({
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'campus': student.get_campus_display() if hasattr(student, 'get_campus_display') else "Unknown Campus", # 👈 Added Campus!
+                'total_hours': round(student_total_hours, 1),
+                'events_attended': events_count,
+                'on_time_count': on_time_count,
+                'late_count': late_count,
+            })
+            
+        # Add summary data to the payload
+        response_data = {
+            'summary': {
+                'volunteers': total_volunteers,
+                'hours': round(total_calculated_hours, 1)
+            },
+            'rankings': leaderboard_data
+        }
+
+        return Response(response_data)    
+        
+        
+class VideoGuidesView(TemplateView):
+    template_name = 'core/video_guides.html' 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        context['videos'] = [
+            {
+                'id': 1,
+                'title': 'How to Register in the platform',
+                # 👇 Pointing directly to your images folder
+                'filename': 'images/register.mp4', 
+                
+            },
+            {
+                'id': 2,
+                'title': 'How to RSVP for Events',
+                # 👇 Exactly matching your file path
+                'filename': 'images/rsvp.mp4',
+            },
+        ]
+        return context

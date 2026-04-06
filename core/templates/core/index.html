@@ -88,6 +88,15 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a href="#" class="nav-link" id="link-leaderboard">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                        </svg>
+                        <span>Leaderboard</span>
+                    </a>
+                </li>
+
                 <li class="nav-item" id="nav-item-reports">
                     <a href="#" class="nav-link" id="link-event-reports">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -245,6 +254,55 @@
         </div>
     </div>
 
+    <div id="leaderboardTab" class="dashboard-section" style="display: none;">
+    <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #2c3e50;">🏆 Volunteer Leaderboard</h2>
+            <span style="color: #7f8c8d; font-size: 0.9rem;">Ranked by Total Hours</span>
+        </div>
+
+        <div id="leaderboardList" style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="text-align: center; color: #7f8c8d; padding: 20px;">Loading leaderboard...</div>
+        </div>
+    </div>
+</div>
+
+<div id="statsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 25px; position: relative;">
+        
+        <button onclick="closeStatsModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #7f8c8d;">&times;</button>
+        
+        <h2 id="modalStudentName" style="margin-top: 0; color: #2c3e50;">Student Name</h2>
+        <div id="modalBadges" style="margin-bottom: 20px;"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9rem; color: #7f8c8d; text-transform: uppercase;">Total Hours</div>
+                <div id="modalTotalHours" style="font-size: 1.8rem; font-weight: bold; color: #2980b9;">0</div>
+            </div>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9rem; color: #7f8c8d; text-transform: uppercase;">Events Attended</div>
+                <div id="modalTotalEvents" style="font-size: 1.8rem; font-weight: bold; color: #27ae60;">0</div>
+            </div>
+        </div>
+
+        <h4 style="margin-bottom: 10px; color: #34495e;">⏱️ Punctuality Stats</h4>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span>On Time / Early:</span>
+                <span id="modalOnTime" style="font-weight: bold; color: #27ae60;">0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Late Arrivals:</span>
+                <span id="modalLate" style="font-weight: bold; color: #e74c3c;">0</span>
+            </div>
+        </div>
+
+        <button style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="closeStatsModal()">Close Profile</button>
+    </div>
+</div>
+
     <style>
         .alert-modal-overlay {
             display: none; /* Hidden by default */
@@ -384,5 +442,8 @@
     const isUserLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
     </script>
     <script src="{% static 'js/index.js' %}"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </body>
 </html>
