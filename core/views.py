@@ -896,15 +896,14 @@ class VideoGuidesView(TemplateView):
             {
                 'id': 1,
                 'title': 'How to Register in the platform',
-                # 👇 Pointing directly to your images folder
-                'filename': 'images/register.mp4', 
-                
+                # 👇 Paste your full Google Cloud URL here
+                'url': 'https://storage.googleapis.com/cshaw/images/register.mp4', 
             },
             {
                 'id': 2,
                 'title': 'How to RSVP for Events',
-                # 👇 Exactly matching your file path
-                'filename': 'images/rsvp.mp4',
+                # 👇 Paste your full Google Cloud URL here
+                'url': 'https://storage.googleapis.com/cshaw/images/rsvp.mp4',
             },
         ]
         return context

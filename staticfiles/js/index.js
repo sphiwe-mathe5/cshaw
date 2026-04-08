@@ -495,25 +495,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dateObj = new Date(activity.date_time);
 
-        // 2. FIX: Add 'timeZone: UTC' to the options to prevent the +2 hour shift
         const dateStr = dateObj.toLocaleDateString('en-GB', { 
             weekday: 'short', 
             day: 'numeric', 
             month: 'short',
-            timeZone: 'Africa/Johannesburg' // <--- IMPORTANT: Forces it to stick to the DB time
-        });
-
-        const timeStr = dateObj.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: false,   // Optional: Use 'false' for 09:00 or 'true' for 9:00 AM
-            timeZone: 'Africa/Johannesburg'  // <--- IMPORTANT: Prevents converting to 11:00
+            timeZone: 'Africa/Johannesburg' 
         });
 
         const startDate = new Date(activity.date_time);
 
-        // 2. Calculate End Date (Start Time + Duration in Milliseconds)
-        // Duration is in hours, so: hours * 60 mins * 60 secs * 1000 ms
+        // Calculate End Date
         const durationMs = (activity.duration_hours || 0) * 60 * 60 * 1000;
         const endDate = new Date(startDate.getTime() + durationMs);
 
@@ -524,21 +515,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const endTimeStr = endDate.toLocaleTimeString('en-GB', { 
             hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg'
         });
-        const spotsColor = activity.spots_left > 5 ? '#27ae60' : '#e74c3c';
+
+        // --- NEW LOGIC: Check if event has ended ---
+        const now = new Date();
+        const hasEnded = now > endDate;
+
+        let statusText = '';
+        let statusColor = '';
+
+        if (hasEnded) {
+            statusText = 'Ended';
+            statusColor = '#95a5a6'; // A sleek grey color for ended events
+        } else if (activity.spots_left === null) {
+            statusText = 'Open (Unlimited Spots)';
+            statusColor = '#27ae60'; // Green
+        } else {
+            statusText = activity.spots_left + ' spots left';
+            statusColor = activity.spots_left > 5 ? '#27ae60' : '#e74c3c'; // Green or Red depending on spots
+        }
 
         // Check signed up status
         const isSignedUp = activity.is_signed_up; 
 
         return `
-            <div class="card">
+            <div class="card" ${hasEnded ? 'style="opacity: 0.7;"' : ''}>
                 <div class="card-image" style="${imageStyle} position: relative;">
                     ${isSignedUp ? '<div style="position: absolute; top: 10px; right: 10px; background: #27ae60; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✓ Signed Up</div>' : ''}
                 </div>
                 <div class="card-body">
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <span class="card-badge">${activity.campus} Campus</span>
-                        <span style="font-size:0.8rem; font-weight:700; color:${activity.spots_left === null ? '#27ae60' : spotsColor};">
-                            ${activity.spots_left === null ? 'Open (Unlimited Spots)' : activity.spots_left + ' spots left'}
+                        
+                        <span style="font-size:0.8rem; font-weight:700; color:${statusColor};">
+                            ${statusText}
                         </span>
                     </div>
                     <h3>${activity.title}</h3>
@@ -547,7 +556,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         ⏳ ${activity.duration_hours} Hours
                     </p>
                     <p>${activity.description.substring(0, 80)}...</p>
-                    <button id="view-btn-${activity.id}" class="btn-card-action">View Details</button>
+                    
+                    <button id="view-btn-${activity.id}" class="btn-card-action">
+                        View Details
+                    </button>
                 </div>
             </div>
         `;
@@ -1008,7 +1020,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="color: #666;">${startTimeStr} - ${endTimeStr}</span>
                 <span style="color: #ccc; margin: 0 8px;">|</span>
                 <span style="color: #666; font-weight:500;">${activity.campus} Campus</span>
+                <span style="color: #ccc; margin: 0 8px;">|</span>
+                <span style="background: #e2e8f0; color: #334155; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">
+                    👤 ${rsvps.length} RSVP${rsvps.length === 1 ? '' : 's'}
+                </span>
             `;
+            
             document.getElementById('activityHeader').innerHTML = infoHtml;
 
             const tbody = document.getElementById('attendanceTableBody');

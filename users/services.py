@@ -1,4 +1,5 @@
 import threading
+import time
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -10,22 +11,47 @@ class BackgroundEmailService:
     def _send_async(subject, to_emails, html_content, bcc_emails=None):
         """
         Internal helper: Handles the actual network request in the background.
+        Automatically chunks large BCC lists to bypass Postmark's 50-recipient limit.
         """
         text_content = strip_tags(html_content)
         from_email = settings.DEFAULT_FROM_EMAIL
 
         def send():
             try:
-                msg = EmailMultiAlternatives(
-                    subject=subject,
-                    body=text_content,
-                    from_email=from_email,
-                    to=to_emails,
-                    bcc=bcc_emails
-                )
-                msg.attach_alternative(html_content, "text/html")
-                msg.send(fail_silently=False) # 👈 Never fail silently so we can see logs!
-                print(f"✅ Successfully sent: {subject}")
+                # 1. IF WE HAVE A LARGE LIST OF BCC EMAILS (Announcements, Mass Events)
+                if bcc_emails:
+                    batch_size = 45  # Postmark limit is 50. 45 gives us a safe buffer.
+                    
+                    for i in range(0, len(bcc_emails), batch_size):
+                        batch_bcc = bcc_emails[i:i + batch_size]
+                        
+                        msg = EmailMultiAlternatives(
+                            subject=subject,
+                            body=text_content,
+                            from_email=from_email,
+                            to=to_emails, 
+                            bcc=batch_bcc  # 👈 Pass the small batch here
+                        )
+                        msg.attach_alternative(html_content, "text/html")
+                        msg.send(fail_silently=False)
+                        
+                        # Pause for a fraction of a second to respect API rate limits
+                        time.sleep(0.2) 
+                    
+                    print(f"✅ Successfully sent: '{subject}' to {len(bcc_emails)} recipients in batches.")
+
+                # 2. IF WE HAVE NO BCC EMAILS (Single Welcome Emails, RSVP Confirmations)
+                else:
+                    msg = EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_content,
+                        from_email=from_email,
+                        to=to_emails
+                    )
+                    msg.attach_alternative(html_content, "text/html")
+                    msg.send(fail_silently=False)
+                    print(f"✅ Successfully sent: '{subject}' to {to_emails}")
+
             except Exception as e:
                 print(f"❌ Background Email Error: {e}")
 

@@ -244,7 +244,7 @@
             {% for video in videos %}
             <div class="reel-card paused" id="card-{{ video.id }}">
                 
-                <video class="reel-video" id="video-{{ video.id }}" loop playsinline src="{% static video.filename %}"></video>
+                <video class="reel-video" id="video-{{ video.id }}" loop playsinline src="{{ video.url }}"></video>
                 
                 <button class="top-btn fullscreen-btn" onclick="toggleFullscreen('{{ video.id }}')">
                     <i class="fa-solid fa-expand" id="fullscreen-icon-{{ video.id }}"></i>
