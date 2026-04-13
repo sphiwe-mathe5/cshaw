@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Feedback | C-SHAW</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.google.com/recaptcha/api.js?render={{ RECAPTCHA_SITE_KEY }}"></script>
+
+<style>
+        body, html { margin: 0; padding: 0; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; font-family: 'Poppins', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        .top-nav { padding: 20px 30px; display: flex; align-items: center; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .back-btn { color: #bdc3c7; text-decoration: none; font-weight: 600; font-size: 1rem; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 20px; transition: 0.2s; background: rgba(255,255,255,0.05); }
+        .back-btn:hover { color: #FF8C42; background: rgba(255, 140, 66, 0.1); }
+        
+        /* Container updated for better responsiveness */
+        .feedback-container { 
+            max-width: 600px; 
+            margin: 40px auto; 
+            width: 90%; 
+            box-sizing: border-box; /* Ensures padding doesn't push width over 100% */
+            background: #1c243a; 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4); 
+            border: 1px solid rgba(255,255,255,0.05); 
+        }
+        
+        .type-selector { display: flex; gap: 10px; margin-bottom: 30px; background: #101524; padding: 8px; border-radius: 12px; flex-wrap: wrap; }
+        .type-btn { flex: 1; min-width: 100px; padding: 12px; background: transparent; border: none; color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; font-size: 0.9rem;}
+        .type-btn.active { background: #2c3e50; color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .type-btn.active.report { background: #e74c3c; color: white; }
+
+        .star-rating { display: flex; flex-direction: row-reverse; justify-content: center; gap: 10px; margin: 20px 0; }
+        .star-rating input { display: none; }
+        .star-rating label { font-size: 2.5rem; color: #475569; cursor: pointer; transition: color 0.2s; }
+        .star-rating label:hover, .star-rating label:hover ~ label, .star-rating input:checked ~ label { color: #f1c40f; }
+
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #cbd5e1; }
+        textarea { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #334155; background: #101524; color: white; font-family: inherit; resize: vertical; box-sizing: border-box; }
+        textarea:focus { outline: none; border-color: #FF8C42; }
+        
+        .submit-btn { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #FF8C42; color: #101524; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: transform 0.2s; margin-top: 10px; }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 140, 66, 0.3); }
+        .submit-btn:disabled { background: #95a5a6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .hidden { display: none; }
+
+        /* Anonymous Badge Styling */
+        .anonymous-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* reCAPTCHA centering */
+        .g-recaptcha { display: flex; justify-content: center; margin-top: 15px; }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 600px) {
+            .feedback-container { padding: 25px 20px; margin: 20px auto; width: 95%; }
+            .type-btn { padding: 10px; font-size: 0.85rem; min-width: 80px;} /* slightly smaller buttons so they fit nicely */
+            .star-rating label { font-size: 2rem; } /* slightly smaller stars */
+            .top-nav { padding: 15px 20px; }
+            .back-btn span { display: none; } /* hide text on tiny screens, keep arrow */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <a href="{% url 'index' %}" class="back-btn"><i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span></a>
+    </div>
+
+    <div class="feedback-container">
+        <h2 style="margin-top: 0; text-align: center; color: white;">Hub Feedback & Support</h2>
+        <p style="text-align: center; color: #94a3b8; margin-bottom: 30px;">Help us make C-SHAW Hub better for everyone.</p>
+
+        <div class="type-selector">
+            <button type="button" class="type-btn active" onclick="setFeedbackType('REVIEW', this)">⭐ Review</button>
+            <button type="button" class="type-btn" onclick="setFeedbackType('IDEA', this)">💡 Suggestion</button>
+            <button type="button" class="type-btn" onclick="setFeedbackType('REPORT', this)">🚩 Report Issue</button>
+        </div>
+
+        <form id="feedbackForm" data-sitekey="{{ RECAPTCHA_SITE_KEY }}">
+            {% csrf_token %}
+            <input type="hidden" id="feedbackType" value="REVIEW">
+
+            <div id="starContainer" class="form-group" style="text-align: center;">
+                <label>Rate your experience</label>
+                <div class="star-rating">
+                    <input type="radio" id="star5" name="rating" value="5"><label for="star5" class="fa-solid fa-star"></label>
+                    <input type="radio" id="star4" name="rating" value="4"><label for="star4" class="fa-solid fa-star"></label>
+                    <input type="radio" id="star3" name="rating" value="3"><label for="star3" class="fa-solid fa-star"></label>
+                    <input type="radio" id="star2" name="rating" value="2"><label for="star2" class="fa-solid fa-star"></label>
+                    <input type="radio" id="star1" name="rating" value="1"><label for="star1" class="fa-solid fa-star"></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label id="messageLabel">What do you like or dislike?</label>
+                <textarea id="feedbackMessage" rows="5" required minlength="10" maxlength="2000" placeholder="Write your thoughts here..."></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn" class="submit-btn">Send Feedback</button>
+
+            <div class="anonymous-badge">
+                <i class="fa-solid fa-user-secret" style="color: #27ae60;"></i>
+                <span>Your feedback is submitted <strong>anonymously</strong>. It is not attached to your C-SHAW account.</span>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function getValidCsrfToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function setFeedbackType(type, btnElement) {
+            document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active', 'report'));
+            btnElement.classList.add('active');
+            if (type === 'REPORT') btnElement.classList.add('report');
+
+            document.getElementById('feedbackType').value = type;
+            const starContainer = document.getElementById('starContainer');
+            const messageLabel = document.getElementById('messageLabel');
+
+            if (type === 'REVIEW') {
+                starContainer.classList.remove('hidden');
+                messageLabel.textContent = "What do you like or dislike?";
+            } else if (type === 'IDEA') {
+                starContainer.classList.add('hidden');
+                messageLabel.textContent = "How can we improve the platform?";
+            } else if (type === 'REPORT') {
+                starContainer.classList.add('hidden');
+                messageLabel.textContent = "Please describe the issue or abuse in detail.";
+            }
+        }
+
+        // Store the key in a JS variable so we can use it in the execute function
+
+        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const form = document.getElementById('feedbackForm');
+            const SITE_KEY = form.dataset.sitekey; // 👈 Grab it from the HTML!
+            
+            // 👇 Failsafe: Tell us immediately if Django failed to pass the key
+            if (!SITE_KEY || SITE_KEY.includes("{{")) {
+                alert("System Error: Django is not passing the RECAPTCHA_SITE_KEY to the template.");
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            const type = document.getElementById('feedbackType').value;
+            const message = document.getElementById('feedbackMessage').value.trim();
+            
+            if (message.length < 10) {
+                alert("Please provide a slightly more detailed message (at least 10 characters).");
+                return;
+            }
+
+            let rating = null;
+            if (type === 'REVIEW') {
+                const selectedStar = document.querySelector('input[name="rating"]:checked');
+                rating = selectedStar ? selectedStar.value : null;
+            }
+
+            if (typeof grecaptcha === 'undefined') {
+                alert("Anti-spam script failed to load. Please refresh.");
+                return;
+            }
+
+            btn.textContent = "Securely Sending...";
+            btn.disabled = true;
+
+            grecaptcha.ready(async () => {
+                try {
+                    // Use the safely extracted SITE_KEY
+                    const token = await grecaptcha.execute(SITE_KEY, { action: 'submit_feedback' });
+
+                    const res = await fetch('/api/feedback/submit/', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getValidCsrfToken()
+                        },
+                        body: JSON.stringify({ 
+                            type: type, 
+                            rating: rating, 
+                            message: message,
+                            recaptcha_token: token
+                        })
+                    });
+
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        document.querySelector('.feedback-container').innerHTML = `
+                            <div style="text-align:center; padding: 40px 0;">
+                                <i class="fa-solid fa-shield-check" style="font-size: 4rem; color: #27ae60; margin-bottom: 20px;"></i>
+                                <h2 style="color: white; margin: 0;">Feedback Secured</h2>
+                                <p style="color: #94a3b8; margin-top: 10px;">Thank you! Your submission has been verified and saved.</p>
+                                <a href="{% url 'index' %}" style="display:inline-block; margin-top: 20px; color: #FF8C42; text-decoration: none; font-weight: bold;">← Return to Hub</a>
+                            </div>
+                        `;
+                    } else {
+                        alert(data.error);
+                        btn.textContent = "Send Feedback";
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Network error. Please try again.");
+                    btn.textContent = "Send Feedback";
+                    btn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

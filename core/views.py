@@ -26,6 +26,15 @@ from users.models import User
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.views.generic import TemplateView
+import json
+import os
+from django.http import JsonResponse
+from django.views import View
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import UserPassesTestMixin
+import urllib.request
+import urllib.parse
+from django.core.cache import cache
 
 
 def index_page(request):
@@ -285,10 +294,16 @@ class AttendanceActionView(views.APIView):
             signup = ActivitySignup.objects.get(pk=pk)
         except ActivitySignup.DoesNotExist:
             return Response({"error": "Signup not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # --- ACCOUNTABILITY CHECK ---
+        if request.user == signup.user:  # (Check your model, might be signup.student)
+            return Response(
+                {"error": "Accountability Lock 🔒: You cannot sign yourself in or out. Please ask another Executive to log your attendance."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        # --- PERMISSION CHECK UPDATE ---
+        # --- PERMISSION CHECK ---
         if request.user.role == 'STUDENT':
-            # Block ONLY if the campus is NOT 'ALL' AND NOT their own campus
             if signup.activity.campus != 'ALL' and signup.activity.campus != request.user.campus:
                 return Response(
                     {"error": "You can only manage attendance for your own campus or 'All Campus' events."}, 
@@ -312,40 +327,31 @@ class AttendanceActionView(views.APIView):
                 # Create the Action Time using the Event's Date + Manual Hours
                 action_time = event_start_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-                # CHECK: Future Time (Allow 5 min buffer)
-                if action_time > (current_now + timezone.timedelta(minutes=5)):
-                    return Response({"error": "Cannot log time in the future."}, 
-                                  status=status.HTTP_400_BAD_REQUEST)
+                # 🚨 FIX 1: STRICT FUTURE CHECK (No more 5-minute buffer)
+                if action_time > current_now:
+                    return Response({
+                        "error": f"Cannot log future time. The current time is {current_now.strftime('%H:%M')}."
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
             except ValueError:
-                return Response({"error": "Invalid time format."}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Invalid time format."}, status=status.HTTP_400_BAD_REQUEST)
         else:
             # "Instant" Button Click -> Just use Now
             action_time = current_now
 
-        # 4. SIGN IN
+        # --- 4. SIGN IN ---
         if action == 'signin':
             if signup.sign_in_time:
-                return Response({"error": "Student already signed in."}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Student already signed in."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # DATE CHECK: Ensure we are signing in on the correct DAY
             if action_time.date() != event_date:
-                return Response({
-                    "error": f"Date mismatch. Event is on {event_date.strftime('%d %B')}."
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Date mismatch. Event is on {event_date.strftime('%d %B')}."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # TIME WINDOW CHECK: Only allow sign-in between start and end time
             if action_time < event_start_local:
-                return Response({
-                    "error": f"Cannot sign in before event starts at {event_start_local.strftime('%H:%M')}."
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Cannot sign in before event starts at {event_start_local.strftime('%H:%M')}."}, status=status.HTTP_400_BAD_REQUEST)
             
             if action_time > event_end_local:
-                return Response({
-                    "error": f"Cannot sign in after event ended at {event_end_local.strftime('%H:%M')}."
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Cannot sign in after event ended at {event_end_local.strftime('%H:%M')}."}, status=status.HTTP_400_BAD_REQUEST)
 
             signup.sign_in_time = action_time
             signup.sign_in_facilitator = request.user
@@ -353,38 +359,34 @@ class AttendanceActionView(views.APIView):
 
             return Response({"message": "Signed In", "time": signup.sign_in_time})
 
-        # 5. SIGN OUT
+        # --- 5. SIGN OUT ---
         elif action == 'signout':
             if not signup.sign_in_time:
-                return Response({"error": "Cannot sign out. Student never signed in."}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Cannot sign out. Student never signed in."}, status=status.HTTP_400_BAD_REQUEST)
 
             if signup.sign_out_time:
-                return Response({"error": "Student already signed out."}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Student already signed out."}, status=status.HTTP_400_BAD_REQUEST)
 
+            # 🚨 FIX 2: AUTO-CAP LATE SIGN-OUTS TO EVENT END TIME
+            # If it's 22:30 but the event ended at 22:24, we quietly snap the time back to 22:24.
+            if action_time > event_end_local:
+                action_time = event_end_local
+
+            # Check if this new capped time overlaps with their sign in
             if action_time <= signup.sign_in_time:
-                return Response({"error": "Sign-out time cannot be before Sign-in time."}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Sign-out time cannot be before or equal to Sign-in time."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Record the actual time they were signed out (for audit purposes)
+            # Record the audited time
             signup.sign_out_time = action_time
 
             # --- STRICT TIME BOUNDING CALCULATION ---
-            # 1. If they sign in early, start counting at event_start
             effective_sign_in = max(signup.sign_in_time, event_start_local)
             
-            # 2. If they sign out late (e.g., 20:16), stop counting at event_end (19:00)
-            effective_sign_out = min(signup.sign_out_time, event_end_local)
+            # We don't need min() here anymore because we already capped action_time above!
+            duration = signup.sign_out_time - effective_sign_in
+            actual_hours = duration.total_seconds() / 3600
 
-            # 3. Calculate the valid overlapped hours
-            if effective_sign_out > effective_sign_in:
-                duration = effective_sign_out - effective_sign_in
-                actual_hours = duration.total_seconds() / 3600
-            else:
-                actual_hours = 0.00 # Failsafe if times don't overlap the event at all
-
-            # 4. Failsafe max-cap just in case
+            # Failsafe max-cap just in case
             max_allowed = float(signup.activity.duration_hours or 0)
             final_hours = max_allowed if (max_allowed > 0 and actual_hours > max_allowed) else actual_hours
 
@@ -399,6 +401,7 @@ class AttendanceActionView(views.APIView):
                 "hours": signup.hours_earned
             })
 
+        # --- 6. RE-SIGN IN ---
         elif action == 'resignin':
             if not signup.sign_out_time:
                 return Response({"error": "Student must be signed out first before re-signing in."}, status=status.HTTP_400_BAD_REQUEST)
@@ -409,7 +412,6 @@ class AttendanceActionView(views.APIView):
             if action_time <= signup.sign_out_time:
                 return Response({"error": "Re-sign in time must be after their last sign-out time."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Start a new session (hours_earned stays safe in the DB)
             signup.sign_in_time = action_time
             signup.sign_out_time = None  # Resets them to "In Progress"
             signup.save()
@@ -537,7 +539,7 @@ class StudentStatsView(APIView):
         elif total_hours >= 30:
             motivation = "🫡 30 Hours deep. The dedication is real. We see you!"
         elif total_hours >= 20:
-            motivation = "👨‍🍳 20 Hours? Okay, hold up... let them cook!"
+            motivation = "👨‍🍳 20 Hours? Okay, hold up... you are cooking!"
         elif total_hours >= 10:
             motivation = "⚡ Double digits (10h)! Huge W. Keep that momentum going."
         elif total_hours > 0:
@@ -906,4 +908,150 @@ class VideoGuidesView(TemplateView):
                 'url': 'https://storage.googleapis.com/cshaw/images/rsvp.mp4',
             },
         ]
+        return context
+    
+    
+
+
+# Create a path for our hidden JSON file in the main project folder
+FEEDBACK_FILE = os.path.join(settings.BASE_DIR, 'platform_feedback.json')
+
+def save_feedback_to_file(data):
+    """Helper to append new feedback to the JSON file."""
+    feedbacks = []
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r') as f:
+            try:
+                feedbacks = json.load(f)
+            except json.JSONDecodeError:
+                pass # If file is empty or corrupted, start fresh
+                
+    # Add timestamp and append
+    data['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    feedbacks.insert(0, data) # Insert at the top so newest is first
+
+    with open(FEEDBACK_FILE, 'w') as f:
+        json.dump(feedbacks, f, indent=4)
+
+def get_all_feedback():
+    """Helper to read the JSON file."""
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return []
+    return []
+
+# --- 1. The API Endpoint for the Javascript Fetch ---
+class StudentFeedbackView(TemplateView):
+    template_name = 'core/student_feedback.html' # (Check that this matches your folder structure)
+
+    # 👇 YOU MUST ADD THIS BLOCK 👇
+    def get_context_data(self, **kwargs):
+        # 1. Get the default context (the base data Django usually sends)
+        context = super().get_context_data(**kwargs)
+        
+        # 2. Add our custom reCAPTCHA key to the context dictionary
+        context['RECAPTCHA_SITE_KEY'] = settings.RECAPTCHA_SITE_KEY
+        
+        # 3. Return the updated dictionary to the HTML template
+        return context
+# --- 2. The API Endpoint ---
+def get_client_ip(request):
+    """Helper to safely get the user's IP address (handles proxies like Railway/Vercel)"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+# --- 2. The API Endpoint ---
+class SubmitFeedbackAPI(View):
+    def post(self, request, *args, **kwargs):
+        
+        # 👇 1. RATE LIMIT CHECK (Before anything else to save server resources)
+        client_ip = get_client_ip(request)
+        cache_key = f"feedback_limit_{client_ip}"
+        
+        # Get how many times this IP has submitted (defaults to 0)
+        attempts = cache.get(cache_key, 0)
+        
+        # If they hit 3 submissions, block them
+        if attempts >= 3:
+            return JsonResponse({
+                "error": "You are submitting too fast. Please wait 10 minutes before trying again."
+            }, status=429) # 429 = Too Many Requests
+            
+        # Log this attempt in the cache and set it to expire in 600 seconds (10 minutes)
+        cache.set(cache_key, attempts + 1, timeout=600)
+
+        # 👇 2. PROCEED WITH NORMAL LOGIC
+        try:
+            data = json.loads(request.body)
+            
+            # Verify reCAPTCHA v3
+            recaptcha_response = data.get('recaptcha_token')
+            if not recaptcha_response:
+                return JsonResponse({"error": "Missing security token."}, status=400)
+
+            verify_url = 'https://www.google.com/recaptcha/api/siteverify'
+            verify_data = urllib.parse.urlencode({
+                'secret': settings.RECAPTCHA_SECRET_KEY,
+                'response': recaptcha_response
+            }).encode('utf-8')
+            
+            req = urllib.request.Request(verify_url, data=verify_data)
+            response = urllib.request.urlopen(req)
+            result = json.loads(response.read().decode('utf-8'))
+            
+            # v3 LOGIC: Check success, score threshold, and exact action name
+            if not result.get('success') or result.get('score', 0) < 0.5 or result.get('action') != 'submit_feedback':
+                print(f"Spam blocked! Score: {result.get('score')}")
+                return JsonResponse({"error": "Spam detected. Please try again."}, status=400)
+
+            # Extract and Validate Input
+            raw_message = data.get('message', '').strip()
+            if not raw_message:
+                return JsonResponse({"error": "Message cannot be empty."}, status=400)
+            
+            safe_message = strip_tags(raw_message)
+            feedback_type = strip_tags(data.get('type', 'REVIEW'))
+            rating = strip_tags(str(data.get('rating', ''))) if data.get('rating') else None
+
+            safe_data = {
+                'type': feedback_type,
+                'rating': rating,
+                'message': safe_message
+            }
+
+            if request.user.is_authenticated:
+                safe_data['student_name'] = f"{request.user.first_name} {request.user.last_name}"
+                safe_data['student_email'] = request.user.email
+            else:
+                safe_data['student_name'] = "Anonymous"
+                safe_data['student_email'] = "N/A"
+
+            save_feedback_to_file(safe_data)
+            return JsonResponse({"message": "Thank you! Your feedback has been securely submitted."}, status=200)
+            
+        except Exception as e:
+            print(f"Feedback Error: {e}")
+            return JsonResponse({"error": "An unexpected server error occurred."}, status=500)
+
+# --- 2. The Student View ---
+
+
+# --- 3. The Admin View (Protected) ---
+class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
+    template_name = 'core/admin_feedback.html' # Adjust path
+
+    # Only let staff/admins access this page
+    def test_func(self):
+        return self.request.user.is_staff or getattr(self.request.user, 'role', '') in ['COORDINATOR', 'EXECUTIVE']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['feedbacks'] = get_all_feedback()
         return context

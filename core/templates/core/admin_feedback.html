@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Inbox | C-SHAW</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body, html { margin: 0; padding: 0; background: #0f172a; color: #e2e8f0; font-family: 'Poppins', sans-serif; min-height: 100vh; }
+        .top-nav { padding: 20px 30px; display: flex; align-items: center; background: #1e293b; border-bottom: 1px solid #334155; }
+        .back-btn { color: #bdc3c7; text-decoration: none; font-weight: 600; font-size: 1rem; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 20px; transition: 0.2s; background: rgba(255,255,255,0.05); }
+        .back-btn:hover { color: #FF8C42; background: rgba(255, 140, 66, 0.1); }
+        
+        .admin-board { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .fb-card { background: #1c243a; border-radius: 12px; padding: 25px; margin-bottom: 20px; border-left: 5px solid #475569; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .fb-card.review { border-left-color: #f1c40f; }
+        .fb-card.idea { border-left-color: #3498db; }
+        .fb-card.report { border-left-color: #e74c3c; }
+        
+        .fb-header { display: flex; justify-content: space-between; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;}
+        .fb-type { font-weight: 800; font-size: 0.85rem; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px; }
+        .fb-type.review { background: rgba(241, 196, 15, 0.1); color: #f1c40f; }
+        .fb-type.idea { background: rgba(52, 152, 219, 0.1); color: #3498db; }
+        .fb-type.report { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        
+        .fb-student { font-weight: 600; color: #ffffff; }
+        .fb-date { font-size: 0.8rem; color: #94a3b8; }
+        
+        /* The 'white-space: pre-wrap' ensures paragraphs are kept intact */
+        .fb-message { font-size: 1rem; line-height: 1.6; color: #cbd5e1; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <a href="{% url 'index' %}" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Hub Dashboard</a>
+    </div>
+
+    <div class="admin-board">
+        <h1 style="color: white; border-bottom: 2px solid #FF8C42; padding-bottom: 10px; margin-bottom: 30px;">Inbox: Platform Feedback</h1>
+
+        {% if feedbacks %}
+            {% for item in feedbacks %}
+                <div class="fb-card {{ item.type|lower }}">
+                    <div class="fb-header">
+                        <div>
+                            <span class="fb-type {{ item.type|lower }}">
+                                {% if item.type == 'REVIEW' %}⭐ REVIEW {% if item.rating %}({{ item.rating }}/5){% endif %}
+                                {% elif item.type == 'IDEA' %}💡 SUGGESTION
+                                {% elif item.type == 'REPORT' %}🚩 ABUSE REPORT
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="fb-student">{{ item.student_name }}</div>
+                            <div class="fb-date">{{ item.timestamp }}</div>
+                        </div>
+                    </div>
+                    <div class="fb-message">{{ item.message }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div style="text-align: center; padding: 60px; background: #1c243a; border-radius: 12px; color: #94a3b8;">
+                <i class="fa-solid fa-inbox" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                <h3>No feedback received yet.</h3>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
