@@ -1088,6 +1088,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 hour12: false, 
                 timeZone: 'Africa/Johannesburg' 
             };
+
+            const metaTag = document.querySelector('meta[name="current-user-email"]');
+            const currentUserEmail = metaTag ? metaTag.getAttribute('content') : "";
             
             // --- ROW GENERATION ---
             rsvps.forEach(rsvp => {
@@ -1097,6 +1100,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Pass Start Time as Minimum for inputs
                 const minTimeAttr = `data-min="${rawStartTime}"`;
+                const isSelf = rsvp.student_email === currentUserEmail;
+
+
+                if (isSelf) {
+                    // 👇 2. If it's them, OVERRIDE the buttons with a strict warning popup
+                    actionBtn = `<button onclick="alert('Accountability Lock 🔒\\n\\nYou cannot sign yourself in or out. Please find another Executive to log your attendance to ensure fair tracking.')"
+                        style="padding:6px 16px; background:#95a5a6; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                        Locked (Self)
+                    </button>`;
+                } else {
 
                 if (rsvp.sign_in_time && !rsvp.sign_out_time) {
                     // --- CASE A: IN PROGRESS ---
@@ -1147,8 +1160,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 else {
                     // --- CASE C: NOT STARTED ---
-                    actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" data-name="${rsvp.student_name}" ${minTimeAttr}
-                        style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(39,174,96,0.2);">Sign In</button>`;
+                    if (hasEventEnded) {
+                        // If the event is over, show a disabled grey button
+                        actionBtn = `<button disabled 
+                            style="padding:6px 16px; background:#bdc3c7; color:white; border:none; border-radius:4px; cursor:not-allowed; font-weight:600;">
+                            Event Ended
+                        </button>`;
+                    } else {
+                        // If the event is still active, show the normal green Sign In button
+                        actionBtn = `<button class="btn-signin" data-id="${rsvp.id}" data-name="${rsvp.student_name}" ${minTimeAttr}
+                            style="padding:6px 16px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(39,174,96,0.2);">
+                            Sign In
+                        </button>`;
+                    }
                 }
 
                 const fullNameLower = `${rsvp.student_name} ${rsvp.student_surname}`.toLowerCase();
@@ -1173,6 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding: 15px; text-align: right;">${actionBtn}</td>
                 `;
                 tbody.appendChild(tr);
+                }
             });
 
             // --- FILTER LOGIC ---
@@ -1465,9 +1490,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             ${awardsListHtml}
 
-                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
-                                <div class="rank-badge" style="display:inline-block; font-size: 0.85rem; padding: 4px 12px;">
-                                    Position #${data.rank} on Leaderboard
+                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                <div class="rank-badge" style="background: rgba(255, 140, 66, 0.1); color: var(--primary-orange); border: 1px solid var(--primary-orange); font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                                    🌍 Global: #${data.rank_global}
+                                </div>
+                                <div class="rank-badge" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                                    🏫 ${data.campus}: #${data.rank_campus}
                                 </div>
                             </div>
                         </div>

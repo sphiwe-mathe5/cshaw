@@ -513,19 +513,16 @@ class StudentStatsView(APIView):
             total_events=Count('id')
         )
         
-        # 👇 ADD BONUS HOURS LOGIC HERE 👇
+        # --- TOTAL HOURS CALCULATION ---
         activity_hours = float(stats['total_hours'] or 0.00)
         bonus_hours = float(getattr(user, 'manual_bonus_hours', 0.00)) 
-        
-        total_hours = activity_hours + bonus_hours # Combined Total
-        # 👆 -------------------------- 👆
+        total_hours = activity_hours + bonus_hours 
         
         events_count = stats['total_events'] or 0
-        
-
         remaining = round(max(0, TARGET_HOURS - total_hours), 2)
         progress_percent = round(min(100, (total_hours / TARGET_HOURS) * 100), 1)
         
+        # --- MOTIVATION LOGIC ---
         if total_hours >= 80:
             motivation = "👑 GOAT STATUS! 80+ hours? You really left no crumbs. Absolute legend."
         elif total_hours >= 70:
@@ -549,19 +546,46 @@ class StudentStatsView(APIView):
 
         recruits_count = user.recruits.count()
 
-        user_hours_map = ActivitySignup.objects.filter(
+        # 👇 --- FIXED RANKING LOGIC --- 👇
+        
+        # 1. Get all students
+        # (Assuming your User model is imported. Adjust import if needed)
+        from users.models import User 
+        all_students = User.objects.filter(role=User.Roles.STUDENT)
+        
+        # 2. Start a dictionary with EVERY student's bonus hours
+        peer_totals = {u.id: float(u.manual_bonus_hours or 0.0) for u in all_students}
+        
+        # 3. Add their actual activity hours for the current year
+        yearly_activity = ActivitySignup.objects.filter(
             attended=True,
-            sign_out_time__year=current_year 
+            sign_out_time__year=current_year,
+            user__role=User.Roles.STUDENT
         ).values('user').annotate(
             hours=Sum('hours_earned')
-        ).order_by('-hours')
+        )
         
-        rank = 1
-        for u in user_hours_map:
-            
-            if float(u['hours']) > total_hours:
-                rank += 1
-        
+        for item in yearly_activity:
+            uid = item['user']
+            if uid in peer_totals:
+                peer_totals[uid] += float(item['hours'] or 0.0)
+                
+        # 4. Calculate Global Rank (Compare against ALL students)
+        global_rank = 1
+        for uid, peer_hours in peer_totals.items():
+            if peer_hours > total_hours and uid != user.id:
+                global_rank += 1
+                
+        # 5. Calculate Campus Rank (Compare ONLY against their campus)
+        campus_rank = 1
+        campus_student_ids = set(all_students.filter(campus=user.campus).values_list('id', flat=True))
+        for uid, peer_hours in peer_totals.items():
+            if uid in campus_student_ids and peer_hours > total_hours and uid != user.id:
+                campus_rank += 1
+                
+        # 👆 ------------------------------ 👆
+
+        # --- FORMAT MONTHLY DATA ---
         monthly_data = ActivitySignup.objects.filter(
             user=user, 
             attended=True,
@@ -581,10 +605,7 @@ class StudentStatsView(APIView):
             })
 
         user_awards = user.awards.all()
-        awards_data = [
-            {'name': a.name, 'icon': a.icon, 'color': a.color} 
-            for a in user_awards
-        ]
+        awards_data = [{'name': a.name, 'icon': a.icon, 'color': a.color} for a in user_awards]
         
         recent_events = ActivitySignup.objects.filter(
             user=user, 
@@ -605,15 +626,16 @@ class StudentStatsView(APIView):
             "is_executive": bool(user.executive_position),
             "current_year": current_year, 
             "total_hours": total_hours,
-            "activity_hours": activity_hours, # Sending raw activity hours
-            "bonus_hours": bonus_hours,       # Sending raw bonus hours
+            "activity_hours": activity_hours,
+            "bonus_hours": bonus_hours,      
             "events_count": events_count,
             "recruits_count": recruits_count,
             "target": TARGET_HOURS,
             "remaining": remaining,
             "progress_percent": progress_percent,
             "motivation": motivation,
-            "rank": rank,
+            "rank_global": global_rank,   # 👈 Returning new global rank
+            "rank_campus": campus_rank,   # 👈 Returning new campus rank
             "monthly": formatted_months,
             "history": events_list,
             "awards": awards_data,
