@@ -1490,12 +1490,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             ${awardsListHtml}
 
-                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                                <div class="rank-badge" style="background: rgba(255, 140, 66, 0.1); color: var(--primary-orange); border: 1px solid var(--primary-orange); font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
-                                    🌍 Global: #${data.rank_global}
+                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
+                                <div style="font-size: 0.75rem; color: #95a5a6; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Leaderboard Position
                                 </div>
-                                <div class="rank-badge" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
-                                    🏫 ${data.campus}: #${data.rank_campus}
+                                
+                                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                    <div class="rank-badge" style="background: rgba(255, 140, 66, 0.1); color: var(--primary-orange); border: 1px solid var(--primary-orange); font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                                        🌍 Global: #${data.rank_global}
+                                    </div>
+                                    <div class="rank-badge" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                                        🏫 ${data.campus}: #${data.rank_campus}
+                                    </div>
                                 </div>
                             </div>
                         </div>
