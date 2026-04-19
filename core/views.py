@@ -947,7 +947,6 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
-# --- 1. The HTML View (Protected) ---
 class StudentFeedbackView(LoginRequiredMixin, TemplateView):
     template_name = 'core/student_feedback.html'
 
@@ -955,26 +954,20 @@ class SubmitFeedbackAPI(APIView):
     permission_classes = [IsAuthenticated] 
 
     def post(self, request, *args, **kwargs):
-        client_ip = get_client_ip(request)
-        cache_key = f"feedback_limit_{client_ip}"
-        attempts = cache.get(cache_key, 0)
-        
-        if attempts >= 3:
-            return Response(
-                {"error": "You are submitting too fast. Please wait 10 minutes before trying again."}, 
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
-            
-        cache.set(cache_key, attempts + 1, timeout=600)
-
 
         serializer = FeedbackSerializer(data=request.data)
         
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Thank you! Your feedback has been securely submitted."}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Thank you! Your feedback has been securely submitted."}, 
+                status=status.HTTP_201_CREATED
+            )
             
-        return Response({"error": "Invalid data provided.", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Invalid data provided.", "details": serializer.errors}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
