@@ -96,3 +96,19 @@ class ActivitySignup(models.Model):
     def __str__(self):
         return f"{self.user.first_name} -> {self.activity.title}"
     
+    
+class Feedback(models.Model):
+    class FeedbackTypes(models.TextChoices):
+        REVIEW = 'REVIEW', 'Review'
+        IDEA = 'IDEA', 'Suggestion'
+        REPORT = 'REPORT', 'Report Issue'
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    type = models.CharField(max_length=20, choices=FeedbackTypes.choices, default=FeedbackTypes.REVIEW)
+    rating = models.IntegerField(null=True, blank=True)
+    message = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.type} - {self.created_at.strftime('%Y-%m-%d')}"
+    

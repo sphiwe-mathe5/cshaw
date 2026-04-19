@@ -481,6 +481,5 @@ if (resetConfirmForm) {
             resetMatchError.classList.remove('hidden');
             return;
         }
-        // This is a normal Django POST so no fetch needed — just let it submit
     });
 }

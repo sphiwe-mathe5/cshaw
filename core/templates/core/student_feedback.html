@@ -93,7 +93,7 @@
             <button type="button" class="type-btn" onclick="setFeedbackType('REPORT', this)">🚩 Report Issue</button>
         </div>
 
-        <form id="feedbackForm" data-sitekey="{{ RECAPTCHA_SITE_KEY }}">
+        <form id="feedbackForm">
             {% csrf_token %}
             <input type="hidden" id="feedbackType" value="REVIEW">
 
@@ -159,20 +159,10 @@
             }
         }
 
-        // Store the key in a JS variable so we can use it in the execute function
 
-        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const form = document.getElementById('feedbackForm');
-            const SITE_KEY = form.dataset.sitekey; // 👈 Grab it from the HTML!
-            
-            // 👇 Failsafe: Tell us immediately if Django failed to pass the key
-            if (!SITE_KEY || SITE_KEY.includes("{{")) {
-                alert("System Error: Django is not passing the RECAPTCHA_SITE_KEY to the template.");
-                return;
-            }
-
             const btn = document.getElementById('submitBtn');
             const type = document.getElementById('feedbackType').value;
             const message = document.getElementById('feedbackMessage').value.trim();
@@ -188,56 +178,47 @@
                 rating = selectedStar ? selectedStar.value : null;
             }
 
-            if (typeof grecaptcha === 'undefined') {
-                alert("Anti-spam script failed to load. Please refresh.");
-                return;
-            }
-
             btn.textContent = "Securely Sending...";
             btn.disabled = true;
 
-            grecaptcha.ready(async () => {
-                try {
-                    // Use the safely extracted SITE_KEY
-                    const token = await grecaptcha.execute(SITE_KEY, { action: 'submit_feedback' });
+            try {
+                const res = await fetch('/api/feedback/submit/', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getValidCsrfToken()
+                    },
+                    body: JSON.stringify({ 
+                        type: type, 
+                        rating: rating, 
+                        message: message
+                    })
+                });
 
-                    const res = await fetch('/api/feedback/submit/', {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getValidCsrfToken()
-                        },
-                        body: JSON.stringify({ 
-                            type: type, 
-                            rating: rating, 
-                            message: message,
-                            recaptcha_token: token
-                        })
-                    });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    document.querySelector('.feedback-container').innerHTML = `
+                        <div style="text-align:center; padding: 40px 0;">
+                            <i class="fa-solid fa-circle-check" style="font-size: 4rem; color: #27ae60; margin-bottom: 20px;"></i>
+                            <h2 style="color: white; margin: 0;">Feedback Sent</h2>
+                            <p style="color: #94a3b8; margin-top: 10px;">Thank you! Your submission has been securely saved.</p>
+                            <a href="{% url 'index' %}" style="display:inline-block; margin-top: 20px; color: #FF8C42; text-decoration: none; font-weight: bold;">← Return to Hub</a>
+                        </div>
+                    `;
+                } else {
 
-                    const data = await res.json();
-                    
-                    if (res.ok) {
-                        document.querySelector('.feedback-container').innerHTML = `
-                            <div style="text-align:center; padding: 40px 0;">
-                                <i class="fa-solid fa-shield-check" style="font-size: 4rem; color: #27ae60; margin-bottom: 20px;"></i>
-                                <h2 style="color: white; margin: 0;">Feedback Secured</h2>
-                                <p style="color: #94a3b8; margin-top: 10px;">Thank you! Your submission has been verified and saved.</p>
-                                <a href="{% url 'index' %}" style="display:inline-block; margin-top: 20px; color: #FF8C42; text-decoration: none; font-weight: bold;">← Return to Hub</a>
-                            </div>
-                        `;
-                    } else {
-                        alert(data.error);
-                        btn.textContent = "Send Feedback";
-                        btn.disabled = false;
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert("Network error. Please try again.");
+                    const errorMsg = data.error || "Failed to submit feedback.";
+                    alert(errorMsg);
                     btn.textContent = "Send Feedback";
                     btn.disabled = false;
                 }
-            });
+            } catch (err) {
+                console.error(err);
+                alert("Network error. Please try again.");
+                btn.textContent = "Send Feedback";
+                btn.disabled = false;
+            }
         });
     </script>
 </body>

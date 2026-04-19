@@ -59,7 +59,7 @@ AUTH_USER_MODEL = 'users.User'
 
 AUTHENTICATION_BACKENDS = [
 
-    'django.contrib.auth.backends.ModelBackend',  # Keep for superuser
+    'django.contrib.auth.backends.ModelBackend', 
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -85,7 +85,7 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = False
 CSRF_USE_SESSIONS = False
-CSRF_TRUSTED_ORIGINS = [  # ADD THIS - This was missing!
+CSRF_TRUSTED_ORIGINS = [  
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'https://cshaw.co.za',
@@ -226,7 +226,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
 
 ANYMAIL = {
-    # Postmark uses your Server API Token for authentication. 
+    # Postmark uses Server API Token for authentication. 
     # If you used EMAIL_HOST_PASSWORD before, it's the exact same token!
     "POSTMARK_SERVER_TOKEN": config('EMAIL_HOST_PASSWORD'), 
 }
@@ -302,3 +302,5 @@ CSP_IMG_SRC = (
 CSP_FORM_ACTION = ("'self'",)
 CSP_FRAME_ANCESTORS = ("'self'",)
 SECURE_CROSS_ORIGIN_RESOURCE_POLICY = "same-origin"
+
+LOGIN_URL = 'login-page'

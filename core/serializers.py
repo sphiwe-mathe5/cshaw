@@ -1,7 +1,8 @@
 from rest_framework import serializers, generics
-from .models import VolunteerActivity, ActivityRole, ActivitySignup
+from .models import VolunteerActivity, ActivityRole, ActivitySignup, Feedback
 from users.permissions import IsCoordinator 
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 class ActivityRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -137,3 +138,16 @@ class ActivityRSVPSerializer(serializers.ModelSerializer):
         if roles:
             return ", ".join([r.role_type for r in roles]) 
         return "General"
+
+# Feedback Serializer
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = ['type', 'rating', 'message']
+
+    def validate_message(self, value):
+
+        clean_message = strip_tags(value).strip()
+        if len(clean_message) < 10:
+            raise serializers.ValidationError("Message must be at least 10 characters.")
+        return clean_message

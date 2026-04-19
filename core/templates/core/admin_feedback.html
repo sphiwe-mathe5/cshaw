@@ -53,8 +53,13 @@
                             </span>
                         </div>
                         <div style="text-align: right;">
-                            <div class="fb-student">{{ item.student_name }}</div>
-                            <div class="fb-date">{{ item.timestamp }}</div>
+                            <div class="fb-student" style="color: #27ae60; font-weight: 600;">
+                                <i class="fa-solid fa-user-secret"></i> Anonymous
+                            </div>
+                            
+                            <div class="fb-date" style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">
+                                {{ item.created_at|date:"d M Y, H:i" }}
+                            </div>
                         </div>
                     </div>
                     <div class="fb-message">{{ item.message }}</div>

@@ -1,13 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from rest_framework import generics, permissions
-from .models import VolunteerActivity, ActivitySignup
+from .models import VolunteerActivity, ActivitySignup, Feedback
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, views
 from rest_framework.decorators import api_view, permission_classes
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer, ActivityRSVPSerializer, ActivitySerializer
+from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer, ActivityRSVPSerializer, ActivitySerializer, FeedbackSerializer
 from users.permissions import IsCoordinator, IsAuthorizedExecutiveOrCoordinator 
 from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth, ExtractYear
@@ -31,7 +32,7 @@ import os
 from django.http import JsonResponse
 from django.views import View
 from django.views.generic import TemplateView
-from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 import urllib.request
 import urllib.parse
 from django.core.cache import cache
@@ -526,13 +527,13 @@ class StudentStatsView(APIView):
         if total_hours >= 80:
             motivation = "👑 GOAT STATUS! 80+ hours? You really left no crumbs. Absolute legend."
         elif total_hours >= 70:
-            motivation = "🔥 70 Hours? You're eating this up. Final stretch, bestie!"
+            motivation = "🔥 70 Hours? You're eating this up. Final stretch, champ!"
         elif total_hours >= 60:
-            motivation = "💅 60 Hours done. Highkey impressive. You're glowing right now."
+            motivation = "💅 60 Hours done. Highkey impressive."
         elif total_hours >= 50:
             motivation = "✨ 50 Hours! You have officially entered your Volunteer Era."
         elif total_hours >= 40:
-            motivation = "🔋 Halfway Point! 40 hours locked in. Main character energy only."
+            motivation = "🔋 Halfway Point! 40 hours locked in. Main character energy."
         elif total_hours >= 30:
             motivation = "🫡 30 Hours deep. The dedication is real. We see you!"
         elif total_hours >= 20:
@@ -935,51 +936,8 @@ class VideoGuidesView(TemplateView):
     
 
 
-# Create a path for our hidden JSON file in the main project folder
-FEEDBACK_FILE = os.path.join(settings.BASE_DIR, 'platform_feedback.json')
 
-def save_feedback_to_file(data):
-    """Helper to append new feedback to the JSON file."""
-    feedbacks = []
-    if os.path.exists(FEEDBACK_FILE):
-        with open(FEEDBACK_FILE, 'r') as f:
-            try:
-                feedbacks = json.load(f)
-            except json.JSONDecodeError:
-                pass # If file is empty or corrupted, start fresh
-                
-    # Add timestamp and append
-    data['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-    feedbacks.insert(0, data) # Insert at the top so newest is first
 
-    with open(FEEDBACK_FILE, 'w') as f:
-        json.dump(feedbacks, f, indent=4)
-
-def get_all_feedback():
-    """Helper to read the JSON file."""
-    if os.path.exists(FEEDBACK_FILE):
-        with open(FEEDBACK_FILE, 'r') as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return []
-    return []
-
-# --- 1. The API Endpoint for the Javascript Fetch ---
-class StudentFeedbackView(TemplateView):
-    template_name = 'core/student_feedback.html' # (Check that this matches your folder structure)
-
-    # 👇 YOU MUST ADD THIS BLOCK 👇
-    def get_context_data(self, **kwargs):
-        # 1. Get the default context (the base data Django usually sends)
-        context = super().get_context_data(**kwargs)
-        
-        # 2. Add our custom reCAPTCHA key to the context dictionary
-        context['RECAPTCHA_SITE_KEY'] = settings.RECAPTCHA_SITE_KEY
-        
-        # 3. Return the updated dictionary to the HTML template
-        return context
-# --- 2. The API Endpoint ---
 def get_client_ip(request):
     """Helper to safely get the user's IP address (handles proxies like Railway/Vercel)"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -989,91 +947,43 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
-# --- 2. The API Endpoint ---
-class SubmitFeedbackAPI(View):
+# --- 1. The HTML View (Protected) ---
+class StudentFeedbackView(LoginRequiredMixin, TemplateView):
+    template_name = 'core/student_feedback.html'
+
+class SubmitFeedbackAPI(APIView):
+    permission_classes = [IsAuthenticated] 
+
     def post(self, request, *args, **kwargs):
-        
-        # 👇 1. RATE LIMIT CHECK (Before anything else to save server resources)
         client_ip = get_client_ip(request)
         cache_key = f"feedback_limit_{client_ip}"
-        
-        # Get how many times this IP has submitted (defaults to 0)
         attempts = cache.get(cache_key, 0)
         
-        # If they hit 3 submissions, block them
         if attempts >= 3:
-            return JsonResponse({
-                "error": "You are submitting too fast. Please wait 10 minutes before trying again."
-            }, status=429) # 429 = Too Many Requests
+            return Response(
+                {"error": "You are submitting too fast. Please wait 10 minutes before trying again."}, 
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
             
-        # Log this attempt in the cache and set it to expire in 600 seconds (10 minutes)
         cache.set(cache_key, attempts + 1, timeout=600)
 
-        # 👇 2. PROCEED WITH NORMAL LOGIC
-        try:
-            data = json.loads(request.body)
+
+        serializer = FeedbackSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Thank you! Your feedback has been securely submitted."}, status=status.HTTP_201_CREATED)
             
-            # Verify reCAPTCHA v3
-            recaptcha_response = data.get('recaptcha_token')
-            if not recaptcha_response:
-                return JsonResponse({"error": "Missing security token."}, status=400)
-
-            verify_url = 'https://www.google.com/recaptcha/api/siteverify'
-            verify_data = urllib.parse.urlencode({
-                'secret': settings.RECAPTCHA_SECRET_KEY,
-                'response': recaptcha_response
-            }).encode('utf-8')
-            
-            req = urllib.request.Request(verify_url, data=verify_data)
-            response = urllib.request.urlopen(req)
-            result = json.loads(response.read().decode('utf-8'))
-            
-            # v3 LOGIC: Check success, score threshold, and exact action name
-            if not result.get('success') or result.get('score', 0) < 0.5 or result.get('action') != 'submit_feedback':
-                print(f"Spam blocked! Score: {result.get('score')}")
-                return JsonResponse({"error": "Spam detected. Please try again."}, status=400)
-
-            # Extract and Validate Input
-            raw_message = data.get('message', '').strip()
-            if not raw_message:
-                return JsonResponse({"error": "Message cannot be empty."}, status=400)
-            
-            safe_message = strip_tags(raw_message)
-            feedback_type = strip_tags(data.get('type', 'REVIEW'))
-            rating = strip_tags(str(data.get('rating', ''))) if data.get('rating') else None
-
-            safe_data = {
-                'type': feedback_type,
-                'rating': rating,
-                'message': safe_message
-            }
-
-            if request.user.is_authenticated:
-                safe_data['student_name'] = f"{request.user.first_name} {request.user.last_name}"
-                safe_data['student_email'] = request.user.email
-            else:
-                safe_data['student_name'] = "Anonymous"
-                safe_data['student_email'] = "N/A"
-
-            save_feedback_to_file(safe_data)
-            return JsonResponse({"message": "Thank you! Your feedback has been securely submitted."}, status=200)
-            
-        except Exception as e:
-            print(f"Feedback Error: {e}")
-            return JsonResponse({"error": "An unexpected server error occurred."}, status=500)
-
-# --- 2. The Student View ---
+        return Response({"error": "Invalid data provided.", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# --- 3. The Admin View (Protected) ---
 class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
-    template_name = 'core/admin_feedback.html' # Adjust path
+    template_name = 'core/admin_feedback.html' 
 
-    # Only let staff/admins access this page
     def test_func(self):
-        return self.request.user.is_staff or getattr(self.request.user, 'role', '') in ['COORDINATOR', 'EXECUTIVE']
+        return self.request.user.is_staff or getattr(self.request.user, 'role', '') in ['COORDINATOR']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['feedbacks'] = get_all_feedback()
+        context['feedbacks'] = Feedback.objects.all().order_by('-created_at')
         return context
