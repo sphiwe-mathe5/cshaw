@@ -1343,6 +1343,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
 
+            const totalDecimal = parseFloat(data.total_hours) || 0;
+            const exactHours = Math.floor(totalDecimal);
+            const exactMinutes = Math.floor((totalDecimal - exactHours) * 60);
+            const exactSeconds = Math.round((((totalDecimal - exactHours) * 60) - exactMinutes) * 60);
+
             mainContent.innerHTML = `
                 <style>
                     @media (max-width: 768px) {
@@ -1375,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </h1>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; color: #6b6b90; font-weight: 500;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                <span>${data.campus || 'C-SHAW'} Volunteer</span>
+                                <span>${data.campus || 'C-SHAW'}</span>
                             </div>
                         </div>
 
@@ -1387,12 +1392,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 color: #FF6B35;
                                 letter-spacing: -2px;
                             ">
-                                ${data.total_hours}
+                                ${exactHours}
                             </div>
                             <div style="color: #6b6b90; font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 5px;">
                                 Hours Earned
                             </div>
                         </div>
+
                     </div>
 
                     <div style="
@@ -1409,6 +1415,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
+
+                                            <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
+                        <div style="color: #FF6B35; margin-bottom: 10px;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            </div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: white; display: flex; justify-content: center; align-items: baseline; gap: 4px;">
+                                <span>${exactHours}<span style="font-size:1rem; color:#FF6B35;">h</span></span>
+                                <span>${exactMinutes}<span style="font-size:1rem; color:#FF6B35;">m</span></span>
+                                <span>${exactSeconds}<span style="font-size:1rem; color:#FF6B35;">s</span></span>
+                            </div>
+                            <div style="color: #6b6b90; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Detailed Time</div>
+                        </div>
                         
                         <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
                             <div style="color: #FF6B35; margin-bottom: 10px;">
@@ -1420,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
                             <div style="color: #FF6B35; margin-bottom: 10px;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
                             </div>
                             <div style="font-size: 2rem; font-weight: 700; color: white;">${Math.round(data.progress_percent)}%</div>
                             <div style="color: #6b6b90; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Progress</div>
@@ -3820,8 +3838,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 .podium-name { font-weight: bold; font-size: 1.1rem; color: #ffffff; margin-top: 10px; }
                 .podium-hours { color: #FF8C42; font-weight: bold; font-size: 0.9rem; margin-bottom: 15px; }
 
-                /* --- RANK CARD STYLES (4-10) --- */
-                .rankings-list { display: flex; flex-direction: column; gap: 15px; animation: slideUp 0.6s ease 0.4s forwards; opacity: 0; }
+                /* --- RANK CARD STYLES (Scrollable List) --- */
+                .rankings-list { 
+                    display: flex; 
+                    flex-direction: column; 
+                    gap: 15px; 
+                    animation: slideUp 0.6s ease 0.4s forwards; 
+                    opacity: 0; 
+                    
+                    /* 👇 NEW SCROLLING RULES 👇 */
+                    max-height: 500px; 
+                    overflow-y: auto;
+                    padding-right: 15px;
+                }
+
+                /* Custom Dark Scrollbar */
+                .rankings-list::-webkit-scrollbar { width: 8px; }
+                .rankings-list::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+                .rankings-list::-webkit-scrollbar-thumb { background: rgba(255, 140, 66, 0.3); border-radius: 10px; }
+                .rankings-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 140, 66, 0.7); }
+
                 .rank-card { background: #1c243a; border-radius: 12px; padding: 18px 25px; display: flex; align-items: center; justify-content: space-between; border: 1px solid transparent; transition: all 0.2s ease-in-out; cursor: pointer; }
                 .rank-card:hover { border-color: rgba(255, 140, 66, 0.5); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
 
@@ -3873,8 +3909,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div id="rankingsList" class="rankings-list"></div>
                 
-                <div style="margin-top: 40px; text-align: center; color: #7f8c8d; font-size: 0.85rem;">
-                    Updated in real-time • <a href="#" style="color: #FF8C42; text-decoration: none; font-weight: bold;">View Full Rankings</a>
+                <div style="margin-top: 30px; text-align: center; color: #7f8c8d; font-size: 0.85rem;">
+                    <i class="fa-solid fa-bolt" style="color: #FF8C42; margin-right: 5px;"></i> Updated in real-time
                 </div>
             </div>
         `;
@@ -3969,18 +4005,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- RENDER PODIUM (TOP 3) ---
-            // We use a custom flex order to put Rank 1 in the middle
             const podiumSpots = students.slice(0, 3);
             
             // Define specific layouts for Rank 2, 1, 3
             const layout = [
-                { rank: 2, order: 1, data: podiumSpots[1] }, // Left side
-                { rank: 1, order: 2, data: podiumSpots[0] }, // Middle (Largest)
-                { rank: 3, order: 3, data: podiumSpots[2] }  // Right side
+                { rank: 2, order: 1, data: podiumSpots[1] },
+                { rank: 1, order: 2, data: podiumSpots[0] },
+                { rank: 3, order: 3, data: podiumSpots[2] }
             ];
 
             layout.forEach(spot => {
-                if (!spot.data) return; // Handle if less than 3 students exist
+                if (!spot.data) return; 
                 
                 const student = spot.data;
                 const initials = getInitials(student.first_name, student.last_name);
@@ -3988,7 +4023,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const spotDiv = document.createElement('div');
                 spotDiv.className = `podium-spot rank-${spot.rank}`;
-                spotDiv.style.order = spot.order; // Controls flex placement
+                spotDiv.style.order = spot.order;
 
                 spotDiv.innerHTML = `
                     ${spot.rank === 1 ? '<i class="fa-solid fa-crown" style="font-size: 1.5rem; color: #f1c40f; margin-bottom: 5px; display: block;"></i>' : ''}
@@ -4003,23 +4038,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
 
-            // --- RENDER REMAINING RANKS (4-10) ---
-            const otherStudents = students.slice(3, 10);
+            // 👇 THE FIX: Removed the '10' so it loads EVERY remaining student into the scroll box! 👇
+            const otherStudents = students.slice(3);
             
             if (otherStudents.length === 0) {
                 list.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 20px;">More rankings will appear as students earn hours.</div>';
             } else {
                 otherStudents.forEach((student, index) => {
-                    const rank = index + 4;
+                    const rank = index + 4; // Start rank at 4
                     const initials = getInitials(student.first_name, student.last_name);
                     const safeStudentJSON = JSON.stringify(student).replace(/"/g, '&quot;');
                     
-                    // Determine Punctuality class for simple card display
                     let punctualityHTML = student.late_count > student.on_time_count ? 
                         `<span class="card-perf late"><i class="fa-solid fa-clock"></i> Usually Late</span>` :
                         `<span class="card-perf"><i class="fa-solid fa-circle-check"></i> Usually On Time</span>`;
                     
-                    // Skip icons if no history
                     if (student.late_count === 0 && student.on_time_count === 0) punctualityHTML = '';
 
                     const card = document.createElement('div');
@@ -4072,7 +4105,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- PDF EXPORT GENERATOR ---
-// --- INSTANT PDF EXPORT GENERATOR ---
+
 window.exportToPDF = function(filterType) {
     // 1. Check if the jsPDF library has loaded
     if (!window.jspdf) {

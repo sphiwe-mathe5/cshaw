@@ -102,17 +102,48 @@ ul { list-style: none; }
 .btn-nav-login {
     font-weight: 600;
     color: var(--text-main);
-    padding: 8px 12px;
+    padding: 6px 8px; /* Smaller padding for mobile */
+    font-size: 0.85rem; /* Smaller font for mobile */
+    text-decoration: none;
 }
+
 .btn-nav-join {
     background-color: var(--primary-orange);
     color: white;
     font-weight: 600;
-    padding: 8px 20px;
+    padding: 6px 14px; /* Scaled down for mobile */
     border-radius: 20px;
-    transition: background 0.2s;
+    font-size: 0.85rem; /* Smaller font for mobile */
+    text-decoration: none;
+    transition: background 0.2s, transform 0.2s;
+    white-space: nowrap; /* 👈 THE MAGIC FIX: Prevents text from breaking into two lines */
 }
-.btn-nav-join:hover { background-color: var(--primary-orange-hover); }
+
+.btn-nav-join:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 140, 66, 0.3);
+}
+
+/* TABLET & DESKTOP SCALE-UP */
+@media (min-width: 768px) { 
+    .user-greeting { 
+        display: block; 
+    } 
+    
+    .nav-right {
+        gap: 15px; /* More breathing room on bigger screens */
+    }
+
+    .btn-nav-login {
+        padding: 8px 12px;
+        font-size: 1rem;
+    }
+
+    .btn-nav-join {
+        padding: 8px 20px;
+        font-size: 1rem;
+    }
+}
 
 /* --- 3. Layout Container --- */
 .main-container {
