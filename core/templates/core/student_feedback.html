@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,7 +8,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
     <script src="https://www.google.com/recaptcha/api.js?render={{ RECAPTCHA_SITE_KEY }}"></script>
 
 <style>
@@ -78,7 +79,6 @@
     </style>
 </head>
 <body>
-
     <div class="top-nav">
         <a href="{% url 'index' %}" class="back-btn"><i class="fa-solid fa-arrow-left"></i> <span>Back to Hub</span></a>
     </div>
@@ -87,15 +87,25 @@
         <h2 style="margin-top: 0; text-align: center; color: white;">Hub Feedback & Support</h2>
         <p style="text-align: center; color: #94a3b8; margin-bottom: 30px;">Help us make C-SHAW Hub better for everyone.</p>
 
+        {% if messages %}
+            {% for message in messages %}
+                <div style="padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; 
+                    {% if message.tags == 'error' %}background: #fadbd8; color: #c0392b;{% else %}background: #e8f8f0; color: #27ae60;{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         <div class="type-selector">
             <button type="button" class="type-btn active" onclick="setFeedbackType('REVIEW', this)">⭐ Review</button>
             <button type="button" class="type-btn" onclick="setFeedbackType('IDEA', this)">💡 Suggestion</button>
             <button type="button" class="type-btn" onclick="setFeedbackType('REPORT', this)">🚩 Report Issue</button>
         </div>
 
-        <form id="feedbackForm">
+        <form method="POST" action="{% url 'student-feedback' %}">
             {% csrf_token %}
-            <input type="hidden" id="feedbackType" value="REVIEW">
+            
+            <input type="hidden" id="feedbackType" name="type" value="REVIEW">
 
             <div id="starContainer" class="form-group" style="text-align: center;">
                 <label>Rate your experience</label>
@@ -110,116 +120,41 @@
 
             <div class="form-group">
                 <label id="messageLabel">What do you like or dislike?</label>
-                <textarea id="feedbackMessage" rows="5" required minlength="10" maxlength="2000" placeholder="Write your thoughts here..."></textarea>
+                <textarea id="feedbackMessage" name="message" rows="5" required minlength="10" maxlength="2000" placeholder="Write your thoughts here..."></textarea>
             </div>
 
-            <button type="submit" id="submitBtn" class="submit-btn">Send Feedback</button>
+            <button type="submit" class="submit-btn">Send Feedback</button>
 
             <div class="anonymous-badge">
                 <i class="fa-solid fa-user-secret" style="color: #27ae60;"></i>
-                <span>Your feedback is submitted <strong>anonymously</strong>. It is not attached to your C-SHAW account.</span>
+                <span>Your feedback is submitted <strong>anonymously</strong>.</span>
             </div>
         </form>
     </div>
 
     <script>
-        function getValidCsrfToken() {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
         function setFeedbackType(type, btnElement) {
             document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active', 'report'));
             btnElement.classList.add('active');
             if (type === 'REPORT') btnElement.classList.add('report');
 
+            // Updates the hidden input so Django knows what type to save
             document.getElementById('feedbackType').value = type;
+            
             const starContainer = document.getElementById('starContainer');
             const messageLabel = document.getElementById('messageLabel');
 
             if (type === 'REVIEW') {
-                starContainer.classList.remove('hidden');
+                starContainer.style.display = 'block';
                 messageLabel.textContent = "What do you like or dislike?";
             } else if (type === 'IDEA') {
-                starContainer.classList.add('hidden');
+                starContainer.style.display = 'none';
                 messageLabel.textContent = "How can we improve the platform?";
             } else if (type === 'REPORT') {
-                starContainer.classList.add('hidden');
+                starContainer.style.display = 'none';
                 messageLabel.textContent = "Please describe the issue or abuse in detail.";
             }
         }
-
-
-        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const btn = document.getElementById('submitBtn');
-            const type = document.getElementById('feedbackType').value;
-            const message = document.getElementById('feedbackMessage').value.trim();
-            
-            if (message.length < 10) {
-                alert("Please provide a slightly more detailed message (at least 10 characters).");
-                return;
-            }
-
-            let rating = null;
-            if (type === 'REVIEW') {
-                const selectedStar = document.querySelector('input[name="rating"]:checked');
-                rating = selectedStar ? selectedStar.value : null;
-            }
-
-            btn.textContent = "Securely Sending...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch("{% url 'api-submit-feedback' %}", {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getValidCsrfToken()
-                    },
-                    body: JSON.stringify({ 
-                        type: type, 
-                        rating: rating, 
-                        message: message
-                    })
-                });
-
-                const data = await res.json();
-                
-                if (res.ok) {
-                    document.querySelector('.feedback-container').innerHTML = `
-                        <div style="text-align:center; padding: 40px 0;">
-                            <i class="fa-solid fa-circle-check" style="font-size: 4rem; color: #27ae60; margin-bottom: 20px;"></i>
-                            <h2 style="color: white; margin: 0;">Feedback Sent</h2>
-                            <p style="color: #94a3b8; margin-top: 10px;">Thank you! Your submission has been securely saved.</p>
-                            <a href="{% url 'index' %}" style="display:inline-block; margin-top: 20px; color: #FF8C42; text-decoration: none; font-weight: bold;">← Return to Hub</a>
-                        </div>
-                    `;
-                } else {
-
-                    const errorMsg = data.error || "Failed to submit feedback.";
-                    alert(errorMsg);
-                    btn.textContent = "Send Feedback";
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Network error. Please try again.");
-                btn.textContent = "Send Feedback";
-                btn.disabled = false;
-            }
-        });
     </script>
 </body>
 </html>

@@ -1,5 +1,10 @@
+from pyexpat.errors import messages
+
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse_lazy
 from rest_framework import generics, permissions
+from django.contrib import messages
+from core.forms import FeedbackForm
 from .models import VolunteerActivity, ActivitySignup, Feedback
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -26,7 +31,7 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from users.models import User
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.views.generic import TemplateView
+from django.views.generic import CreateView, CreateView, TemplateView
 import json
 import os
 from django.http import JsonResponse
@@ -938,37 +943,22 @@ class VideoGuidesView(TemplateView):
 
 
 
-def get_client_ip(request):
-    """Helper to safely get the user's IP address (handles proxies like Railway/Vercel)"""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
 
-class StudentFeedbackView(LoginRequiredMixin, TemplateView):
+class StudentFeedbackView(LoginRequiredMixin, CreateView):
+    model = Feedback
+    form_class = FeedbackForm
     template_name = 'core/student_feedback.html'
+    success_url = reverse_lazy('student-feedback') 
 
-class SubmitFeedbackAPI(APIView):
-    permission_classes = [IsAuthenticated] 
+    def form_valid(self, form):
+        messages.success(self.request, "Thank you! Your feedback has been securely submitted.")
+        return super().form_valid(form)
 
-    def post(self, request, *args, **kwargs):
+    def form_invalid(self, form):
 
-        serializer = FeedbackSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {"message": "Thank you! Your feedback has been securely submitted."}, 
-                status=status.HTTP_201_CREATED
-            )
-            
-        return Response(
-            {"error": "Invalid data provided.", "details": serializer.errors}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
+        if self.request.POST:
+            messages.error(self.request, "There was an error with your submission. Please check your inputs.")
+        return super().form_invalid(form)
 
 class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
     template_name = 'core/admin_feedback.html' 

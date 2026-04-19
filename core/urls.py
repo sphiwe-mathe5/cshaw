@@ -30,6 +30,5 @@ urlpatterns = [
     path('api/users/leaderboard/', views.LeaderboardAPIView.as_view(), name='api-leaderboard'),
     path('api/communications/announce/', views.SendAnnouncementView.as_view(), name='send-announcement'),
     path('feedback/', views.StudentFeedbackView.as_view(), name='student-feedback'),
-    path('api/feedback/submit/', views.SubmitFeedbackAPI.as_view(), name='api-submit-feedback'),
     path('feedback-dashboard/', views.AdminFeedbackDashboard.as_view(), name='admin-feedback'),
 ]
