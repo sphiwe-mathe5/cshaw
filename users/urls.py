@@ -54,6 +54,6 @@ urlpatterns = [
 
     path('login/', login_page, name='login-page'),
     path('register/student/', student_register_page, name='student-register-page'),
-    #path('register/coordinator/', coordinator_register_page, name='coordinator-register-page'),
+    path('register/coordinator/', coordinator_register_page, name='coordinator-register-page'),
     
 ]
