@@ -923,9 +923,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         &larr; Back to Events
                     </button>
                     
-                    <button id="bulkSignOutBtn" style="display:none; background:#2c3e50; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
+                    <!--
+                    <button id="bulkSignOutBtn" 
+                        style="display:none; background:#2c3e50; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
                         ⚡ Sign Out Remaining
                     </button>
+                    -->
                 </div>
                 
                 <h1>Attendance Sheet</h1>
@@ -943,7 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <thead>
                             <tr>
                                 <th>Student</th>
-                                <th>Role</th>
+                                
                                 <th>Status</th>
                                 <th>Time Logged</th>
                                 <th style="text-align: right;">Actions</th>
@@ -1039,7 +1042,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasPendingStudents = rsvps.some(r => r.sign_in_time && !r.sign_out_time);
             const bulkBtn = document.getElementById('bulkSignOutBtn');
             
-            if (hasPendingStudents) {
+            // 👇 ADD "&& bulkBtn" RIGHT HERE 👇
+            if (hasPendingStudents && bulkBtn) { 
                 bulkBtn.style.display = 'block';
                 bulkBtn.onclick = () => {
                     const confirmMsg = `Are you sure you want to sign out all remaining students?\n\nThey will be signed out at the official end time (${endTimeStr}).`;
@@ -1185,12 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.innerHTML = `
                     <td style="padding: 15px;">
                         <div style="font-weight: 600; color: var(--text-main);">${rsvp.student_name} ${rsvp.student_surname}</div>
-                        <div style="font-size: 0.8rem; color: #888;">${rsvp.student_email}</div>
-                    </td>
-                    <td style="padding: 15px;">
-                        <span style="background:#f8f9fa; border:1px solid #eee; padding:2px 8px; border-radius:4px; font-size:0.85rem; color:#555;">
-                            ${rsvp.role_name || 'General'}
-                        </span>
+
                     </td>
                     <td style="padding: 15px;">${statusBadge}</td>
                     <td style="padding: 15px;">${timeLog}</td>
@@ -1414,9 +1413,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         "${data.motivation || 'Service to others is the rent you pay for your room here on earth.'}"
                     </div>
 
+                    <div class="mobile-only-leaderboard">
+                        <div style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                            🏫 ${data.campus}: #${data.rank_campus}
+                        </div>
+                        <div style="background: rgba(255, 140, 66, 0.1); color: #FF8C42; border: 1px solid rgba(255, 140, 66, 0.3); font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                            🌍 Global: #${data.rank_global}
+                        </div>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
 
-                                            <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
+                    <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
                         <div style="color: #FF6B35; margin-bottom: 10px;">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             </div>
@@ -1425,7 +1433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span>${exactMinutes}<span style="font-size:1rem; color:#FF6B35;">m</span></span>
                                 <span>${exactSeconds}<span style="font-size:1rem; color:#FF6B35;">s</span></span>
                             </div>
-                            <div style="color: #6b6b90; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Detailed Time</div>
+                            <div style="color: #6b6b90; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Detailed Hours</div>
                         </div>
                         
                         <div style="background: #19192f; padding: 25px; border-radius: 16px; text-align: center; border: 1px solid #252545;">
@@ -1490,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             <div class="stat-list-item">
                                 <span class="stat-label">Most Hours</span>
-                                <span class="stat-val">(${data.total_hours})</span>
+                                <span class="stat-val">(${exactHours})</span>
                             </div>
                             
                             <div class="stat-list-item">
@@ -2409,7 +2417,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <tr>
                                 <th style="text-align: left;">Title</th>
                                 <th style="text-align: left;">Date & Time</th>
-                                <th style="text-align: center;">Spots</th>
+                                
                                 <th style="text-align: right;">Actions</th>
                             </tr>
                         </thead>
@@ -2563,11 +2571,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Re-attach listeners
-            document.querySelectorAll('.attendance-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                     // Updated: Pass title to function if needed, or just ID
-                     // Ensure renderAttendanceSheet handles the 2nd argument or ignore it
-                     renderAttendanceSheet(btn.dataset.id, btn.dataset.back); 
+            document.querySelectorAll('.exec-event-row').forEach(row => {
+                row.addEventListener('click', () => {
+                     // Get the ID directly from the row we clicked
+                     renderAttendanceSheet(row.dataset.id); 
                 });
             });
 
@@ -2578,10 +2585,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- HELPER 1: Create Row HTML ---
+
     function createExecutiveRow(event, isHistory) {
         const tr = document.createElement('tr');
+        // Add a class and dataset ID to the row itself
+        tr.className = 'exec-event-row'; 
+        tr.dataset.id = event.id;
+        
+        // Styling to make it act like a button
         tr.style.borderBottom = '1px solid #eee';
+        tr.style.cursor = 'pointer'; 
+        tr.style.transition = 'background-color 0.2s ease'; // Smooth hover effect
         if (isHistory) tr.style.background = '#fafafa';
+
+        // Add a hover effect directly via JS event listeners (or you can use CSS)
+        tr.onmouseenter = () => tr.style.background = isHistory ? '#f0f0f0' : '#f9f9f9';
+        tr.onmouseleave = () => tr.style.background = isHistory ? '#fafafa' : 'transparent';
 
         // Time calculations (UTC Fixed)
         const startDate = new Date(event.date_time);
@@ -2591,20 +2610,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const startTimeStr = startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg'});
         const endTimeStr = endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg'});
 
-        const baseStyle = 'padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;';
-        const btnStyle = isHistory 
-            ? `${baseStyle} background: #f0f0f0; color: #666; border: 1px solid #ccc;` 
-            : `${baseStyle} background: #FFF4EC; color: #E35205; border: 1px solid #ffccb3;`;
-
-        const btnText = isHistory ? '👁️ View' : '📋 Manage';
+        // Visual indicator colors
+        const indicatorColor = isHistory ? '#ccc' : '#E35205';
 
         tr.innerHTML = `
-            <td style="padding: 15px; font-weight: 600; color: var(--text-main);">
+            <td style="padding: 15px; font-weight: 600; color: var(--text-main); width: 50%;">
                 ${event.title}
                 <div style="font-size: 0.75rem; color: #999; font-weight: normal; margin-top:2px;">${event.campus}</div>
             </td>
 
-            <td style="padding: 15px; color: var(--text-main);">
+            <td style="padding: 15px; color: var(--text-main); width: 45%;">
                 ${dateStr}
                 <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">
                      ⏰ ${startTimeStr} - ${endTimeStr} 
@@ -2612,23 +2627,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </td>
             
-            <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.95rem;">
-                ${event.total_spots === null 
-                    ? `<span style="color: #27ae60; font-weight: bold;">Unlimited</span>` 
-                    : `
-                        <span style="color: ${event.spots_left > 0 ? '#27ae60' : '#e74c3c'}">${event.spots_left}</span> 
-                        <span style="color: #ccc;">/</span> 
-                        ${event.total_spots}
-                    `
-                }
-            </td>
-            
-            <td style="padding: 15px; text-align: right;">
-                <button class="attendance-btn" data-id="${event.id}" data-title="${event.title}" 
-                    title="${isHistory ? 'View Past Records' : 'Manage Attendance'}" 
-                    style="${btnStyle}">
-                    ${btnText}
-                </button>
+            <td style="padding: 15px; text-align: right; width: 5%;">
+                <span style="color: ${indicatorColor}; font-size: 1.2rem; font-weight: bold;">❯</span>
             </td>
         `;
         return tr;

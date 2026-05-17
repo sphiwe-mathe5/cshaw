@@ -876,6 +876,136 @@ ul { list-style: none; }
     text-transform: uppercase;
 }
 
+/* --- RESPONSIVE MOBILE TABLE (GRID CARD VIEW) --- */
+@media (max-width: 768px) {
+    /* 1. LOCK THE SEARCH BAR */
+    .filters-wrapper {
+        width: 100%;
+        padding: 0 5px;
+        box-sizing: border-box;
+    }
+    .search-input {
+        width: 100%; /* Makes search stretch perfectly across the screen */
+        box-sizing: border-box;
+    }
+
+    /* 2. KILL THE HORIZONTAL SCROLL */
+    .table-scroll-wrapper {
+        overflow-x: hidden !important; /* This permanently stops the sliding */
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* 3. RESET THE CONTAINER */
+    .attendance-container {
+        padding: 10px 5px !important; /* Tiny padding so cards don't touch phone edges */
+        background: transparent !important; 
+        box-shadow: none !important;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    /* 4. FORCE TABLE TO BEHAVE */
+    .attendance-table, .attendance-table tbody {
+        display: block;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .attendance-table thead {
+        display: none;
+    }
+
+    /* 📦 5. THE CARD CONTAINER (Locked & Stacked) */
+    .attendance-table tbody tr {
+        display: flex !important;
+        flex-direction: column !important; 
+        width: 100% !important; /* Locks width */
+        box-sizing: border-box !important; /* Prevents padding from breaking the screen width */
+        gap: 12px; 
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 16px !important;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* 6. RESET CELLS */
+    .attendance-table td {
+        display: flex !important;
+        align-items: center;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 0 !important; 
+        border: none !important;
+    }
+
+    /* --- CARD INNER STYLING --- */
+    
+    /* NAME */
+    .attendance-table td:nth-child(1) {
+        border-bottom: 1px solid #f1f5f9 !important; 
+        padding-bottom: 12px !important;
+    }
+    .attendance-table td:nth-child(1) div {
+        font-size: 1.15rem !important; 
+        font-weight: 700;
+    }
+
+    /* STATUS & TIME */
+    .attendance-table td:nth-child(2),
+    .attendance-table td:nth-child(3) {
+        justify-content: flex-start;
+    }
+
+    /* ACTIONS */
+    .attendance-table td:nth-child(4) {
+        margin-top: 5px;
+        padding-top: 15px !important;
+        border-top: 1px solid #f1f5f9 !important; 
+        justify-content: center;
+        width: 100% !important;
+        margin-left: -15rem; /* Negative margin to offset the padding and make buttons edge-to-edge */
+    }
+    
+    /* BIG MOBILE BUTTONS */
+    .attendance-table td:nth-child(4) button {
+        width: 30%;
+        padding: 10px 16px !important; /* Slightly slimmer height */
+        font-size: 0.95rem !important;
+        border-radius: 8px !important; /* Rounds the corners of the button itself */
+        box-sizing: border-box;
+        display: flex !important;
+        justify-content: center !important; /* Centers the text perfectly */
+        align-items: center;
+        margin-bottom: 4px; /* Stops it from touching the absolute bottom edge */
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important; /* Adds a subtle floating shadow */
+
+    }
+
+    .attendance-table tbody tr[style*="display: none"],
+    .attendance-table tbody tr[style*="display:none"] {
+        display: none !important;
+    }
+
+    .attendance-table td:nth-child(4) div {
+        width: 30% !important; /* Force the wrapper to stretch full width */
+        display: flex !important;
+        justify-content: space-between !important; 
+        align-items: center !important;
+        box-sizing: border-box;
+        gap: 15px !important; /* Clean spacing between ✓ and button */
+    }
+
+    /* Make the Re-Sign In button share the space perfectly */
+    .attendance-table td:nth-child(4) div button {
+        width: auto !important; /* Stop it from forcing 100% */
+        flex-grow: 1 !important; /* Magically stretches to fill only the remaining space */
+        margin-bottom: 0 !important; /* Keeps it perfectly aligned with the checkmark */
+    }
+}
 /* Modal Overlay */
 .custom-modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -1143,4 +1273,18 @@ ul { list-style: none; }
     border-radius: 6px;
     margin-bottom: 20px;
     font-size: 1rem;
+}
+
+.mobile-only-leaderboard {
+    display: none; 
+}
+
+@media (max-width: 768px) {
+    .mobile-only-leaderboard {
+        display: flex; 
+        justify-content: center; 
+        gap: 8px; /* Tighter gap */
+        margin-top: 20px; /* Stops it from touching the motivation quote */
+        margin-bottom: 30px; /* Stops it from touching the grid below */
+    }
 }
