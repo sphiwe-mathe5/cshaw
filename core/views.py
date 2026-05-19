@@ -481,9 +481,14 @@ class ExecutiveCampusEventsView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         
-        # Filter: Matches the user's campus OR matches 'ALL'
+        # 🛑 THE FIX: Coordinators (and Superusers) see absolutely everything 🛑
+        if getattr(user, 'role', '') == 'COORDINATOR' or user.is_superuser:
+            return VolunteerActivity.objects.all().order_by('date_time')
+        
+        # Executives only see their campus + 'ALL'
+        user_campus = getattr(user, 'campus', None)
         return VolunteerActivity.objects.filter(
-            Q(campus=user.campus) | Q(campus='ALL')
+            Q(campus=user_campus) | Q(campus='ALL')
         ).order_by('date_time')
     
 class EventRSVPListView(generics.ListAPIView):
@@ -662,7 +667,6 @@ def event_report_view(request, pk):
     comparison = get_comparative_stats(pk)
     
     # 2. Get AI Insight (Cached or New)
-    # We pass the 'activity' object so we can save the result to it
     ai_summary = get_or_create_ai_insight(activity, stats, comparison)
     
     return Response({
