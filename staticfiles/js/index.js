@@ -923,12 +923,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         &larr; Back to Events
                     </button>
                     
-                    <!--
+                    
                     <button id="bulkSignOutBtn" 
                         style="display:none; background:#2c3e50; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:0.9rem;">
                         ⚡ Sign Out Remaining
                     </button>
-                    -->
+                    
                 </div>
                 
                 <h1>Attendance Sheet</h1>
