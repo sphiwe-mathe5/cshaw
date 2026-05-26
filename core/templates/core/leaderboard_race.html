@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard Race - Volunteer Portal</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            color: #1a1a2e;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a1a2e;
+            letter-spacing: -0.5px;
+        }
+
+        /* Control buttons */
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #2d3748;
+            color: white;
+        }
+
+        .control-btn:hover {
+            background: #1a202c;
+            transform: scale(1.05);
+        }
+
+        /* Race track container */
+        .race-container {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        #raceTrack {
+            position: relative;
+            width: 100%;
+            min-height: 450px;
+            padding-left: 80px;
+            padding-right: 60px;
+        }
+
+        /* Watermark date */
+        #watermarkDate {
+            position: absolute;
+            bottom: 20px;
+            right: 0;
+            font-size: 5rem;
+            font-weight: 800;
+            color: rgba(0, 0, 0, 0.06);
+            z-index: 0;
+            letter-spacing: -2px;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* Race bar styles */
+        .race-bar-container {
+            position: absolute;
+            left: 0;
+            right: 60px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            z-index: 10;
+        }
+
+        .race-name {
+            position: absolute;
+            left: 0;
+            width: 75px;
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1a1a2e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 12px;
+        }
+
+        .race-bar-wrapper {
+            margin-left: 80px;
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+
+        .race-bar {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            transition: width 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            min-width: 40px;
+        }
+
+        .race-hours {
+            position: absolute;
+            right: -55px;
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            background: #e8f5e9;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 30px;
+            padding: 16px 0;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #4a5568;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Stats section */
+        .stats-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        /* Controls section */
+        .controls-section {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        /* Speed slider */
+        .speed-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 120px;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #2d3748;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .speed-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .speed-value {
+            font-size: 0.9rem;
+            color: #718096;
+            min-width: 30px;
+        }
+
+        /* Dropdown */
+        .dropdown {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            color: #4a5568;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .dropdown:focus {
+            border-color: #a0aec0;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            gap: 16px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #718096;
+            font-size: 0.95rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .title {
+                font-size: 1.4rem;
+            }
+
+            #raceTrack {
+                padding-left: 70px;
+                padding-right: 50px;
+            }
+
+            .race-name {
+                width: 65px;
+                font-size: 0.85rem;
+            }
+
+            .race-bar-wrapper {
+                margin-left: 70px;
+            }
+
+            #watermarkDate {
+                font-size: 3rem;
+            }
+
+            .stats-section {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .controls-section {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="title">Volunteer Leaderboard Race</h1>
+            
+
+            <div class="controls">
+                <button id="playRaceBtn" class="control-btn" title="Play/Pause">
+                    <span id="playIcon">&#9658;</span>
+                </button>
+                <button id="restartRaceBtn" class="control-btn" title="Restart">
+                    &#8635;
+                </button>
+            </div>
+        </div>
+
+        <!-- Race track -->
+        <div class="race-container">
+            <div id="raceTrack">
+                <div id="watermarkDate">DAY 1</div>
+                <div class="loading" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading race data...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend"></div>
+
+        <!-- Stats section -->
+        <div class="stats-section">
+            <div class="stat-box">
+                <div class="stat-label">Current Day</div>
+                <div class="stat-value" id="currentDayDisplay">Day 1 / 60</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Top Leader</div>
+                <div class="stat-value" id="topLeader">-</div>
+            </div>
+        </div>
+
+        <!-- Controls section -->
+        <div class="controls-section">
+            <div class="control-group">
+                <span class="control-label">Speed</span>
+                <input type="range" id="speedSlider" class="speed-slider" min="100" max="1000" value="500">
+                <span class="speed-value" id="speedValue">50</span>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Growth Profile</span>
+                <select id="growthProfile" class="dropdown">
+                    <option value="steady">Steady Increments</option>
+                    <option value="exponential">Exponential Growth</option>
+                    <option value="random">Random Bursts</option>
+                </select>
+            </div>
+
+            <p style="color: #718096; font-size: 0.9rem; margin-top: 8px; font-weight: 500;">
+                <span style="color: #e53e3e; font-weight: bold;">*</span> Note: Manual Bonus hours represent hours logged before the platform was used.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let raceTimelineData = [];
+        let currentRaceIndex = 0;
+        let raceInterval = null;
+        let playSpeed = 500;
+        const barColors = {};
+
+        // Color palette matching the screenshot
+        const colorPalette = [
+            '#ef5350', // Red/Coral
+            '#ff9800', // Orange
+            '#2196f3', // Blue
+            '#26a69a', // Teal
+            '#78909c', // Gray
+            '#9c27b0', // Purple
+            '#4caf50', // Green
+            '#ff7043', // Deep Orange
+            '#5c6bc0', // Indigo
+            '#8bc34a', // Light Green
+            '#f06292', // Pink
+            '#ffca28', // Yellow
+        ];
+
+        let colorIndex = 0;
+        function getNextColor(name) {
+            if (!barColors[name]) {
+                barColors[name] = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
+            }
+            return barColors[name];
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const watermarkDisplay = document.getElementById('watermarkDate');
+            const playBtn = document.getElementById('playRaceBtn');
+            const playIcon = document.getElementById('playIcon');
+            const restartBtn = document.getElementById('restartRaceBtn');
+            const loadingState = document.getElementById('loadingState');
+            const currentDayDisplay = document.getElementById('currentDayDisplay');
+            const topLeader = document.getElementById('topLeader');
+            const speedSlider = document.getElementById('speedSlider');
+            const speedValue = document.getElementById('speedValue');
+            const legend = document.getElementById('legend');
+
+            // Speed slider
+            speedSlider.addEventListener('input', (e) => {
+                playSpeed = 1100 - parseInt(e.target.value);
+                speedValue.innerText = Math.round((parseInt(e.target.value) - 100) / 9);
+                
+                if (raceInterval) {
+                    clearInterval(raceInterval);
+                    startRace();
+                }
+            });
+
+            try {
+                const res = await fetch('/api/activities/leaderboard-race/');
+                raceTimelineData = await res.json();
+
+                if (loadingState) {
+                    loadingState.remove();
+                }
+
+                if (raceTimelineData.length === 0) {
+                    watermarkDisplay.innerText = "No Data";
+                    return;
+                }
+
+                // Pre-assign colors to all participants
+                const allNames = new Set();
+                raceTimelineData.forEach(frame => {
+                    frame.rankings.forEach(r => allNames.add(r.name));
+                });
+                allNames.forEach(name => getNextColor(name));
+
+                // Build legend
+                buildLegend(allNames);
+
+                currentRaceIndex = 0;
+                renderRaceFrame(currentRaceIndex);
+
+            } catch (e) {
+                console.error("Failed to load race data", e);
+                watermarkDisplay.innerText = "Error";
+                if (loadingState) {
+                    loadingState.innerHTML = '<div class="loading-text">Failed to load race data</div>';
+                }
+            }
+
+            function startRace() {
+                raceInterval = setInterval(() => {
+                    currentRaceIndex++;
+                    if (currentRaceIndex >= raceTimelineData.length) {
+                        clearInterval(raceInterval);
+                        raceInterval = null;
+                        playIcon.innerHTML = "&#8635;";
+                        return;
+                    }
+                    renderRaceFrame(currentRaceIndex);
+                }, playSpeed);
+            }
+
+            // Play/Pause Logic
+            playBtn.addEventListener('click', () => {
+                if (raceInterval) {
+                    clearInterval(raceInterval);
+                    raceInterval = null;
+                    playIcon.innerHTML = "&#9658;";
+                } else {
+                    playIcon.innerHTML = "&#10074;&#10074;";
+
+                    if (currentRaceIndex >= raceTimelineData.length - 1) {
+                        currentRaceIndex = 0;
+                    }
+
+                    startRace();
+                }
+            });
+
+            // Restart Logic
+            restartBtn.addEventListener('click', () => {
+                clearInterval(raceInterval);
+                raceInterval = null;
+                currentRaceIndex = 0;
+                playIcon.innerHTML = "&#9658;";
+                renderRaceFrame(currentRaceIndex);
+            });
+
+            function buildLegend(names) {
+                legend.innerHTML = '';
+                names.forEach(name => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    item.innerHTML = `
+                        <span class="legend-dot" style="background: ${barColors[name]}"></span>
+                        <span>${name}</span>
+                    `;
+                    legend.appendChild(item);
+                });
+            }
+        });
+
+        function renderRaceFrame(frameIndex) {
+            const track = document.getElementById('raceTrack');
+            const watermarkDisplay = document.getElementById('watermarkDate');
+            const currentDayDisplay = document.getElementById('currentDayDisplay');
+            const topLeader = document.getElementById('topLeader');
+            const frameData = raceTimelineData[frameIndex];
+
+            // Update stats
+            const dateObj = new Date(frameData.date);
+            const formattedDate = dateObj.toLocaleDateString('en-GB', { 
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric' 
+            });
+            watermarkDisplay.innerText = formattedDate;
+            currentDayDisplay.innerText = formattedDate;
+
+            // Top leader
+            if (frameData.rankings.length > 0) {
+                topLeader.innerText = frameData.rankings[0].name;
+            }
+
+            // FIX 1: Look for r.hours instead of r.total_hours
+            const maxHours = Math.max(...frameData.rankings.map(r => r.hours), 1);
+            const barHeight = 40;
+            const barGap = 12;
+
+            // FIX 2: We removed the existingBars.remove() line so the CSS transitions can actually work!
+
+            frameData.rankings.forEach((r, index) => {
+                // FIX 1: Look for r.hours instead of r.total_hours
+                const widthPercent = (r.hours / maxHours) * 100;
+                const color = barColors[r.name] || getNextColor(r.name);
+
+                let barContainer = document.getElementById(`bar-${r.name}`);
+
+                if (!barContainer) {
+                    barContainer = document.createElement('div');
+                    barContainer.className = 'race-bar-container';
+                    barContainer.id = `bar-${r.name}`;
+                    barContainer.innerHTML = `
+                        <div class="race-name">${r.name}</div>
+                        <div class="race-bar-wrapper">
+                            <div class="race-bar" style="background: ${color}; width: 0%;">
+                                <span class="race-hours">${r.hours.toFixed(1)}h</span>
+                            </div>
+                        </div>
+                    `;
+                    track.appendChild(barContainer);
+                } 
+                
+                // Update existing bars so they slide smoothly
+                const bar = barContainer.querySelector('.race-bar');
+                const hours = barContainer.querySelector('.race-hours');
+                bar.style.width = `${widthPercent}%`;
+                hours.innerText = `${r.hours.toFixed(1)}h`;
+                
+                barContainer.style.transform = `translateY(${index * (barHeight + barGap)}px)`;
+            });
+
+            // Update track height
+            track.style.minHeight = `${frameData.rankings.length * (barHeight + barGap) + 80}px`;
+        }
+    </script>
+</body>
+</html>

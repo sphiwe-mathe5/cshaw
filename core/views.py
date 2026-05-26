@@ -944,7 +944,92 @@ class VideoGuidesView(TemplateView):
     
     
 
+@permission_classes([IsCoordinator]) # Or your standard login decorators
+def leaderboard_page_view(request):
+    # Render a dedicated HTML template (we will create this in Step 3)
+    return render(request, 'core/leaderboard_race.html')
 
+
+# --- 2. THE DATA API VIEW ---
+@api_view(['GET'])
+@permission_classes([IsCoordinator])
+def leaderboard_race_data(request):
+    # 1. Fetch all regular event hours, chronologically
+    signups = ActivitySignup.objects.filter(
+        attended=True,
+        hours_earned__gt=0
+    ).select_related('user', 'activity').order_by('activity__date_time')
+
+    # 2. Fetch users who have manual bonus hours to give them a "Head Start"
+    users_with_bonus = User.objects.filter(manual_bonus_hours__gt=0)
+    
+    # Create our baseline dictionary
+    baseline_totals = {}
+    for u in users_with_bonus:
+        name = f"{u.first_name} {u.last_name}".strip()
+        if not name:
+            name = getattr(u, 'username', 'Unknown')
+        baseline_totals[name] = float(u.manual_bonus_hours)
+
+    # If there is absolutely no data in the system at all
+    if not signups.exists() and not users_with_bonus.exists():
+        return Response([])
+
+    # 3. Determine the start date of the race
+    if signups.exists():
+        start_date = signups.first().activity.date_time.date()
+    else:
+        # If no events exist yet, but someone has bonus hours, just start the timeline 7 days ago
+        start_date = timezone.now().date() - timedelta(days=7)
+        
+    end_date = timezone.now().date()
+    
+    # 4. Copy the baseline bonus hours into the running totals
+    user_totals = dict(baseline_totals)
+    race_timeline = []
+
+    signup_list = list(signups)
+    idx = 0
+    total_signups = len(signup_list)
+    current_date = start_date
+
+    # 5. Walk through history day by day
+    while current_date <= end_date:
+        
+        # Add any event hours earned on or before this current timeline day
+        while idx < total_signups and signup_list[idx].activity.date_time.date() <= current_date:
+            signup = signup_list[idx]
+            user = signup.user
+            
+            user_name = f"{user.first_name} {user.last_name}".strip()
+            if not user_name:
+                user_name = getattr(user, 'username', 'Unknown')
+
+            # If they don't have bonus hours, they start at 0
+            if user_name not in user_totals:
+                user_totals[user_name] = 0.0
+                
+            user_totals[user_name] += float(signup.hours_earned)
+            
+            idx += 1 
+
+        # Build the leaderboard for this specific day
+        rankings = []
+        for name, hours in user_totals.items():
+            if hours > 0:
+                rankings.append({"name": name, "hours": hours})
+
+        # Sort so highest hours are at the top, and take the Top 10
+        rankings.sort(key=lambda x: x['hours'], reverse=True)
+        
+        race_timeline.append({
+            "date": current_date.strftime("%Y-%m-%d"),
+            "rankings": rankings[:10]
+        })
+
+        current_date += timedelta(days=1)
+
+    return Response(race_timeline)
 
 
 
