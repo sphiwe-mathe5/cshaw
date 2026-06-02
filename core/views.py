@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from rest_framework import generics, permissions
 from django.contrib import messages
 from core.forms import FeedbackForm
-from .models import VolunteerActivity, ActivitySignup, Feedback
+from .models import VolunteerActivity, ActivitySignup, Feedback, Feedback
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -1059,3 +1059,72 @@ class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['feedbacks'] = Feedback.objects.all().order_by('-created_at')
         return context
+    
+
+
+def quarterly_report_view(request):
+    now = timezone.now()
+
+    # --- 1. HERO METRICS ---
+    # Total hours ever earned
+    total_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
+    total_hours = total_hours_dict['hours_earned__sum'] or 0.0
+
+    # Total past events hosted
+    total_events = VolunteerActivity.objects.filter(date_time__lte=now).count()
+
+    # Total unique active peers (students who have attended at least 1 event)
+    active_peers = ActivitySignup.objects.filter(attended=True).values('user').distinct().count()
+
+    # --- 2. ENGAGEMENT DATA (For the Charts) ---
+    # Get the last 5 completed events to show the "Expected vs Actual" turnout trend
+    recent_events = VolunteerActivity.objects.filter(date_time__lte=now).order_by('-date_time')[:5]
+    
+    turnout_labels = []
+    expected_data = []
+    actual_data = []
+
+    for event in reversed(recent_events): # Reverse so oldest is first on the chart left-to-right
+        turnout_labels.append(event.title)
+        
+        # 'Expected' = everyone who signed up (RSVP'd)
+        total_rsvps = ActivitySignup.objects.filter(activity=event).count()
+        expected_data.append(total_rsvps)
+        
+        # 'Actual' = everyone who actually showed up
+        attended_count = ActivitySignup.objects.filter(activity=event, attended=True).count()
+        actual_data.append(attended_count)
+
+    # Calculate overall attendance percentage across all time
+    all_time_rsvps = ActivitySignup.objects.count()
+    all_time_attended = ActivitySignup.objects.filter(attended=True).count()
+    attendance_rate = 0
+    if all_time_rsvps > 0:
+        attendance_rate = round((all_time_attended / all_time_rsvps) * 100)
+
+    # --- 3. PUNCTUALITY METRICS ---
+    # NOTE: If your ActivitySignup doesn't have an 'is_late' boolean, you can adapt this.
+    # Assuming you track lateness somehow. If not, these can remain 0 until you add it.
+    on_time_count = ActivitySignup.objects.filter(attended=True).count() # Placeholder
+    late_count = 0 # Placeholder if you don't track this yet
+    excused_count = ActivitySignup.objects.filter(attended=False).count() # Assuming absent means excused/no-show for now
+    recent_feedbacks = Feedback.objects.select_related('user').order_by('-created_at')[:5]
+
+    context = {
+        'total_hours': round(total_hours, 1),
+        'total_events': total_events,
+        'active_peers': active_peers,
+        'attendance_rate': attendance_rate,
+        
+        # Data for Javascript Charts (converted to lists)
+        'chart_labels': turnout_labels,
+        'chart_expected': expected_data,
+        'chart_actual': actual_data,
+        
+        'punctuality_on_time': on_time_count,
+        'punctuality_late': late_count,
+        'punctuality_excused': excused_count,
+        'feedbacks': recent_feedbacks,
+    }
+
+    return render(request, 'core/quarterly_report.html', context)

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>C-SHAW Hub — Quarterly Impact Report</title>
+    <meta name="description" content="Quarterly Impact Report for the C-SHAW Hub volunteer management ecosystem." />
+
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ---------- Design Tokens ---------- */
+        :root {
+            --brand-orange: #E35205;
+            --brand-orange-soft: #fff1ea;
+            --brand-dark: #2c3e50;
+            --page-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-body: #475569;
+            --text-muted: #94a3b8;
+            --border: #eef2f7;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            --shadow-hover: 0 12px 32px rgba(44, 62, 80, 0.08);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+        }
+
+        /* ---------- Reset ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--page-bg);
+            color: var(--text-body);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* ---------- Typography ---------- */
+        h1, h2, h3 {
+            color: var(--brand-dark);
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.2;
+        }
+
+        h2 { font-size: 1.9rem; }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        p { color: var(--text-body); }
+
+        /* ---------- Layout Shell ---------- */
+        .page-wrap {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* ---------- Top Bar / Hero ---------- */
+        .report-header {
+            background: var(--brand-dark);
+            color: #fff;
+            padding: 56px 24px;
+            margin-bottom: 56px;
+        }
+
+        .report-header-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .report-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(227, 82, 5, 0.15);
+            color: #ffb38c;
+            border: 1px solid rgba(227, 82, 5, 0.4);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .report-badge .dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--brand-orange);
+        }
+
+        .report-header h1 {
+            color: #fff;
+            font-size: 2.7rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+        }
+
+        .report-header .subtitle {
+            color: #cbd5e1;
+            margin-top: 10px;
+            font-size: 1.05rem;
+            max-width: 520px;
+        }
+
+        .report-meta {
+            text-align: right;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .report-meta strong { color: #fff; display: block; font-size: 1.1rem; }
+
+        /* ---------- Sections ---------- */
+        section { margin-bottom: 64px; }
+
+        section > h2 {
+            position: relative;
+            padding-bottom: 16px;
+            margin-bottom: 28px;
+        }
+        section > h2::after {
+            content: "";
+            position: absolute;
+            left: 0; bottom: 0;
+            width: 56px; height: 4px;
+            background: var(--brand-orange);
+            border-radius: 2px;
+        }
+
+        .section-lead {
+            font-size: 1.1rem;
+            max-width: 760px;
+            margin-bottom: 32px;
+            color: var(--text-body);
+        }
+
+        /* ---------- Generic Cards / Story Blocks ---------- */
+        .story-block, .problem-block, .solution-block {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 34px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .story-block { border-left: 4px solid var(--brand-dark); }
+        .problem-block { border-left: 4px solid #ef4444; }
+        .solution-block { border-left: 4px solid var(--brand-orange); }
+
+        .story-block h3, .problem-block h3, .solution-block h3 {
+            margin-bottom: 12px;
+        }
+
+        .story-block p + p,
+        .problem-block p + p,
+        .solution-block p + p { margin-top: 14px; }
+
+        .solution-block ul {
+            list-style: none;
+            margin-top: 22px;
+            display: grid;
+            gap: 16px;
+        }
+        .solution-block li {
+            background: var(--page-bg);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            position: relative;
+            padding-left: 48px;
+        }
+        .solution-block li::before {
+            content: "✓";
+            position: absolute;
+            left: 16px; top: 18px;
+            width: 22px; height: 22px;
+            background: var(--brand-orange);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .solution-block li strong { color: var(--brand-dark); }
+
+        /* ---------- KPI Hero Grid ---------- */
+        .hero-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+        .metric-card::before {
+            content: "";
+            width: 36px; height: 4px;
+            background: var(--brand-orange);
+            border-radius: 2px;
+            margin-bottom: 14px;
+        }
+
+        .metric-number {
+            font-size: 3.1rem;
+            font-weight: 800;
+            color: var(--brand-dark);
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .metric-title {
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        /* ---------- Campus Breakdown + Table ---------- */
+        .campus-breakdown {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 34px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 48px;
+        }
+        .campus-breakdown h3 { margin-bottom: 8px; }
+        .campus-breakdown > p { margin-bottom: 24px; max-width: 720px; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .data-table thead th {
+            background: var(--page-bg);
+            color: var(--brand-dark);
+            text-transform: uppercase;
+            font-size: 0.74rem;
+            letter-spacing: 0.6px;
+            font-weight: 700;
+            text-align: left;
+            padding: 14px 18px;
+        }
+        .data-table thead th:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        .data-table thead th:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+        .data-table tbody td {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-body);
+        }
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .data-table tbody tr { transition: background 0.18s ease; }
+        .data-table tbody tr:hover { background: var(--brand-orange-soft); }
+        .data-table tbody td strong { color: var(--brand-dark); }
+
+        /* ---------- Charts Grid ---------- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-container h3 { margin-bottom: 8px; }
+        .chart-container p { font-size: 0.92rem; margin-bottom: 20px; }
+        .chart-container canvas {
+            max-height: 280px;
+            margin-top: auto;
+        }
+
+        /* ---------- Impact Grid ---------- */
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        .impact-block {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 34px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .impact-block h3 { margin-bottom: 14px; }
+        .impact-block p + p { margin-top: 14px; }
+
+        /* ---------- Feedback Marquee ---------- */
+        .feedback-section { margin-top: 8px; }
+        .feedback-section > h3 { margin-bottom: 8px; }
+        .feedback-section > p { margin-bottom: 28px; max-width: 720px; }
+
+        .feedback-scroll-container {
+            position: relative;
+            overflow: hidden;
+            padding: 8px 0;
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+        }
+
+        .feedback-track {
+            display: flex;
+            gap: 22px;
+            width: max-content;
+            animation: marquee 40s linear infinite;
+        }
+        .feedback-scroll-container:hover .feedback-track {
+            animation-play-state: paused;
+        }
+
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        .feedback-card {
+            flex: 0 0 360px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 26px 28px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+        }
+        .quote-icon {
+            color: var(--brand-orange);
+            font-size: 2rem;
+            line-height: 1;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .quote-text {
+            font-size: 1rem;
+            color: #334155;
+            font-weight: 500;
+            margin-bottom: 18px;
+            flex-grow: 1;
+        }
+        .quote-author {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--brand-dark);
+        }
+
+        /* ---------- Challenges Grid ---------- */
+        .challenges-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        .challenge-block {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 34px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .challenge-block h3 { margin-bottom: 18px; }
+        .challenge-block ul { list-style: none; display: grid; gap: 16px; }
+        .challenge-block li {
+            position: relative;
+            padding-left: 22px;
+        }
+        .challenge-block li::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 10px;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--brand-orange);
+        }
+        .challenge-block li strong { color: var(--brand-dark); }
+
+        /* ---------- Footer ---------- */
+        .report-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ---------- Responsiveness ---------- */
+        @media (max-width: 768px) {
+            .report-header { padding: 40px 24px; }
+            .report-header h1 { font-size: 2rem; }
+            .report-header-inner { flex-direction: column; align-items: flex-start; }
+            .report-meta { text-align: left; }
+
+            h2 { font-size: 1.55rem; }
+
+            .charts-grid,
+            .impact-grid,
+            .challenges-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-number { font-size: 2.6rem; }
+
+            .story-block, .problem-block, .solution-block,
+            .campus-breakdown, .impact-block, .challenge-block,
+            .chart-container { padding: 24px; }
+
+            /* Horizontal scroll fallback for table */
+            .table-scroll { overflow-x: auto; }
+            .data-table { min-width: 520px; }
+
+            .feedback-card { flex-basis: 280px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="report-header">
+        <div class="report-header-inner">
+            <div>
+                <span class="report-badge"><span class="dot"></span> Quarterly Impact Report</span>
+                <h1>The C-SHAW Hub</h1>
+                <p class="subtitle">How a single digital ecosystem replaced paper registers, WhatsApp chaos, and guesswork with real-time, accountable data.</p>
+            </div>
+            <div class="report-meta">
+                <strong>Q2 &mdash; 2026</strong>
+                Prepared for University Staff
+            </div>
+        </div>
+    </header>
+
+    <main class="page-wrap">
+        <section id="executive-summary">
+            <h2>1. Executive Summary: The Problem &amp; The Solution</h2>
+
+            <div class="story-block">
+                <h3>The Catalyst: The 2025 APB Incident</h3>
+                <p>In late 2025, an exhausted APB Executive was tallying up the month's volunteer hours. Buried under a stack of confusing, handwritten paper registers, fatigue set in, and a Peer Educator's hours were mistakenly recorded. The resulting debate among the team wasn't just about a simple math error; it highlighted a systemic failure. Our student leaders were burning out doing basic arithmetic instead of leading.</p>
+            </div>
+
+            <div class="problem-block">
+                <h3>The Problem: The Friction of the Old Way</h3>
+                <p>The paper-based tracking system was actively dragging the program down. Executives were spending massive amounts of administrative time manually tallying hours, deciphering handwriting, and hunting down lost data.</p>
+                <p>Communication was another major bottleneck. We were relying heavily on informal WhatsApp groups to announce opportunities. Crucial event details were constantly getting buried under hundreds of chat messages, leading to dedicated volunteers missing out on events simply because they didn't see the text in time.</p>
+            </div>
+
+            <div class="solution-block">
+                <h3>The Solution: The C-SHAW Hub Ecosystem</h3>
+                <p>We didn't just need a digital register; we needed a complete management ecosystem. The C-SHAW Hub was implemented to completely remove these friction points. Rather than just setting goals, here is what the platform is actively achieving today:</p>
+
+                <ul>
+                    <li><strong>Frictionless Admin:</strong> Executives no longer have to worry about manually calculating hours. The system automatically tracks, tallies, and validates every minute volunteered as soon as a student scans in, giving our leaders their time back.</li>
+                    <li><strong>Instant, Reliable Communication:</strong> The WhatsApp chaos has been replaced. The Hub features an automated email system that instantly notifies every active student the second a new event is created, ensuring clear communication and equal opportunity to RSVP.</li>
+                    <li><strong>Real-Time Analytics:</strong> Coordinators now have instant, live oversight of the entire program. From overall campus turnout to individual student progress, management can see exactly what is happening without waiting for end-of-month spreadsheet reports.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="impact-metrics">
+            <h2>2. High-Level Impact &amp; Engagement Metrics</h2>
+            <p class="section-lead">For the first time in the program's history, we have absolute, real-time visibility into our operational scale. Every hour and every attendee is mathematically accounted for.</p>
+
+            <div class="hero-metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-number">3,480</span>
+                    <span class="metric-title">Total Volunteer Hours</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">612</span>
+                    <span class="metric-title">Total Registered Students</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">148</span>
+                    <span class="metric-title">Active Peer Educators</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">37</span>
+                    <span class="metric-title">Events &amp; Trainings Hosted</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">82%</span>
+                    <span class="metric-title">Overall Attendance Rate</span>
+                </div>
+            </div>
+
+            <div class="campus-breakdown">
+                <h3>Campus Contribution Breakdown</h3>
+                <p>By splitting the data across our four locations, management can clearly see where engagement is thriving and where additional resources or motivation might be required.</p>
+
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Campus</th>
+                                <th>Active Educators</th>
+                                <th>Total Hours Contributed</th>
+                                <th>Average Hours per PE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>APB Campus</strong></td>
+                                <td>42</td>
+                                <td>1,120h</td>
+                                <td>26.7h</td>
+                            </tr>
+                            <tr>
+                                <td><strong>DFC Campus</strong></td>
+                                <td>38</td>
+                                <td>960h</td>
+                                <td>25.3h</td>
+                            </tr>
+                            <tr>
+                                <td><strong>APK Campus</strong></td>
+                                <td>41</td>
+                                <td>905h</td>
+                                <td>22.1h</td>
+                            </tr>
+                            <tr>
+                                <td><strong>SWC Campus</strong></td>
+                                <td>27</td>
+                                <td>495h</td>
+                                <td>18.3h</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Engagement: Expected vs. Actual Turnout</h3>
+                    <p>By comparing digital RSVPs against actual QR-code sign-ins at the door, we can finally track true commitment levels rather than relying on optimistic headcounts.</p>
+                    <canvas id="turnoutChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>The Punctuality Reality</h3>
+                    <p>Paper registers rarely capture the exact minute a student walks in. Because the Hub strictly timestamps every scan, we exposed a late-arrival rate that previously went unnoticed. This data is critical for addressing team discipline.</p>
+                    <canvas id="punctualityChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="outcomes-impact">
+            <h2>3. Outcomes &amp; Behavioral Impact</h2>
+            <p class="section-lead">The true success of the C-SHAW Hub isn't just in data storage&mdash;it is in how the technology has fundamentally transformed student behavior and program culture.</p>
+
+            <div class="impact-grid">
+                <div class="impact-block">
+                    <h3>The Gamification Effect</h3>
+                    <p>Before the Hub, tracking hours was a tedious administrative chore that happened in the background. By introducing a live, dynamic Leaderboard, we turned volunteering into a healthy, highly visible competition.</p>
+                    <p>The result was a massive turnaround in Peer involvement. We saw volunteers actively seeking out extra shifts and rushing to hit the prestigious 80-hour mark&mdash;a milestone that four of our top educators have already smashed just halfway through the year. Gamification proved to be our strongest driver for engagement.</p>
+                </div>
+
+                <div class="impact-block">
+                    <h3>Developer Reflections: Building for Real People</h3>
+                    <p>Managing this rollout provided invaluable lessons in user adoption and system scalability. The biggest takeaway? Technology is only successful if it solves a real human problem.</p>
+                    <p>I learned that user onboarding must be absolutely frictionless; if a student cannot RSVP in under three clicks, they will abandon the process. Additionally, seeing the server handle traffic spikes when 50 students attempt to scan QR codes simultaneously taught me critical lessons in building robust, scalable architecture for the real world.</p>
+                </div>
+            </div>
+
+            <div class="feedback-section">
+                <h3>Direct Peer Feedback</h3>
+                <p>We built a direct feedback loop into the platform so students always have a voice. Here is what they are saying about the new system:</p>
+
+                <div class="feedback-scroll-container">
+                    <div class="feedback-track" id="feedbackTrack">
+                        <!-- Cards injected by JS (duplicated for seamless loop) -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="key-challenges">
+            <h2>4. Key Challenges &amp; The Honest Reality</h2>
+            <p class="section-lead">Transitioning a program of this size from paper to a strict digital ecosystem wasn't without its hurdles. Being transparent about these friction points has been critical to improving the platform.</p>
+
+            <div class="challenges-grid">
+                <div class="challenge-block">
+                    <h3>System &amp; Infrastructure Hurdles</h3>
+                    <ul>
+                        <li><strong>Campus Connectivity:</strong> We quickly discovered that certain event venues on campus have severe Wi-Fi dead zones. This occasionally caused delays during high-volume check-ins, as the system requires a live connection to validate QR scans.</li>
+                        <li><strong>Device Limitations:</strong> Not all students have the latest smartphones. Older phone cameras struggled to focus on QR codes quickly in poorly lit venues, which created minor bottlenecks at the door.</li>
+                        <li><strong>Early Deployment Bugs:</strong> As with any live software launch, the first two weeks exposed a few edge-case bugs (such as RSVP sync delays) that required immediate late-night hotfixes to ensure data integrity wasn't compromised.</li>
+                    </ul>
+                </div>
+
+                <div class="challenge-block">
+                    <h3>User Adoption &amp; Change Management</h3>
+                    <ul>
+                        <li><strong>Breaking the WhatsApp Habit:</strong> Getting students to stop relying on informal group chats and transition to officially RSVPing through the Hub required a massive culture shift. We had to enforce a strict "No RSVP, No Entry" policy to drive adoption.</li>
+                        <li><strong>The Punctuality Pushback:</strong> Because the system automatically timestamps every check-in to the exact minute, executives could no longer turn a blind eye to latecomers. This sudden shift toward strict accountability caused some initial pushback and friction among peers, though it ultimately drove a noticeable improvement in overall punctuality.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="report-footer">
+            C-SHAW Hub &mdash; Quarterly Impact Report &middot; Generated from live platform analytics.
+        </footer>
+    </main>
+
+    <script>
+        /* =========================================================
+           Feedback Marquee — build cards then duplicate for loop
+           ========================================================= */
+        (function () {
+            var feedbacks = [
+                { message: "Honestly, signing in with the QR code takes two seconds. No more chasing exec members to confirm my hours.", author: "APB Campus Peer Educator" },
+                { message: "The leaderboard got competitive fast. I picked up three extra shifts just to climb past my roommate.", author: "DFC Campus Peer Educator" },
+                { message: "Getting an email the moment a new event drops is a game changer. I never miss opportunities anymore.", author: "APK Campus Peer Educator" },
+                { message: "Seeing my total hours update live actually keeps me motivated. It feels like progress, not paperwork.", author: "SWC Campus Peer Educator" },
+                { message: "The old WhatsApp groups were chaos. Now everything is in one place and I always know where to be.", author: "APB Campus Peer Educator" },
+                { message: "Hitting the 80-hour milestone and seeing it celebrated on the Hub felt genuinely rewarding.", author: "DFC Campus Peer Educator" }
+            ];
+
+            function cardHTML(fb, hidden) {
+                return '<div class="feedback-card"' + (hidden ? ' aria-hidden="true"' : '') + '>' +
+                    '<span class="quote-icon">&#10077;</span>' +
+                    '<p class="quote-text">' + fb.message + '</p>' +
+                    '<span class="quote-author">&mdash; ' + fb.author + '</span>' +
+                    '</div>';
+            }
+
+            var track = document.getElementById('feedbackTrack');
+            if (track) {
+                var html = feedbacks.map(function (fb) { return cardHTML(fb, false); }).join('');
+                // Duplicate set so the -50% translate loop is seamless
+                html += feedbacks.map(function (fb) { return cardHTML(fb, true); }).join('');
+                track.innerHTML = html;
+            }
+        })();
+
+        /* =========================================================
+           Charts
+           ========================================================= */
+        (function () {
+            if (typeof Chart === 'undefined') return;
+
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#94a3b8';
+
+            var ORANGE = '#E35205';
+            var DARK = '#2c3e50';
+            var GRID = 'rgba(148, 163, 184, 0.15)';
+
+            // --- Turnout: Expected (RSVP) vs Actual (Sign-in) ---
+            var turnoutEl = document.getElementById('turnoutChart');
+            if (turnoutEl) {
+                new Chart(turnoutEl, {
+                    type: 'bar',
+                    data: {
+                        labels: ['APB', 'DFC', 'APK', 'SWC'],
+                        datasets: [
+                            {
+                                label: 'Expected (RSVP)',
+                                data: [120, 98, 105, 64],
+                                backgroundColor: DARK,
+                                borderRadius: 6,
+                                maxBarThickness: 32
+                            },
+                            {
+                                label: 'Actual (Sign-in)',
+                                data: [101, 86, 79, 48],
+                                backgroundColor: ORANGE,
+                                borderRadius: 6,
+                                maxBarThickness: 32
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 18, boxWidth: 8 } }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { beginAtZero: true, grid: { color: GRID }, border: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // --- Punctuality: On Time vs Late ---
+            var punctualityEl = document.getElementById('punctualityChart');
+            if (punctualityEl) {
+                new Chart(punctualityEl, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['On Time', 'Late (1–15 min)', 'Very Late (15+ min)'],
+                        datasets: [{
+                            data: [68, 24, 8],
+                            backgroundColor: [DARK, ORANGE, '#f6b08a'],
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '62%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, boxWidth: 8 } }
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -21,6 +21,8 @@ from .views import (
 )
 from users import views
 
+from core import views 
+
 urlpatterns = [
 
     path('api/users/register/student/', StudentRegistrationView.as_view(), name='api-register-student'),
@@ -52,8 +54,13 @@ urlpatterns = [
          auth_views.PasswordResetCompleteView.as_view(template_name='users/password_reset_complete.html'), 
          name='password_reset_complete'),
 
-    path('login/', login_page, name='login-page'),
-    path('register/student/', student_register_page, name='student-register-page'),
+    #path('login/', login_page, name='login-page'),
+    #path('register/student/', student_register_page, name='student-register-page'),
+    
+    path('login/', views.index_page, name='login-page'),
+    path('register/student/', views.index_page, name='student-register-page'),
+    
+    
     #path('register/coordinator/', coordinator_register_page, name='coordinator-register-page'),
     
 ]

@@ -7,11 +7,600 @@
     <title>Volunteer Hub | Dashboard</title>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <meta name="current-user-email" content="{{ request.user.email }}">
 </head>
 <body>
 
-<nav class="navbar">
+{% if True %} 
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    transition: background 2s ease;
+  }
+ 
+  #bgCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+ 
+  #starCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: auto;
+  }
+ 
+  /* ---- CELESTIAL BODIES ---- */
+  #celestial {
+    position: absolute;
+    top: 55px; right: 110px;
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    z-index: 2;
+    pointer-events: none;
+    transition: all 1.5s ease;
+  }
+ 
+  #celestial.moon {
+    background: radial-gradient(circle at 38% 35%, #fffbe6, #f5d97a 40%, #e8b84b 80%);
+    box-shadow:
+      0 0 40px 12px rgba(255, 220, 100, 0.35),
+      0 0 100px 40px rgba(255, 200, 60, 0.15),
+      0 0 200px 80px rgba(255, 180, 40, 0.07);
+  }
+ 
+  #celestial.sun {
+    background: radial-gradient(circle at 45% 45%, #fff9c4, #fde047 40%, #fb923c 85%);
+    box-shadow:
+      0 0 50px 18px rgba(253, 224, 71, 0.5),
+      0 0 120px 60px rgba(251, 146, 60, 0.25),
+      0 0 250px 100px rgba(251, 146, 60, 0.1);
+  }
+ 
+  #celestial.sun-low {
+    background: radial-gradient(circle at 45% 45%, #ffe0b2, #fb923c 40%, #dc2626 85%);
+    box-shadow:
+      0 0 60px 20px rgba(251, 146, 60, 0.55),
+      0 0 150px 70px rgba(220, 38, 38, 0.25),
+      0 0 300px 120px rgba(220, 38, 38, 0.1);
+  }
+ 
+  .moon-crater {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(180, 140, 40, 0.25);
+    transition: opacity 1s ease;
+  }
+  .cr1 { width: 18px; height: 18px; top: 22px; left: 30px; }
+  .cr2 { width: 10px; height: 10px; top: 55px; left: 62px; }
+  .cr3 { width: 14px; height: 14px; top: 40px; left: 20px; }
+ 
+  /* ---- NEBULA / ATMOSPHERE ---- */
+  .nebula {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    transition: all 2s ease;
+  }
+  .neb-1 { width: 500px; height: 300px; top: -50px; left: -100px; filter: blur(40px); }
+  .neb-2 { width: 600px; height: 400px; bottom: -100px; right: -100px; filter: blur(50px); }
+  .neb-3 { width: 400px; height: 250px; top: 30%; left: 50%; transform: translateX(-50%); filter: blur(60px); }
+ 
+  /* ---- CONTENT ---- */
+  .content {
+    position: relative;
+    z-index: 3;
+    text-align: center;
+    max-width: 900px;
+    padding: 40px;
+    pointer-events: none;
+  }
+ 
+  .brand {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fb923c;
+    transition: color 1.5s ease;
+  }
+ 
+  .brand-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #fb923c;
+    box-shadow: 0 0 8px 2px rgba(251, 146, 60, 0.7);
+    transition: background 1.5s ease, box-shadow 1.5s ease;
+  }
+ 
+  .title {
+    font-size: 5.2rem;
+    font-weight: 600;
+    margin: 0 0 24px;
+    line-height: 1.05;
+    letter-spacing: -3px;
+    transition: color 1.5s ease, text-shadow 1.5s ease;
+  }
+ 
+  .title span {
+    color: #fdba74;
+    transition: color 1.5s ease, text-shadow 1.5s ease;
+  }
+ 
+  .subtitle {
+    font-size: 1.2rem;
+    margin: 0 auto 40px;
+    font-weight: 400;
+    line-height: 1.7;
+    max-width: 600px;
+    transition: color 1.5s ease;
+  }
+ 
+  .buttons { display: flex; justify-content: center; pointer-events: auto; }
+ 
+  .btn {
+    background: rgba(251, 146, 60, 0.15);
+    color: #fdba74;
+    padding: 15px 36px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    border: 1px solid rgba(251, 146, 60, 0.35);
+    transition: all 0.3s ease;
+    letter-spacing: 0.3px;
+  }
+ 
+  .btn:hover {
+    background: rgba(251, 146, 60, 0.25);
+    border-color: rgba(251, 146, 60, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(234, 88, 12, 0.25);
+  }
+ 
+  /* ---- TIME BADGE ---- */
+  #time-badge {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.2);
+    backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+ 
+  @media (max-width: 768px) {
+    .title { font-size: 3rem; letter-spacing: -1.5px; }
+    .subtitle { font-size: 1rem; }
+    #celestial { width: 75px; height: 75px; top: 35px; right: 55px; }
+  }
+</style>
+</head>
+<body>
+ 
+  <canvas id="bgCanvas"></canvas>
+ 
+  <div class="nebula neb-1" id="neb1"></div>
+  <div class="nebula neb-2" id="neb2"></div>
+  <div class="nebula neb-3" id="neb3"></div>
+ 
+  <div id="celestial">
+    <div class="moon-crater cr1" id="cr1"></div>
+    <div class="moon-crater cr2" id="cr2"></div>
+    <div class="moon-crater cr3" id="cr3"></div>
+  </div>
+ 
+  <canvas id="starCanvas"></canvas>
+ 
+  <div class="content">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      C-SHAW HUB
+      <div class="brand-dot"></div>
+    </div>
+    <h1 class="title" id="title">Leveling up for<br><span>Semester 2.</span></h1>
+    <p class="subtitle" id="subtitle">We're updating the platform with new features and improving security. Go crush your exams, enjoy the break, and we'll see you soon.</p>
+    <div class="buttons">
+      <a href="mailto:info@cshaw.co.za" class="btn" id="btn">Email Support</a>
+    </div>
+  </div>
+ 
+  <div id="time-badge">🕐 Loading SA time…</div>
+ 
+  <script>
+  // ─── SA TIME (SAST = UTC+2, no DST) ───────────────────────────────────────
+  function getSATime() {
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const sast = new Date(utc + 2 * 3600000);
+    return sast;
+  }
+ 
+  function getMode(h, m) {
+    const t = h + m / 60;
+    if (t >= 5 && t < 7)   return 'dawn';
+    if (t >= 7 && t < 17)  return 'day';
+    if (t >= 17 && t < 19) return 'dusk';
+    return 'night';
+  }
+ 
+  // ─── CANVAS SETUP ─────────────────────────────────────────────────────────
+  const bgCanvas  = document.getElementById('bgCanvas');
+  const bgCtx     = bgCanvas.getContext('2d');
+  const starCanvas = document.getElementById('starCanvas');
+  const ctx       = starCanvas.getContext('2d');
+ 
+  let W, H;
+  let stars = [], shootingStars = [], clouds = [], birds = [];
+  let mouse = { x: null, y: null };
+  let currentMode = null;
+ 
+  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('mouseout',  () => { mouse.x = null; mouse.y = null; });
+  window.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+  window.addEventListener('touchend',  () => { mouse.x = null; mouse.y = null; });
+ 
+  // ─── THEME APPLICATION ────────────────────────────────────────────────────
+  function applyTheme(mode) {
+    const body      = document.body;
+    const celestial = document.getElementById('celestial');
+    const neb1      = document.getElementById('neb1');
+    const neb2      = document.getElementById('neb2');
+    const neb3      = document.getElementById('neb3');
+    const title     = document.getElementById('title');
+    const subtitle  = document.getElementById('subtitle');
+    const craters   = document.querySelectorAll('.moon-crater');
+ 
+    // Hide/show craters
+    craters.forEach(c => c.style.opacity = (mode === 'night') ? '1' : '0');
+ 
+    if (mode === 'night') {
+      body.style.background = '#050b18';
+      celestial.className = 'moon';
+      neb1.style.background = 'radial-gradient(ellipse, rgba(60,20,120,0.25) 0%, transparent 70%)';
+      neb2.style.background = 'radial-gradient(ellipse, rgba(20,60,120,0.2) 0%, transparent 70%)';
+      neb3.style.background = 'radial-gradient(ellipse, rgba(80,10,60,0.15) 0%, transparent 70%)';
+      title.style.color = '#e8eaf0';
+      title.style.textShadow = '0 0 40px rgba(251,146,60,0.3), 0 0 80px rgba(234,88,12,0.15)';
+      subtitle.style.color = '#94a3b8';
+      starCanvas.style.opacity = '1';
+ 
+    } else if (mode === 'dawn') {
+      body.style.background = '#1a0a2e';
+      celestial.className = 'sun-low';
+      celestial.style.top = '80px';
+      neb1.style.background = 'radial-gradient(ellipse, rgba(251,146,60,0.3) 0%, transparent 70%)';
+      neb2.style.background = 'radial-gradient(ellipse, rgba(220,38,38,0.2) 0%, transparent 70%)';
+      neb3.style.background = 'radial-gradient(ellipse, rgba(251,191,36,0.1) 0%, transparent 70%)';
+      title.style.color = '#fde8d8';
+      title.style.textShadow = '0 0 40px rgba(251,146,60,0.4)';
+      subtitle.style.color = '#c9a98a';
+      starCanvas.style.opacity = '0.3';
+ 
+    } else if (mode === 'day') {
+      body.style.background = '#0ea5e9';
+      celestial.className = 'sun';
+      celestial.style.top = '40px';
+      neb1.style.background = 'radial-gradient(ellipse, rgba(255,255,255,0.15) 0%, transparent 70%)';
+      neb2.style.background = 'radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%)';
+      neb3.style.background = 'radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%)';
+      title.style.color = '#0c1a2e';
+      title.style.textShadow = '0 2px 20px rgba(255,255,255,0.4)';
+      subtitle.style.color = '#0f3460';
+      starCanvas.style.opacity = '0';
+ 
+    } else if (mode === 'dusk') {
+      body.style.background = '#1c0a05';
+      celestial.className = 'sun-low';
+      celestial.style.top = '90px';
+      neb1.style.background = 'radial-gradient(ellipse, rgba(220,38,38,0.35) 0%, transparent 70%)';
+      neb2.style.background = 'radial-gradient(ellipse, rgba(251,146,60,0.25) 0%, transparent 70%)';
+      neb3.style.background = 'radial-gradient(ellipse, rgba(180,30,10,0.2) 0%, transparent 70%)';
+      title.style.color = '#fde8d8';
+      title.style.textShadow = '0 0 40px rgba(251,146,60,0.5)';
+      subtitle.style.color = '#c9a98a';
+      starCanvas.style.opacity = '0.2';
+    }
+  }
+ 
+  // ─── BG CANVAS (sky gradient + clouds for day) ────────────────────────────
+  function drawBg(mode) {
+    bgCtx.clearRect(0, 0, W, H);
+ 
+    if (mode === 'day') {
+      // Sky gradient — deeper blue at top, lighter at horizon
+      const grad = bgCtx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0,   '#0284c7');
+      grad.addColorStop(0.5, '#38bdf8');
+      grad.addColorStop(1,   '#bae6fd');
+      bgCtx.fillStyle = grad;
+      bgCtx.fillRect(0, 0, W, H);
+ 
+      // Draw clouds
+      for (const c of clouds) {
+        bgCtx.save();
+        bgCtx.globalAlpha = c.opacity;
+        bgCtx.fillStyle = '#ffffff';
+        bgCtx.shadowBlur = 20;
+        bgCtx.shadowColor = 'rgba(255,255,255,0.5)';
+        for (const p of c.puffs) {
+          bgCtx.beginPath();
+          bgCtx.arc(c.x + p.dx, c.y + p.dy, p.r, 0, Math.PI * 2);
+          bgCtx.fill();
+        }
+        bgCtx.restore();
+      }
+ 
+    } else if (mode === 'dawn') {
+      const grad = bgCtx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0,   '#1a0a2e');
+      grad.addColorStop(0.4, '#7c2d12');
+      grad.addColorStop(0.7, '#ea580c');
+      grad.addColorStop(1,   '#fbbf24');
+      bgCtx.fillStyle = grad;
+      bgCtx.fillRect(0, 0, W, H);
+ 
+    } else if (mode === 'dusk') {
+      const grad = bgCtx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0,   '#0c0a09');
+      grad.addColorStop(0.3, '#7c2d12');
+      grad.addColorStop(0.65,'#dc2626');
+      grad.addColorStop(1,   '#fb923c');
+      bgCtx.fillStyle = grad;
+      bgCtx.fillRect(0, 0, W, H);
+ 
+    } else {
+      // Night — just let body bg show, canvas stays clear
+    }
+  }
+ 
+  // ─── CLOUDS ───────────────────────────────────────────────────────────────
+  function makePuffs() {
+    const n = Math.floor(Math.random() * 4) + 3;
+    const puffs = [];
+    for (let i = 0; i < n; i++) {
+      puffs.push({ dx: (Math.random() - 0.3) * 80, dy: (Math.random() - 0.5) * 30, r: Math.random() * 28 + 18 });
+    }
+    return puffs;
+  }
+ 
+  function initClouds() {
+    clouds = [];
+    const count = Math.floor(W / 280) + 3;
+    for (let i = 0; i < count; i++) {
+      clouds.push({
+        x: Math.random() * (W + 200) - 100,
+        y: Math.random() * H * 0.45 + 30,
+        speed: Math.random() * 0.25 + 0.08,
+        opacity: Math.random() * 0.4 + 0.55,
+        puffs: makePuffs()
+      });
+    }
+  }
+ 
+  function updateClouds() {
+    for (const c of clouds) {
+      c.x += c.speed;
+      if (c.x > W + 200) { c.x = -250; c.y = Math.random() * H * 0.45 + 30; }
+    }
+  }
+ 
+  // ─── BIRDS ────────────────────────────────────────────────────────────────
+  function initBirds() {
+    birds = [];
+    const count = Math.floor(Math.random() * 5) + 4;
+    for (let i = 0; i < count; i++) {
+      birds.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.5 + 40,
+        speed: Math.random() * 1.2 + 0.5,
+        flapT: Math.random() * Math.PI * 2,
+        flapSpeed: Math.random() * 0.08 + 0.04,
+        size: Math.random() * 5 + 5
+      });
+    }
+  }
+ 
+  function drawBirds() {
+    for (const b of birds) {
+      b.x += b.speed;
+      b.flapT += b.flapSpeed;
+      if (b.x > W + 50) b.x = -50;
+ 
+      const flap = Math.sin(b.flapT) * b.size * 0.7;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(10, 30, 60, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.size, b.y + flap);
+      ctx.quadraticCurveTo(b.x, b.y, b.x + b.size, b.y + flap);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+ 
+  // ─── STARS ────────────────────────────────────────────────────────────────
+  class Star {
+    constructor() { this.reset(true); }
+    reset(init) {
+      this.x = Math.random() * W;
+      this.y = init ? Math.random() * H : Math.random() * H * 0.75;
+      this.size = Math.random() * 1.8 + 0.2;
+      this.baseOpacity = Math.random() * 0.7 + 0.2;
+      this.opacity = this.baseOpacity;
+      this.twinkleSpeed = Math.random() * 0.02 + 0.005;
+      this.twinkleOffset = Math.random() * Math.PI * 2;
+      this.vx = (Math.random() - 0.5) * 0.08;
+      this.vy = (Math.random() - 0.5) * 0.08;
+      this.density = Math.random() * 8 + 1;
+      const r = Math.floor(Math.random() * 3);
+      this.color = r === 0 ? '#ffffff' : r === 1 ? '#c4d0ff' : '#ffd9a0';
+    }
+    update(t) {
+      this.x += this.vx; this.y += this.vy;
+      if (this.x < 0) this.x = W; if (this.x > W) this.x = 0;
+      if (this.y < 0) this.y = H; if (this.y > H) this.y = 0;
+      this.opacity = this.baseOpacity * (0.6 + 0.4 * Math.sin(t * this.twinkleSpeed + this.twinkleOffset));
+      if (mouse.x !== null) {
+        const dx = mouse.x - this.x, dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          const force = (100 - dist) / 100;
+          this.x -= (dx / dist) * force * this.density * 0.5;
+          this.y -= (dy / dist) * force * this.density * 0.5;
+        }
+      }
+    }
+    draw() {
+      ctx.save();
+      ctx.globalAlpha = this.opacity;
+      ctx.fillStyle = this.color;
+      ctx.shadowBlur = this.size > 1.2 ? 6 : 3;
+      ctx.shadowColor = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+ 
+  class ShootingStar {
+    constructor() { this.spawn(); }
+    spawn() {
+      this.x = Math.random() * W * 0.7 + W * 0.1;
+      this.y = Math.random() * H * 0.4;
+      const angle = (Math.random() * 30 + 15) * Math.PI / 180;
+      const speed = Math.random() * 8 + 6;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.len = Math.random() * 120 + 60;
+      this.opacity = 0; this.life = 0;
+      this.maxLife = Math.random() * 40 + 30;
+      this.active = true;
+    }
+    update() {
+      this.life++;
+      this.x += this.vx; this.y += this.vy;
+      const half = this.maxLife / 2;
+      this.opacity = this.life < half ? this.life / half : (this.maxLife - this.life) / half;
+      if (this.life >= this.maxLife || this.x > W + 200 || this.y > H + 200) this.active = false;
+    }
+    draw() {
+      if (!this.active) return;
+      ctx.save();
+      ctx.globalAlpha = this.opacity * 0.9;
+      const tailX = this.x - this.vx * (this.len / 10);
+      const tailY = this.y - this.vy * (this.len / 10);
+      const grad = ctx.createLinearGradient(tailX, tailY, this.x, this.y);
+      grad.addColorStop(0, 'transparent');
+      grad.addColorStop(1, '#ffffff');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 8; ctx.shadowColor = '#c4d0ff';
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(this.x, this.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+ 
+  // ─── INIT ─────────────────────────────────────────────────────────────────
+  function init() {
+    W = starCanvas.width = bgCanvas.width = window.innerWidth;
+    H = starCanvas.height = bgCanvas.height = window.innerHeight;
+    const count = W < 768 ? 120 : 240;
+    stars = Array.from({ length: count }, () => new Star());
+    initClouds();
+    initBirds();
+  }
+ 
+  // ─── MAIN LOOP ────────────────────────────────────────────────────────────
+  let t = 0, lastShoot = 0;
+  let nextShootDelay = Math.random() * 4000 + 2000;
+ 
+  function tick(ts) {
+    t++;
+    const sa    = getSATime();
+    const mode  = getMode(sa.getHours(), sa.getMinutes());
+ 
+    // Update time badge
+    const hh = String(sa.getHours()).padStart(2,'0');
+    const mm = String(sa.getMinutes()).padStart(2,'0');
+    const labels = { night: '🌙 Night', dawn: '🌅 Dawn', day: '☀️ Day', dusk: '🌆 Dusk' };
+    document.getElementById('time-badge').textContent = `${labels[mode]}  ·  ${hh}:${mm} SAST`;
+ 
+    // Theme change
+    if (mode !== currentMode) {
+      currentMode = mode;
+      applyTheme(mode);
+    }
+ 
+    // Clear star canvas
+    ctx.clearRect(0, 0, W, H);
+ 
+    // Draw bg
+    drawBg(mode);
+ 
+    if (mode === 'night' || mode === 'dawn' || mode === 'dusk') {
+      // Stars
+      for (const s of stars) { s.update(t); s.draw(); }
+      // Shooting stars (night only)
+      if (mode === 'night') {
+        if (ts - lastShoot > nextShootDelay) {
+          shootingStars.push(new ShootingStar());
+          lastShoot = ts;
+          nextShootDelay = Math.random() * 4000 + 2000;
+        }
+        shootingStars = shootingStars.filter(s => s.active);
+        for (const s of shootingStars) { s.update(); s.draw(); }
+      }
+    }
+ 
+    if (mode === 'day') {
+      updateClouds();
+      drawBirds();
+    }
+ 
+    requestAnimationFrame(tick);
+  }
+ 
+  window.addEventListener('resize', init);
+  init();
+  requestAnimationFrame(tick);
+  </script>
+
+{% else %}
+    <nav class="navbar">
         <div class="nav-left">
             <button id="sidebarToggle" class="icon-btn">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
@@ -31,7 +620,6 @@
     </nav>
 
     <div class="main-container">
-        
         
         <aside class="sidebar" id="sidebar">
             <ul class="nav-list">
@@ -336,7 +924,6 @@
             max-width: 350px;
             box-shadow: 0 15px 30px rgba(0,0,0,0.3);
             text-align: center;
-            /* A smooth pop-in animation */
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
@@ -455,5 +1042,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+{% endif %}
 </body>
 </html>

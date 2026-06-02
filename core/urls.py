@@ -33,4 +33,5 @@ urlpatterns = [
     path('feedback-dashboard/', views.AdminFeedbackDashboard.as_view(), name='admin-feedback'),
     path('timeline-race/', views.leaderboard_page_view, name='leaderboard_race_page'),
     path('api/activities/leaderboard-race/', views.leaderboard_race_data, name='api_leaderboard_race'),
+    path('quarterly-report/', views.quarterly_report_view, name='quarterly-report'),
 ]
