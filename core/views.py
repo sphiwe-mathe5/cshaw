@@ -1067,6 +1067,16 @@ def quarterly_report_view(request):
 
     # --- 1. HERO METRICS ---
     # Total hours ever earned
+    event_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
+    event_hours = event_hours_dict['hours_earned__sum'] or 0.0
+
+    # B. Get manually added hours directly from the User model
+    manual_hours_dict = User.objects.aggregate(Sum('manual_bonus_hours'))
+    manual_hours = manual_hours_dict['manual_bonus_hours__sum'] or 0.0
+
+    # C. Combine them for the true total
+    total_hours = float(event_hours) + float(manual_hours)
+    
     total_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
     total_hours = total_hours_dict['hours_earned__sum'] or 0.0
 
