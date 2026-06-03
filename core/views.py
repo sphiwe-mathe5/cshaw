@@ -34,6 +34,7 @@ from django.utils.html import strip_tags
 from django.views.generic import CreateView, CreateView, TemplateView
 import json
 import os
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.views import View
 from django.views.generic import TemplateView
@@ -41,6 +42,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 import urllib.request
 import urllib.parse
 from django.core.cache import cache
+from django.db.models import Sum, F, Q, DecimalField
 
 
 def index_page(request):
@@ -1066,84 +1068,112 @@ def quarterly_report_view(request):
     now = timezone.now()
 
     # ==========================================
-    # 1. HERO METRICS
+    # 1. BASE QUERY: THE "TRUE ACTIVE" STUDENTS
     # ==========================================
+    # This creates a reusable list of students who have > 5 total combined hours.
+    # We define it once here to make the rest of the code extremely fast.
     
-    # A. Get automated event hours
+    true_active_students = User.objects.filter(
+        role=User.Roles.STUDENT,
+        is_superuser=False
+    ).annotate(
+        # 1. Sum up all their physical sign-in hours (default to 0 if none)
+        total_event_hours=Coalesce(
+            Sum('activitysignup__hours_earned', filter=Q(activitysignup__attended=True)),
+            0.0,
+            output_field=DecimalField()
+        )
+    ).annotate(
+        # 2. Add their manual bonus hours to their event hours
+        grand_total=F('total_event_hours') + F('manual_bonus_hours')
+    ).filter(
+        # 3. Only keep students whose grand total is strictly greater than 5
+        grand_total__gt=5
+    )
+
+    # ==========================================
+    # 2. HERO METRICS
+    # ==========================================
+    total_registered = User.objects.filter(role=User.Roles.STUDENT, is_superuser=False).count()
+    
+    # We now just count that base query we built above!
+    active_peers = true_active_students.count()
+
+    # Hours calculation
     event_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
     event_hours = event_hours_dict['hours_earned__sum'] or 0.0
 
-    # B. Get manually added hours directly from the User model
-    manual_hours_dict = User.objects.aggregate(Sum('manual_bonus_hours'))
+    manual_hours_dict = User.objects.filter(role=User.Roles.STUDENT).aggregate(Sum('manual_bonus_hours'))
     manual_hours = manual_hours_dict['manual_bonus_hours__sum'] or 0.0
 
-    # C. Combine them for the true total
     total_hours = float(event_hours) + float(manual_hours)
-
-    # D. Other Hero Metrics
     total_events = VolunteerActivity.objects.filter(date_time__lte=now).count()
-    total_registered = User.objects.filter(role=User.Roles.STUDENT).count()
-    active_peers = ActivitySignup.objects.filter(attended=True).values('user').distinct().count()
 
     # ==========================================
-    # 2. CAMPUS BREAKDOWN DATA
+    # 3. CAMPUS BREAKDOWN DATA
     # ==========================================
     campuses = ['APB', 'DFC', 'APK', 'SWC']
     campus_context = {}
 
     for camp in campuses:
-        # Active educators per campus
-        active_count = User.objects.filter(
+        # Total Registered at this campus
+        total_pe_count = User.objects.filter(
             role=User.Roles.STUDENT,
-            campus=camp
+            campus=camp,
+            is_superuser=False
         ).count()
 
-        # Event hours per campus
+        # Active PEs at this campus (We just filter our base query by campus!)
+        active_pe_count = true_active_students.filter(campus=camp).count()
+
+        # Hours for this campus
         camp_event_hours_aggr = ActivitySignup.objects.filter(
-            user__campus=camp,
-            attended=True
+            user__campus=camp, attended=True
         ).aggregate(Sum('hours_earned'))
         camp_event_hours = camp_event_hours_aggr['hours_earned__sum'] or 0.0
 
-        # Manual hours per campus
         camp_manual_hours_aggr = User.objects.filter(
-            role=User.Roles.STUDENT,
-            campus=camp
+            role=User.Roles.STUDENT, campus=camp
         ).aggregate(Sum('manual_bonus_hours'))
         camp_manual_hours = camp_manual_hours_aggr['manual_bonus_hours__sum'] or 0.0
 
-        # Combine for total campus hours
         total_camp_hours = float(camp_event_hours) + float(camp_manual_hours)
 
-        # Average hours (avoid division by zero)
-        avg_hours = (total_camp_hours / active_count) if active_count > 0 else 0.0
+        # Average hours (Calculated against the new >5 hours Active peers metric)
+        avg_hours = (total_camp_hours / active_pe_count) if active_pe_count > 0 else 0.0
 
-        # Dynamically create context keys (e.g., apb_active_count, dfc_total_hours)
+        # Save to context
         prefix = camp.lower()
-        campus_context[f'{prefix}_active_count'] = active_count
+        campus_context[f'{prefix}_total_count'] = total_pe_count
+        campus_context[f'{prefix}_active_count'] = active_pe_count
         campus_context[f'{prefix}_total_hours'] = round(total_camp_hours, 1)
         campus_context[f'{prefix}_avg_hours'] = round(avg_hours, 1)
-
     # ==========================================
     # 3. ENGAGEMENT DATA (For the Charts)
     # ==========================================
     
-    # Get the last 5 completed events
-    recent_events = VolunteerActivity.objects.filter(date_time__lte=now).order_by('-date_time')[:5]
+    # Get ALL completed events, ordered oldest to newest
+    all_past_events = VolunteerActivity.objects.filter(date_time__lte=now).order_by('date_time')
     
     turnout_labels = []
     expected_data = []
     actual_data = []
 
-    # Reverse so the oldest event is first on the chart (left-to-right)
-    for event in reversed(recent_events): 
+    for event in all_past_events: 
         turnout_labels.append(event.title)
         
+        # 'Expected' = RSVPs
         total_rsvps = ActivitySignup.objects.filter(activity=event).count()
         expected_data.append(total_rsvps)
         
+        # 'Actual' = Attended
         attended_count = ActivitySignup.objects.filter(activity=event, attended=True).count()
         actual_data.append(attended_count)
+
+    # Overall attendance percentage
+    all_time_rsvps = ActivitySignup.objects.count()
+    all_time_attended = ActivitySignup.objects.filter(attended=True).count()
+    attendance_rate = round((all_time_attended / all_time_rsvps) * 100) if all_time_rsvps > 0 else 0
 
 
 
