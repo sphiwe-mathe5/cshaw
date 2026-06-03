@@ -1180,8 +1180,18 @@ def quarterly_report_view(request):
     # ==========================================
     # 4. PUNCTUALITY METRICS
     # ==========================================
-    on_time_count = ActivitySignup.objects.filter(attended=True).count() 
-    late_count = 0 
+    late_count = ActivitySignup.objects.filter(
+        attended=True,
+        sign_in_time__isnull=False,
+        sign_in_time__gt=F('activity__date_time')
+    ).count()
+
+    # 2. Calculate On Time: Total attended minus the late comers
+    # (This safely gives the "benefit of the doubt" to anyone marked attended manually without a timestamp)
+    total_attended = ActivitySignup.objects.filter(attended=True).count()
+    on_time_count = total_attended - late_count
+
+    # 3. Calculate No Shows: RSVP'd but never attended
     excused_count = ActivitySignup.objects.filter(attended=False).count() 
 
     # ==========================================
