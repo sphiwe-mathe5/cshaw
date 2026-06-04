@@ -257,6 +257,36 @@
             animation-play-state: paused;
         }
 
+        .feedback-grid {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap; /* Allows it to stack nicely on mobile */
+            min-height: 260px; /* Prevents the page from jumping up/down when clicking next */
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            background: var(--card-bg);
+            color: var(--brand-blue);
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--brand-blue);
+            color: white;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         @keyframes scroll-left {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); } /* Scrolls exactly half the track to loop perfectly */
@@ -685,36 +715,22 @@
                     <span style="font-size: 1.2rem; vertical-align: middle; margin-right: 5px;">👆</span> 
                     Click on any card to read the full student feedback
                 </p>
+
+                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 25px;">
+                    <button id="prevFeedbackBtn" class="nav-btn">&larr; Previous</button>
+                    <button id="nextFeedbackBtn" class="nav-btn">Next &rarr;</button>
+                </div>
             </div>
             
-            <div class="feedback-scroll-container">
-                <div class="feedback-track">
-                    
-                    {% for feedback in feedbacks %}
-                    <div class="feedback-card clickable-card" onclick="openFeedbackModal(this)">
-                        <span class="quote-icon">❝</span>
-                        <p class="quote-text">{{ feedback.message }}</p>
-                        
-                        <span class="quote-author">
-                            — {{ feedback.user.first_name }} {{ feedback.user.last_name }} 
-                            <span style="opacity: 0.7; font-weight: 400;">({% if feedback.user.campus %}{{ feedback.user.get_campus_display }}{% else %}C-SHAW{% endif %})</span>
-                        </span>
-                    </div>
-                    {% endfor %}
-
-                    {% for feedback in feedbacks %}
-                    <div class="feedback-card clickable-card" aria-hidden="true" onclick="openFeedbackModal(this)">
-                        <span class="quote-icon">❝</span>
-                        <p class="quote-text">{{ feedback.message }}</p>
-                        
-                        <span class="quote-author">
-                            — {{ feedback.user.first_name }} {{ feedback.user.last_name }} 
-                            <span style="opacity: 0.7; font-weight: 400;">({% if feedback.user.campus %}{{ feedback.user.get_campus_display }}{% else %}C-SHAW{% endif %})</span>
-                        </span>
-                    </div>
-                    {% endfor %}
-
+            <div class="feedback-grid" id="feedbackContainer">
+                
+                {% for feedback in feedbacks %}
+                <div class="feedback-card clickable-card" onclick="openFeedbackModal(this)">
+                    <span class="quote-icon">❝</span>
+                    <p class="quote-text">{{ feedback.message }}</p>
                 </div>
+                {% endfor %}
+
             </div>
         </div>
 
@@ -723,8 +739,7 @@
                 <span class="lightbox-close" onclick="closeFeedbackModal()" style="color: #94a3b8; top: 15px; right: 20px;">&times;</span>
                 <span class="quote-icon" style="font-size: 3rem;">❝</span>
                 <p id="modalFeedbackText" class="modal-quote-text"></p>
-                <span id="modalFeedbackAuthor" class="modal-quote-author"></span>
-            </div>
+                </div>
         </div>
 
         <div class="video-testimonial-section">
@@ -772,9 +787,16 @@
         <div class="text-grid">
             <div class="card recommendation-block">
                 <h3>Long-Term Hardware Vision</h3>
-                <p>Currently, the system relies on our Executives using their personal smartphones. While this works perfectly for our current rollout.</p>
-                <p>Looking ahead, my recommendation is to eventually invest in a dedicated, low-cost tablet for each campus. These would act as official, standalone "Check-In Kiosks" , making the process even faster and looking highly professional.</p>
+                <p>Currently, the system relies on our Executives using their personal smartphones. While this works perfectly for our current rollout, it does rely heavily on personal devices and battery life.</p>
+                <p>Looking ahead, my recommendation is to eventually invest in a dedicated, low-cost tablet for each campus. These would act as official, standalone "Check-In Kiosks", making the process even faster and looking highly professional.</p>
                 <p style="margin-bottom: 0;"><em>To be clear, this is not an urgent request for this year. It is a roadmap suggestion for the years to come, to ensure the system remains sustainable as the program continues to grow.</em></p>
+            </div>
+
+            <div class="card recommendation-block">
+                <h3>Native Mobile App Development</h3>
+                <p>A dedicated mobile application is currently the most highly requested feature from our Peer Educators. An app would allow for instant push notifications, easier profile access, and a much more seamless experience.</p>
+                <p>Designing, building, and maintaining a standalone app across both iOS and Android is a massive undertaking. To make this a reality in the future, I will need as much support and backing as possible to execute it properly.</p>
+                <p style="margin-bottom: 0;"><em>Like the hardware vision, this is a long-term roadmap goal. I am eager to spearhead it, but it represents the next major evolution of the Hub once our web platform is fully matured.</em></p>
             </div>
 
             <div class="card recommendation-block">
@@ -822,6 +844,10 @@
             </div>
         </div>
     </section>
+
+    <div style="text-align: center; margin: 60px 0 40px; color: #E35205; font-family: 'Inter', sans-serif; font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase;">
+            — The End —
+        </div>
 
 </div>
 
@@ -952,33 +978,24 @@
         const lightbox = document.getElementById('imageLightbox');
         const lightboxImg = document.getElementById('lightboxImage');
         
-        lightboxImg.src = imageSrc; // Give the modal the correct image
-        lightbox.classList.add('active'); // Show it
-        document.body.style.overflow = 'hidden'; // Stop the background from scrolling
+        lightboxImg.src = imageSrc;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 
     function closeLightbox() {
         const lightbox = document.getElementById('imageLightbox');
-        lightbox.classList.remove('active'); // Hide it
-        document.body.style.overflow = 'auto'; // Turn scrolling back on
+        lightbox.classList.remove('active');
+        document.body.style.overflow = 'auto';
     }
     
-    // Allow closing by pressing the Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === "Escape") {
-            closeLightbox();
-        }
-    });
-
     // Feedback Modal Logic
     function openFeedbackModal(cardElement) {
-        // Grab the text and author from the card that was clicked
+        // Grab ONLY the text from the card that was clicked
         const text = cardElement.querySelector('.quote-text').textContent;
-        const authorHTML = cardElement.querySelector('.quote-author').innerHTML;
         
         // Inject it into the modal
         document.getElementById('modalFeedbackText').textContent = text;
-        document.getElementById('modalFeedbackAuthor').innerHTML = authorHTML;
         
         // Show the modal and lock background scrolling
         const modal = document.getElementById('feedbackModal');
@@ -991,10 +1008,60 @@
         document.body.style.overflow = 'auto';
     }
 
-    // Update your existing Escape key listener to close both modals
+    // Feedback Pagination Logic
+    const feedbackCards = document.querySelectorAll('.feedback-grid .feedback-card');
+    const cardsPerPage = 3;
+    let currentFbPage = 0;
+
+    function updateFeedbackView() {
+        const start = currentFbPage * cardsPerPage;
+        const end = start + cardsPerPage;
+
+        feedbackCards.forEach((card, index) => {
+            if (index >= start && index < end) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        const prevBtn = document.getElementById('prevFeedbackBtn');
+        const nextBtn = document.getElementById('nextFeedbackBtn');
+
+        if (prevBtn && nextBtn) {
+            prevBtn.disabled = (currentFbPage === 0);
+            nextBtn.disabled = (end >= feedbackCards.length);
+        }
+    }
+
+    if (feedbackCards.length > 0) {
+        updateFeedbackView();
+    }
+
+    const prevFbBtn = document.getElementById('prevFeedbackBtn');
+    const nextFbBtn = document.getElementById('nextFeedbackBtn');
+
+    if (prevFbBtn) {
+        prevFbBtn.addEventListener('click', () => {
+            if (currentFbPage > 0) {
+                currentFbPage--;
+                updateFeedbackView();
+            }
+        });
+    }
+
+    if (nextFbBtn) {
+        nextFbBtn.addEventListener('click', () => {
+            if ((currentFbPage + 1) * cardsPerPage < feedbackCards.length) {
+                currentFbPage++;
+                updateFeedbackView();
+            }
+        });
+    }
+
+    // Allow closing by pressing the Escape key
     document.addEventListener('keydown', function(event) {
         if (event.key === "Escape") {
-            // Check if functions exist before calling to prevent errors
             if (typeof closeLightbox === "function") closeLightbox();
             if (typeof closeFeedbackModal === "function") closeFeedbackModal();
         }
