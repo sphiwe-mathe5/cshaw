@@ -1,0 +1,258 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excursion Scanner Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 30px; }
+        .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        h1, h2, h3 { color: #2c3e50; margin: 0; }
+        .brand-orange { color: #E35205; }
+        
+        .btn-primary { background: #E35205; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-primary:hover { background: #c84502; }
+        .btn-danger { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger:hover { background: #c82333; }
+        
+        .table-wrapper { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #666; font-weight: 600; }
+        
+        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 2px solid #ddd; }
+        
+        .fallback-section { text-align: center; margin-top: 30px; padding-top: 30px; border-top: 1px solid #eee; }
+        .form-input { padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; text-align: center; letter-spacing: 2px; font-weight: bold; width: 150px; margin-right: 10px; }
+        
+        #status-display { margin-top: 20px; padding: 20px; border-radius: 8px; font-size: 18px; font-weight: bold; text-align: center; display: none; }
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-loading { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        
+        .seats-counter { font-size: 24px; font-weight: 800; color: #E35205; background: #fff5e6; padding: 10px 20px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- SECTION A: TICKET LAUNCHPAD (Coordinator Only) -->
+        {% if user.role == 'COORDINATOR' %}
+        <div class="card">
+            <div class="header">
+                <h2>Ticket Launchpad</h2>
+                <div class="seats-counter">Seats Filled: {{ seats_filled }} / {{ max_seats }}</div>
+            </div>
+            
+            <div style="text-align: right; margin-bottom: 20px;">
+                <button id="generateBtn" class="btn-primary" onclick="generateTickets()">Generate & Fill Empty Seats</button>
+            </div>
+            
+            <h3>Current Ticket Holders</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th>Hours</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in active_tickets %}
+                        <tr>
+                            <td>{{ ticket.user.first_name }} {{ ticket.user.last_name }}</td>
+                            <td>{{ ticket.user.email }}</td>
+                            <td>{{ ticket.user.total_hours|floatformat:"1" }}</td>
+                            <td>
+                                {% if ticket.is_scanned %}
+                                    <span style="color: green; font-weight: bold;">Scanned</span>
+                                {% else %}
+                                    <span style="color: orange; font-weight: bold;">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn-danger" onclick="revokeTicket('{{ ticket.id }}')">Cancel RSVP</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 30px; color: #999;">No active tickets right now.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SECTION B: SCANNER (Coordinator & Executive) -->
+        <div class="card">
+            <div class="header">
+                <h2>QR Code Scanner</h2>
+                <button class="btn-primary" style="padding: 8px 16px; font-size: 14px;" onclick="startScanner()">Start Camera</button>
+            </div>
+            
+            <div id="reader"></div>
+            
+            <div id="status-display"></div>
+            
+            <div class="fallback-section">
+                <h3>Fallback Entry</h3>
+                <p style="color: #666; font-size: 14px;">If the QR code won't scan, enter the 6-digit PIN below.</p>
+                <input type="text" id="pinInput" class="form-input" placeholder="123456" maxlength="6">
+                <button class="btn-primary" onclick="verifyPIN()">Verify PIN</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const csrfToken = '{{ csrf_token }}';
+        
+        function getCSRFToken() {
+            // Function to get CSRF token from cookies if not rendered directly
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue || csrfToken;
+        }
+
+        // --- Ticket Launchpad Actions --- //
+        
+        async function generateTickets() {
+            const btn = document.getElementById('generateBtn');
+            btn.innerText = "Generating...";
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/excursions/generate/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
+                });
+                const data = await res.json();
+                alert(data.message);
+                location.reload();
+            } catch (err) {
+                alert("Error generating tickets.");
+                btn.innerText = "Generate & Fill Empty Seats";
+                btn.disabled = false;
+            }
+        }
+        
+        async function revokeTicket(ticketId) {
+            if(!confirm("Are you sure you want to revoke this ticket? This will open up a seat.")) return;
+            
+            try {
+                const res = await fetch('/api/excursions/revoke/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                    body: JSON.stringify({ ticket_id: ticketId })
+                });
+                const data = await res.json();
+                if(res.ok) {
+                    location.reload();
+                } else {
+                    alert(data.error || "Error revoking ticket.");
+                }
+            } catch (err) {
+                alert("Network error.");
+            }
+        }
+
+        // --- Scanner Logic --- //
+        
+        let html5QrcodeScanner;
+        
+        function startScanner() {
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Stop scanning temporarily
+            html5QrcodeScanner.clear();
+            validateTicket({ ticket_uuid: decodedText });
+        }
+
+        function onScanFailure(error) {
+            // handle scan failure implicitly
+        }
+        
+        function verifyPIN() {
+            const pin = document.getElementById('pinInput').value;
+            if (pin.length !== 6) {
+                showStatus("Please enter a valid 6-digit PIN.", "error");
+                return;
+            }
+            validateTicket({ fallback_pin: pin });
+        }
+        
+        async function validateTicket(payload) {
+            showStatus("Verifying...", "loading");
+            try {
+                const res = await fetch('/api/excursions/validate/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showStatus(data.message, "success");
+                    // If we want to automatically restart scanner after a few seconds
+                    setTimeout(() => {
+                        document.getElementById('pinInput').value = "";
+                        startScanner();
+                        showStatus("", "none");
+                    }, 4000);
+                } else {
+                    showStatus(data.error || "Invalid Ticket", "error");
+                    // Wait a bit before restarting
+                    setTimeout(() => {
+                        startScanner();
+                        showStatus("", "none");
+                    }, 4000);
+                }
+                
+            } catch (err) {
+                showStatus("Network error occurred.", "error");
+            }
+        }
+        
+        function showStatus(message, type) {
+            const display = document.getElementById('status-display');
+            if (type === 'none') {
+                display.style.display = 'none';
+                return;
+            }
+            display.style.display = 'block';
+            display.innerText = message;
+            display.className = ''; // reset
+            display.classList.add(`status-${type}`);
+        }
+        
+        // Auto-start scanner on load if preferred
+        // document.addEventListener('DOMContentLoaded', startScanner);
+    </script>
+</body>
+</html>

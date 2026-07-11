@@ -112,3 +112,45 @@ class Feedback(models.Model):
     def __str__(self):
         return f"{self.type} - {self.created_at.strftime('%Y-%m-%d')}"
     
+    
+class CareerToolkitAsset(models.Model):
+    ASSET_TYPES = [
+        ('cv', 'CV Experience Section'),
+        ('linkedin', 'LinkedIn Summary'),
+        ('scholarship', 'Application Statement'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='career_assets')
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPES)
+    generated_content = models.TextField()
+    
+    # Store the stats at the exact time of generation to check for "staleness"
+    hours_at_generation = models.FloatField(default=0.0)
+    events_at_generation = models.IntegerField(default=0)
+    
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('user', 'asset_type')
+    
+
+def secure_qr_path(instance, filename):
+    ext = filename.split('.')[-1].lower()
+    return f"qrcodes/{uuid.uuid4()}.{ext}"
+
+class ExcursionTicket(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('revoked', 'Revoked'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='excursion_tickets')
+    ticket_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    fallback_pin = models.CharField(max_length=6, unique=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    qr_code = models.ImageField(storage=GoogleCloudMediaFileStorage(), upload_to=secure_qr_path, blank=True, null=True)
+    is_scanned = models.BooleanField(default=False)
+    scanned_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Ticket {self.fallback_pin} for {self.user.email} - {self.status}"

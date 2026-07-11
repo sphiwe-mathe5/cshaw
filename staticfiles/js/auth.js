@@ -158,20 +158,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const data = await response.json();
 
-                if (!response.ok) {
+                if (response.ok) {
+                    // Extract 'next' parameter from the URL if it exists
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextUrl = urlParams.get('next') || '/';
+
+                    // --- THE 2FA INTERCEPT ---
+                    if (data.requires_2fa) {
+                        // Hide login form, show OTP form
+                        document.getElementById('loginStep').style.display = 'none';
+                        document.getElementById('otpStep').style.display = 'block';
+                        
+                        // Reset the login button state in the background
+                        submitBtn.disabled = false;
+                        loader.classList.add('hidden');
+                        
+                        // Optional: auto-focus the OTP input box for better UX
+                        document.getElementById('otpCode').focus();
+                    } else {
+                        // Standard login successful (2FA is off)
+                        window.location.href = nextUrl;
+                    }
+                } else {
+                    // Handle invalid passwords or backend errors
                     showError(data.error || 'Login failed. Please try again.');
                     submitBtn.disabled = false;
                     loader.classList.add('hidden');
-                    return;
                 }
-
-                window.location.href = '/';
 
             } catch (err) {
                 console.error("Login error:", err);
                 showError("Something went wrong. Please refresh and try again.");
                 submitBtn.disabled = false;
                 loader.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- STEP 2: OTP VERIFICATION SCRIPT ---
+    const otpForm = document.getElementById('otpForm');
+    
+    if (otpForm) {
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const otpSubmitBtn = document.getElementById('otpSubmitBtn');
+            const otpLoader = document.getElementById('otpLoader');
+            const otpErrorDiv = document.getElementById('otpError');
+            const otpCode = document.getElementById('otpCode').value;
+
+            otpSubmitBtn.disabled = true;
+            otpLoader.classList.remove('hidden');
+            otpErrorDiv.classList.add('hidden');
+
+            try {
+                // Ensure you have a helper to get the CSRF token, or grab it from the DOM
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                const response = await fetch('/api/auth/verify-otp/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ otp: otpCode })
+                });
+                
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Extract 'next' parameter from the URL if it exists
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextUrl = urlParams.get('next') || '/';
+                    
+                    // OTP is correct! Log them in.
+                    window.location.href = nextUrl; 
+                } else {
+                    // Invalid or expired code
+                    otpErrorDiv.innerText = data.error || 'Invalid code. Please try again.';
+                    otpErrorDiv.classList.remove('hidden');
+                    otpSubmitBtn.disabled = false;
+                    otpLoader.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error("OTP error:", err);
+                otpErrorDiv.innerText = 'Network error. Please try again.';
+                otpErrorDiv.classList.remove('hidden');
+                otpSubmitBtn.disabled = false;
+                otpLoader.classList.add('hidden');
             }
         });
     }

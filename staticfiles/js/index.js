@@ -74,6 +74,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const linkCalendar = document.getElementById('link-calendar');
+    if (linkCalendar) {
+        linkCalendar.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Handle the active class switching on the sidebar
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('nav-item-calendar').classList.add('active');
+            
+            // Render the new calendar
+            renderCalendar();
+            
+            // Close the sidebar if on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+    }
+
+    const linkCareer = document.getElementById('link-career');
+    if (linkCareer) {
+        linkCareer.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Handle the active class switching on the sidebar
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('nav-item-career').classList.add('active');
+            
+            // Render the new Career Toolkit
+            renderCareerToolkit();
+            
+            // Close the sidebar if on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+    }
+
     // --- LEADERBOARD TAB CLICK HANDLER ---
     const leaderboardLink = document.getElementById('link-leaderboard');
     
@@ -357,14 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render Activities (List View)
     async function renderActivities() {
-        const pageTitle = isUserLoggedIn ? "Volunteer Activities" : "Upcoming Activities";
-        const pageSubtitle = isUserLoggedIn ? "Find your next opportunity." : "See what's happening around campus.";
+
+
 
         mainContent.innerHTML = `
-            <div class="header-section">
-                <h1>${pageTitle}</h1>
-                <p>${pageSubtitle}</p>
-            </div>
+
             <div class="loader"></div>
         `;
 
@@ -380,9 +419,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (allActivities.length === 0) {
                 mainContent.innerHTML = `
-                    <div class="header-section"><h1>${pageTitle}</h1><p>${pageSubtitle}</p></div>
                     <div class="cards-grid">
-                        <p style="grid-column: 1/-1; text-align: center; color: #7F8C8D;">No upcoming events found. Check back later!</p>
+                        
+                        <div class="empty-state-container" style="grid-column: 1 / -1;">
+                            <div class="study-scene">
+                                <div class="study-spark spark-left">✦</div>
+                                <div class="study-spark spark-right">✦</div>
+                                <div class="study-spark spark-top">✦</div>
+                                
+                                <div class="floating-book">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="empty-state-title">Zero events right now.</h3>
+                            <p class="empty-state-text" style="margin-bottom: 24px;">Take this time to focus on your studies and ace your upcoming classes!</p>
+                            <div class="empty-state-cta">
+                                <a href="/about/" class="btn-read-cshaw">
+                                    <span>Read about the C-SHAW Program</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+
                     </div>`;
                 return;
             }
@@ -450,8 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // 5. RENDER TO PAGE
             mainContent.innerHTML = `
                 <div class="header-section">
-                    <h1>${pageTitle}</h1>
-                    <p>${pageSubtitle}</p>
                 </div>
                 <div class="cards-grid">
                     ${cardsHtml}
@@ -538,24 +600,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSignedUp = activity.is_signed_up; 
 
         return `
-            <div class="card" ${hasEnded ? 'style="opacity: 0.7;"' : ''}>
-                <div class="card-image" style="${imageStyle} position: relative;">
-                    ${isSignedUp ? '<div style="position: absolute; top: 10px; right: 10px; background: #27ae60; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✓ Signed Up</div>' : ''}
-                </div>
-                <div class="card-body">
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <span class="card-badge">${activity.campus} Campus</span>
-                        
-                        <span style="font-size:0.8rem; font-weight:700; color:${statusColor};">
-                            ${statusText}
-                        </span>
+            <div class="event-card" ${hasEnded ? 'style="opacity: 0.6; filter: grayscale(30%);"' : ''}>
+                
+                <div class="card-image-wrapper" style="${imageStyle}">
+                    
+                    ${isSignedUp ? `
+                    <div class="signed-up-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Signed Up
+                    </div>` : ''}
+
+                    <div class="status-pill" style="color: ${statusColor};">
+                        ${!hasEnded ? `<span class="pulse-dot" style="color: ${statusColor};"></span>` : ''}
+                        ${statusText}
                     </div>
-                    <h3>${activity.title}</h3>
-                    <p style="font-size: 0.85rem; color: #95a5a6; margin-bottom: 10px;">
-                        📅 ${dateStr} at ⏰ ${startTimeStr} - ${endTimeStr} <br>
-                        ⏳ ${activity.duration_hours} Hours
-                    </p>
-                    <p>${activity.description.substring(0, 80)}...</p>
+                </div>
+
+                <div class="card-content">
+                    <div class="card-meta-tags">
+                        <span class="location-tag">${activity.campus} CAMPUS</span>
+                    </div>
+                    
+                    <h3 class="event-title">${activity.title}</h3>
+                    
+                    <ul class="event-details-list">
+                        <li>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            ${dateStr}
+                        </li>
+                        <li>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            ${startTimeStr} - ${endTimeStr} (${activity.duration_hours}h)
+                        </li>
+                    </ul>
+                    
+                    <p class="event-description">${activity.description.substring(0, 80)}...</p>
                     
                     <button id="view-btn-${activity.id}" class="btn-card-action">
                         View Details
@@ -621,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     <h3 style="margin-top: 5px;">${seriesName}</h3>
                     <p style="font-size: 0.9rem; color: #7f8c8d; margin-bottom: 15px;">
-                        This event runs over multiple days. Open the folder to see all available shifts.
+                        This event runs over multiple days. Open the folder to see all available days.
                     </p>
 
                     <button onclick="toggleFolder('${folderId}')" style="width: 100%; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; color: #333; font-weight: 600; cursor: pointer; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
@@ -773,54 +854,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         mainContent.innerHTML = `
-            <button id="backToActivities" style="background:none; border:none; cursor:pointer; color:#7F8C8D; font-weight:600; margin-bottom:20px; display:flex; align-items:center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" style="fill:#7F8C8D; margin-right:5px;"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <button id="backToActivities" class="btn-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
                 Back to Activities
             </button>
 
-            <div style="background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-                <div style="${imageStyle}"></div>
+            <div class="event-detail-container">
+                <div class="event-detail-hero" style="${imageStyle}"></div>
                 
-                <div style="padding: 40px;">
-                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px; margin-bottom:20px;">
-                        <div>
-                            <span class="card-badge" style="font-size:0.9rem;">${activity.campus} Campus</span>
-                            <h1 style="margin-top:10px; font-size:2rem; color:var(--text-main);">${activity.title}</h1>
-                            <p style="color:#7F8C8D; margin-top:5px;">
-                                📅 ${fullDate} &nbsp;|&nbsp; ⏰ ${startTimeStr} - ${endTimeStr} &nbsp;|&nbsp; ⏳ ${activity.duration_hours} Hours
-                            </p>
+                <div class="event-detail-body">
+                    
+                    <div class="event-detail-header">
+                        <div class="event-detail-main-info">
+                            <span class="location-tag">${activity.campus} CAMPUS</span>
+                            <h1 class="event-detail-title">${activity.title}</h1>
+                            
+                            <div class="event-detail-meta">
+                                <span class="meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    ${fullDate}
+                                </span>
+                                <span class="meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    ${startTimeStr} - ${endTimeStr}
+                                </span>
+                                <span class="meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"></path><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path></svg>
+                                    ${activity.duration_hours} Hours
+                                </span>
+                            </div>
                         </div>
-                    <div style="text-align:right;">
-                            <div style="font-size:1.5rem; font-weight:700; color:${activity.spots_left === null ? '#27ae60' : 'var(--primary-orange)'};">
+                        
+                        <div class="event-detail-spots">
+                            <div class="spots-number" style="color: ${activity.spots_left === null ? '#10B981' : 'var(--primary-orange)'};">
                                 ${activity.spots_left === null ? 'Open' : activity.spots_left}
                             </div>
-                            
-                            <div style="color:#7F8C8D; font-size:0.9rem;">
+                            <div class="spots-label">
                                 ${activity.spots_left === null ? 'Unlimited Spots' : 'Spots Remaining'}
                             </div>
                         </div>
                     </div>
 
-                    <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                    <hr class="detail-divider">
 
-                    <h3 style="margin-bottom:10px; color:var(--text-main);">About this Event</h3>
-                    <p style="line-height:1.8; color:#4a4a4a; margin-bottom:30px;">
-                        ${activity.details || activity.description}
-                    </p>
+                    <div class="event-detail-section">
+                        <h3>About this Event</h3>
+                        <div class="event-description-full">
+                            ${activity.details || activity.description}
+                        </div>
+                    </div>
 
                     ${isUserLoggedIn ? `
+                        
                         ${activity.additional_details ? `
-                            <div style="background:#FFF4EC; padding:20px; border-radius:8px; margin-bottom:30px;">
-                                <h4 style="margin-bottom:5px; color:#E87A30;">ℹ️ Important Information</h4>
-                                <p style="color:#555;">${activity.additional_details}</p>
+                            <div class="important-info-box">
+                                <h4>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                    Important Information
+                                </h4>
+                                <p>${activity.additional_details}</p>
                             </div>
                         ` : ''}
 
-                        ${actionButtonHtml}
+                        <div class="event-action-area">
+                            ${actionButtonHtml}
+                        </div>
 
                     ` : `
-                        <div style="background:#f9f9f9; padding:15px; border-radius:6px; text-align:center; color:#666;">
-                            Please <a href="/login" style="color:#E35205; font-weight:bold; text-decoration:none;">log in</a> to sign up for this event.
+                        <div class="login-prompt-box">
+                            <p>Ready to volunteer? <a href="/login/">Log in to sign up</a> for this event.</p>
                         </div>
                     `}
                 </div>
@@ -1102,18 +1207,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 let timeLog = '<span style="color:#ccc;">--:--</span>';
                 let actionBtn = '';
 
-                // Pass Start Time as Minimum for inputs
-                const minTimeAttr = `data-min="${rawStartTime}"`;
                 const isSelf = rsvp.student_email === currentUserEmail;
-
-
-                if (isSelf) {
-                    // 👇 2. If it's them, OVERRIDE the buttons with a strict warning popup
-                    actionBtn = `<button onclick="alert('Accountability Lock 🔒\\n\\nYou cannot sign yourself in or out. Please find another Executive to log your attendance to ensure fair tracking.')"
-                        style="padding:6px 16px; background:#95a5a6; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                        Locked (Self)
-                    </button>`;
-                } else {
+                const minTimeAttr = `data-min="${rawStartTime}"`;
 
                 if (rsvp.sign_in_time && !rsvp.sign_out_time) {
                     // --- CASE A: IN PROGRESS ---
@@ -1179,24 +1274,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                if (isSelf) {
+                    // 👇 2. If it's them, OVERRIDE the buttons with a strict warning popup
+                    actionBtn = `<button onclick="alert('Accountability Lock 🔒\\n\\nYou cannot sign yourself in or out. Please find another Executive to log your attendance to ensure fair tracking.')"
+                        style="padding:6px 16px; background:#95a5a6; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                        Locked (Self)
+                    </button>`;
+                }
+
                 const fullNameLower = `${rsvp.student_name} ${rsvp.student_surname}`.toLowerCase();
 
                 const tr = document.createElement('tr');
-                tr.className = 'rsvp-row'; // Identifies rows for filtering
-                tr.dataset.searchName = fullNameLower; // Store name in DOM
-                tr.style.borderBottom = '1px solid #f0f0f0';
+                tr.className = 'rsvp-row'; 
+                tr.dataset.searchName = fullNameLower; 
 
                 tr.innerHTML = `
-                    <td style="padding: 15px;">
-                        <div style="font-weight: 600; color: var(--text-main);">${rsvp.student_name} ${rsvp.student_surname}</div>
-
+                    <td class="col-student">
+                        <div class="student-name">${rsvp.student_name} ${rsvp.student_surname}</div>
                     </td>
-                    <td style="padding: 15px;">${statusBadge}</td>
-                    <td style="padding: 15px;">${timeLog}</td>
-                    <td style="padding: 15px; text-align: right;">${actionBtn}</td>
+                    <td class="col-status">
+                        ${statusBadge}
+                    </td>
+                    <td class="col-time">
+                        ${timeLog}
+                    </td>
+                    <td class="col-actions">
+                        ${actionBtn}
+                    </td>
                 `;
                 tbody.appendChild(tr);
-                }
             });
 
             // --- FILTER LOGIC ---
@@ -1484,53 +1590,98 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="stats-grid">
                     
                     <div class="stat-card">
-                        <h3>Monthly Hours</h3>
-                        ${monthlyHtml}
+                        <div class="stat-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                            <h3>Monthly Hours</h3>
+                        </div>
+                        <div class="stat-card-content">
+                            ${monthlyHtml}
+                        </div>
                     </div>
 
                     <div class="stat-card">
-                        <h3>Events You Attended</h3>
-                        ${eventsHtml}
-                    </div>
-
-                    <div class="stat-card">
-                            <h3>Achievements</h3>
+                        <div class="stat-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <h3>Punctuality Track</h3>
+                        </div>
+                        
+                        <div class="stat-card-content punctuality-content">
                             
-                            <div class="stat-list-item">
-                                <span class="stat-label">Most Hours</span>
-                                <span class="stat-val">(${exactHours})</span>
+                            <div class="punctuality-status">
+                                <span class="status-badge" style="color: ${data.punctuality_color}; background-color: ${data.punctuality_bg};">
+                                    ${data.punctuality_status}
+                                </span>
                             </div>
                             
-                            <div class="stat-list-item">
+                            <div class="punctuality-stats">
+                                <div class="punc-stat-item early">
+                                    <div class="punc-icon">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
+                                    <div class="punc-details">
+                                        <span class="punc-count">${data.early_count}</span>
+                                        <span class="punc-label">events early</span>
+                                    </div>
+                                </div>
+
+                                <div class="punc-stat-item late">
+                                    <div class="punc-icon">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    </div>
+                                    <div class="punc-details">
+                                        <span class="punc-count">${data.late_count}</span>
+                                        <span class="punc-label">events late</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            <h3>Events You Attended</h3>
+                        </div>
+                        <div class="stat-card-content">
+                            ${eventsHtml}
+                        </div>
+                    </div>
+
+                    <div class="stat-card achievements-card">
+                        <div class="stat-card-header">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            <h3>Achievements</h3>
+                        </div>
+                        
+                        <div class="stat-list">
+                            <div class="stat-row">
+                                <span class="stat-label">Most Hours</span>
+                                <span class="stat-value highlight">${exactHours}</span>
+                            </div>
+                            
+                            <div class="stat-row">
                                 <span class="stat-label">Total Events</span>
-                                <span class="stat-val">${data.events_count}</span>
+                                <span class="stat-value">${data.events_count}</span>
                             </div>
 
                             ${recruitsRow}
+                        </div>
 
-                            <div style="border-bottom: 1px solid #eee; margin: 15px 0 10px 0;"></div>
-
-                            <div style="font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px;">
-                                Honors
-                            </div>
-                            
-                            ${awardsListHtml}
-
-                            <div style="text-align: center; margin-top: auto; padding-top: 15px; border-top: 1px solid #eee;">
-                                <div style="font-size: 0.75rem; color: #95a5a6; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    Leaderboard Position
+                        <div class="leaderboard-section">
+                            <div class="section-micro-header">Leaderboard Position</div>
+                            <div class="rank-badges-container">
+                                <div class="rank-badge badge-global">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    Global: #${data.rank_global}
                                 </div>
-                                
-                                <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                                    <div class="rank-badge" style="background: rgba(255, 140, 66, 0.1); color: var(--primary-orange); border: 1px solid var(--primary-orange); font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
-                                        🌍 Global: #${data.rank_global}
-                                    </div>
-                                    <div class="rank-badge" style="background: rgba(46, 204, 113, 0.1); color: #2ecc71; border: 1px solid #2ecc71; font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
-                                        🏫 ${data.campus}: #${data.rank_campus}
-                                    </div>
+                                <div class="rank-badge badge-campus">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                    ${data.campus}: #${data.rank_campus}
                                 </div>
                             </div>
                         </div>
+                    </div>
 
                 </div>
             `;
@@ -1549,145 +1700,218 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = await response.json();
             const isSelected = (val) => user.campus === val ? 'selected' : '';
 
-
             mainContent.innerHTML = `
                 <div class="header-section">
                     <h1>Profile & Settings</h1>
                     <p>Manage your account details and preferences.</p>
                 </div>
 
-                <div class="profile-section">
-                    <h3>Personal Information</h3>
-                    <form id="profileForm">
-                        
-                        <div class="form-group form-row">
-                            <div>
-                                <label>Role</label>
-                                <input type="text" value="${user.role_label}" disabled>
-                            </div>
-                            <div>
-                                <label>Student / Staff Number</label>
-                                <input type="text" value="${user.student_number || 'N/A'}" disabled>
-                            </div>
-                        </div>
-
-                        <div class="form-group form-row">
-                            <div>
-                                <label>First Name</label>
-                                <input type="text" name="first_name" value="${user.first_name}" required>
-                            </div>
-                            <div>
-                                <label>Last Name</label>
-                                <input type="text" name="last_name" value="${user.last_name}" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group form-row">
-                            <div>
-                                <label>Campus</label>
-                                <select name="campus" disabled style="background-color: #e9ecef; cursor: not-allowed;">
-                                    <option value="APB" ${isSelected('APB')}>APB Campus</option>
-                                    <option value="DFC" ${isSelected('DFC')}>DFC Campus</option>
-                                    <option value="APK" ${isSelected('APK')}>APK Campus</option>
-                                    <option value="SWC" ${isSelected('SWC')}>SWC Campus</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>Email Address</label>
-                                <input type="email" value="${user.email}" disabled>
-                                <small style="color:#999; font-size: 0.8em;">Contact support to change email.</small>
-                            </div>
-                        </div>
-
-                        <div style="text-align: right; margin-top: 20px;">
-                            <button type="submit" class="btn-submit" id="saveProfileBtn">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="profile-section">
-                    <h3>Security</h3>
-                    <form id="changePasswordForm">
-                        <div class="form-group">
-                            <label>Current Password</label>
-                            <div class="password-wrapper">
-                                <input type="password" name="old_password" required placeholder="Enter current password">
-                                <span class="toggle-icon">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                </span>
-                            </div>
+                <div class="settings-container">
+                    
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <h3>Personal Information</h3>
                         </div>
                         
-                        <div class="form-group form-row">
-                            <div>
-                                <label>New Password</label>
-                                <div class="password-wrapper">
-                                    <input type="password" name="new_password" id="newPass" required placeholder="New password">
-                                    <span class="toggle-icon">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </span>
+                        <form id="profileForm" class="settings-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Role</label>
+                                    <input type="text" class="form-input input-disabled" value="${user.role_label}" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Student / Staff Number</label>
+                                    <input type="text" class="form-input input-disabled" value="${user.student_number || 'N/A'}" disabled>
                                 </div>
                             </div>
-                            <div>
-                                <label>Confirm New Password</label>
-                                <div class="password-wrapper">
-                                    <input type="password" id="confirmPass" required placeholder="Repeat new password">
-                                    <span class="toggle-icon">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    </span>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>First Name</label>
+                                    <input type="text" class="form-input" name="first_name" value="${user.first_name}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Last Name</label>
+                                    <input type="text" class="form-input" name="last_name" value="${user.last_name}" required>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div style="text-align: right; margin-top: 15px;">
-                            <button type="submit" class="btn-submit" id="savePasswordBtn" style="background-color: #34495e;">Update Password</button>
-                        </div>
-                    </form>
-                </div>
 
-                <div class="profile-section">
-                    <h3>Preferences</h3>
-                    <div class="toggle-wrapper">
-                        <div>
-                            <div class="toggle-label">Email Notifications</div>
-                            <div style="font-size:0.9rem; color:#666;">Receive updates about upcoming events and reminders.</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="notifToggle" ${user.receive_notifications ? 'checked' : ''}>
-                        </label>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Campus</label>
+                                    <select class="form-input input-disabled" name="campus" disabled>
+                                        <option value="APB" ${isSelected('APB')}>APB Campus</option>
+                                        <option value="DFC" ${isSelected('DFC')}>DFC Campus</option>
+                                        <option value="APK" ${isSelected('APK')}>APK Campus</option>
+                                        <option value="SWC" ${isSelected('SWC')}>SWC Campus</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email Address</label>
+                                    <input type="email" class="form-input input-disabled" value="${user.email}" disabled>
+                                    <small class="form-help-text">Contact support to change email.</small>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-settings-primary" id="saveProfileBtn">Save Changes</button>
+                            </div>
+                        </form>
                     </div>
-                </div>
 
-                <div class="profile-section danger-zone">
-                    <h3>Danger Zone</h3>
-                    <p style="color: #c0392b; margin-bottom: 20px;">
-                        To protect your account from unauthorized changes, direct deletion is disabled. Deleting your account is permanent and will erase all your volunteer hours and history. 
-                        <br><br>
-                        If you wish to proceed, please contact support to verify your identity.
-                    </p>
-                    <a href="mailto:support@cshaw.co.za?subject=Account Deletion Request" class="btn-danger" style="display: inline-block; text-align: center; text-decoration: none;">
-                        Request Account Deletion
-                    </a>
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <h3>Security</h3>
+                        </div>
+                        
+                        <form id="changePasswordForm" class="settings-form">
+                            <div class="form-group" style="max-width: 50%;">
+                                <label>Current Password</label>
+                                <div class="password-input-wrapper">
+                                    <input type="password" class="form-input" name="old_password" required placeholder="Enter current password">
+                                    <span class="password-toggle-icon toggle-icon">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>New Password</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" class="form-input" name="new_password" id="newPass" required placeholder="New password">
+                                        <span class="password-toggle-icon toggle-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Confirm New Password</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" class="form-input" id="confirmPass" required placeholder="Repeat new password">
+                                        <span class="password-toggle-icon toggle-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn-settings-secondary" id="savePasswordBtn">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                            <h3>Preferences & Security</h3>
+                        </div>
+                        
+                        <div class="preference-toggle-row">
+                            <div class="preference-info">
+                                <h4>Email Notifications</h4>
+                                <p>Receive updates about upcoming events and reminders.</p>
+                            </div>
+                            <label class="custom-toggle">
+                                <input type="checkbox" id="notifToggle" ${user.receive_notifications ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="preference-toggle-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+                            <div class="preference-info">
+                                <h4>Two-Factor Authentication (2FA)</h4>
+                                <p>Require an email verification code when logging in for extra security.</p>
+                            </div>
+                            <label class="custom-toggle">
+                                <input type="checkbox" id="twoFactorToggle" ${user.is_2fa_enabled ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-card card-danger">
+                        <div class="settings-card-header text-danger">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <h3>Danger Zone</h3>
+                        </div>
+                        
+                        <div class="danger-content">
+                            <p>To protect your account from unauthorized changes, direct deletion is disabled. Deleting your account is permanent and will erase all your volunteer hours and history.</p>
+                            <p>If you wish to proceed, please contact support to verify your identity.</p>
+                            <a href="mailto:support@cshaw.co.za?subject=Account Deletion Request" class="btn-settings-danger">
+                                Request Account Deletion
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
             `;
 
-
+            // --- 1. Password Eye Toggle ---
             document.querySelectorAll('.toggle-icon').forEach(icon => {
                 icon.addEventListener('click', () => {
                     const input = icon.parentElement.querySelector('input');
                     if (input.type === 'password') {
                         input.type = 'text'; 
-                        // Icon: Eye Slash
                         icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M1 1l22 22"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>`;
                     } else {
                         input.type = 'password'; 
-                        // Icon: Eye
                         icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
                     }
                 });
             });
 
+            // --- 2. Notification Toggle Listener ---
+            document.getElementById('notifToggle').addEventListener('change', async (e) => {
+                 const isChecked = e.target.checked;
+                 try {
+                     const res = await fetch('/api/users/profile/', {
+                         method: 'PATCH',
+                         headers: {'Content-Type': 'application/json', 'X-CSRFToken': getValidCsrfToken()},
+                         body: JSON.stringify({ receive_notifications: isChecked })
+                     });
+                     if(!res.ok) {
+                        e.target.checked = !isChecked; // Revert if failed
+                        alert("Failed to update notifications.");
+                     }
+                 } catch(err) {
+                     e.target.checked = !isChecked;
+                 }
+            });
 
+            // --- 3. 2FA Toggle Listener ---
+            document.getElementById('twoFactorToggle').addEventListener('change', async (e) => {
+                const toggleInput = e.target;
+                const isChecked = toggleInput.checked;
+
+                try {
+                    const response = await fetch('/api/users/toggle-2fa/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getValidCsrfToken() // Use your existing helper!
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to update 2FA setting.');
+                    }
+                    console.log("2FA Updated:", data.message);
+
+                } catch (error) {
+                    console.error("2FA Toggle Error:", error);
+                    alert("Could not update security settings. Please check your connection.");
+                    toggleInput.checked = !isChecked; // Revert visually if network fails
+                }
+            });
+
+            // --- 4. Profile Save Form ---
             document.getElementById('profileForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = document.getElementById('saveProfileBtn');
@@ -1707,7 +1931,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     if (res.ok) {
                         alert('Profile updated successfully.');
-
                         const nameEl = document.querySelector('.user-greeting');
                         if (nameEl) nameEl.textContent = `Hi, ${data.first_name}`;
                     } else {
@@ -1717,9 +1940,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 finally { btn.textContent = 'Save Changes'; }
             });
 
+            // --- 5. Change Password Form ---
             document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
                 const newPass = document.getElementById('newPass').value;
                 const confirmPass = document.getElementById('confirmPass').value;
                 const btn = document.getElementById('savePasswordBtn');
@@ -1757,7 +1980,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert("Password changed successfully!");
                         e.target.reset(); 
                     } else {
-
                         let errorMsg = 'Error: ';
                         if (result.old_password) errorMsg += result.old_password + '\n';
                         if (result.new_password) errorMsg += result.new_password + '\n';
@@ -1771,16 +1993,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.disabled = false;
                 }
             });
-
-            document.getElementById('notifToggle').addEventListener('change', async (e) => {
-                 const isChecked = e.target.checked;
-                 await fetch('/api/users/profile/', {
-                     method: 'PATCH',
-                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getValidCsrfToken()},
-                     body: JSON.stringify({ receive_notifications: isChecked })
-                 });
-            });
-
 
         } catch (err) {
             console.error(err);
@@ -2037,9 +2249,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <form id="createEventForm">
                             <input type="hidden" name="event_id" id="eventIdField"> 
                             
-                            <div class="form-group" style="background: #f0f4f8; padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
+                            <div class="form-group" style="background: #f0f4f8; padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-orange); margin-bottom: 20px;">
                                 <label style="color:#2c3e50; font-weight:bold;">Event Type</label>
-                                <select id="eventTypeSelect" onchange="toggleDateInputs()" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ddd;">
+                                <select id="eventTypeSelect" class="form-input" onchange="toggleDateInputs()" style="width:100%;">
                                     <option value="single">Single Day Event</option>
                                     <option value="multi">Multi-Day Series</option>
                                 </select>
@@ -2052,13 +2264,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             <div class="form-group">
                                 <label>Event Name</label>
-                                <input type="text" name="title" id="inputTitle" required placeholder="e.g. Mass Testing">
+                                <input type="text" class="form-input" name="title" id="inputTitle" required placeholder="e.g. Mass Testing">
                             </div>
 
                             <div class="form-group form-row">
                                 <div>
                                     <label>Campus</label>
-                                    <select name="campus" id="inputCampus" required>
+                                    <select name="campus" id="inputCampus" class="form-input" required>
                                         <option value="ALL">All</option>
                                         <option value="APB">APB</option>
                                         <option value="DFC">DFC</option>
@@ -2069,7 +2281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 
                                 <div id="singleDateGroup" style="flex-grow:1;">
                                     <label>Event Date</label>
-                                    <input type="date" name="date_only" id="inputDateOnly" required>
+                                    <input type="date" name="date_only" id="inputDateOnly" class="form-input" required>
                                 </div>
                             </div>
 
@@ -2081,35 +2293,35 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
 
-                            <div class="form-group" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                            <div class="form-group" style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-top: 20px; margin-bottom: 20px;">
                                 <label style="color:#2c3e50; font-weight:bold;">Time Schedule</label>
                                 
                                 <div class="form-row">
                                     <div>
                                         <label>Start Time</label>
-                                        <input type="time" name="start_time" id="inputStartTime" required onchange="calculateDuration()">
+                                        <input type="time" name="start_time" id="inputStartTime" class="form-input" required onchange="calculateDuration()">
                                     </div>
                                     <div>
                                         <label>End Time</label>
-                                        <input type="time" name="end_time" id="inputEndTime" required onchange="calculateDuration()">
+                                        <input type="time" name="end_time" id="inputEndTime" class="form-input" required onchange="calculateDuration()">
                                     </div>
                                 </div>
 
                                 <div class="form-row" style="margin-top: 15px;">
                                     <div style="flex-grow: 1;">
                                         <label>Calculated Duration (Hours)</label>
-                                        <input type="number" name="duration_hours" id="inputDuration" step="0.1" readonly style="background-color: #e9ecef; cursor: not-allowed; color: #E35205; font-weight: bold;">
+                                        <input type="number" name="duration_hours" id="inputDuration" class="form-input" step="0.1" readonly style="background-color: #e9ecef; cursor: not-allowed; color: #E35205; font-weight: bold;">
                                     </div>
                                     <div class="form-group">
                                         <label for="total_spots">Total Spots (Optional)</label>
-                                        <input type="number" id="total_spots" name="total_spots" placeholder="Leave empty for unlimited">
+                                        <input type="number" id="total_spots" class="form-input" name="total_spots" placeholder="Leave empty for unlimited">
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="form-group"><label>Short Description</label><input type="text" name="description" id="inputDesc" required></div>
-                            <div class="form-group"><label>Full Details</label><textarea name="details" id="inputDetails" rows="4" required></textarea></div>
-                            <div class="form-group"><label>Additional Info</label><textarea name="additional_details" id="inputAdditional" rows="2"></textarea></div>
+                            <div class="form-group"><label>Short Description</label><input type="text" name="description" id="inputDesc" class="form-input" required></div>
+                            <div class="form-group"><label>Full Details</label><textarea name="details" id="inputDetails" class="form-input" rows="4" required></textarea></div>
+                            <div class="form-group"><label>Additional Info</label><textarea name="additional_details" id="inputAdditional" class="form-input" rows="2"></textarea></div>
 
                             <div class="form-group">
                                 <label>Available Roles</label>
@@ -2150,7 +2362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-submit" id="submitEventBtn" style="width:100%; margin-top:10px;">Publish Event</button>
+                            <button type="submit" class="btn-settings-primary" id="submitEventBtn" style="width:100%; margin-top:20px; font-size: 1.1rem; padding: 14px;">Publish Event</button>
                         </form>
                     </div>
                 </div>
@@ -2350,89 +2562,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderExecutiveAttendancePage() {
+function renderExecutiveAttendancePage() {
         mainContent.innerHTML = `
-            <style>
-                /* ... (Your existing Table CSS) ... */
-                .responsive-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
-                .styled-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-                .styled-table thead tr { background-color: #f8f9fa; color: #666; text-align: left; font-weight: 600; }
-                .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #eee; }
-                
-                /* --- NEW: MODAL CSS --- */
-                .modal-overlay {
-                    display: none; /* Hidden by default */
-                    position: fixed; 
-                    z-index: 1000; 
-                    left: 0;
-                    top: 0;
-                    width: 100%; 
-                    height: 100%; 
-                    overflow: auto; 
-                    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-                    justify-content: center;
-                    align-items: center;
-                }
-
-                .modal-content {
-                    background-color: #fefefe;
-                    margin: auto;
-                    padding: 20px;
-                    border: 1px solid #888;
-                    width: 90%;
-                    max-width: 500px;
-                    border-radius: 8px;
-                    position: relative;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-                }
-
-                .close-modal {
-                    color: #aaa;
-                    float: right;
-                    font-size: 28px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    position: absolute;
-                    right: 15px;
-                    top: 5px;
-                }
-
-                .close-modal:hover,
-                .close-modal:focus {
-                    color: black;
-                    text-decoration: none;
-                    cursor: pointer;
-                }
-            </style>
-
-            <div class="event-list-container">
-                <div style="padding: 20px; border-bottom: 1px solid #eee; background: #fff; position: sticky; top: 0; z-index: 11;">
-                    <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">Manage Campus Attendance</h3>
-                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Upcoming events happening at your campus.</p>
+            <div class="exec-attendance-container">
+                <div class="exec-page-header">
+                    <h3>Manage Campus Attendance</h3>
+                    <p>Select an upcoming or past event to manage its register.</p>
                 </div>
                 
-                <div class="responsive-table-wrapper">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th style="text-align: left;">Title</th>
-                                <th style="text-align: left;">Date & Time</th>
-                                
-                                <th style="text-align: right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="execEventsTableBody">
-                            <tr><td colspan="4" style="padding: 20px; text-align: center; color: #888;">Loading events...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="exec-list-wrapper">
+                    <div class="exec-list-header desktop-only">
+                        <span>Event Details</span>
+                        <span style="text-align: right;">Date & Time</span>
+                    </div>
+                    <div id="execEventsList" class="exec-event-list">
+                        <div class="loading-state">Loading events...</div>
+                    </div>
                 </div>
+
+                <div id="historySectionContainer"></div>
             </div>
 
             <div id="actionModal" class="modal-overlay">
                 <div class="modal-content">
                     <span class="close-modal" onclick="document.getElementById('actionModal').style.display='none'">&times;</span>
-                    <div id="modalBody">
-                        </div>
+                    <div id="modalBody"></div>
                 </div>
             </div>
         `;
@@ -2440,203 +2594,120 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchExecutiveEvents();
     }
 
-    // 2. Fetch Events for the Executive's Campus
-
     async function fetchExecutiveEvents() {
-        const tbody = document.getElementById('execEventsTableBody'); // Upcoming
+        const eventsList = document.getElementById('execEventsList'); 
         
         try {
             const response = await fetch('/api/activities/executive-list/'); 
             
             if (!response.ok) {
-                if(response.status === 403) throw new Error("Permission Denied");
+                if(response.status === 403) throw new Error("Permission Denied: Executives Only.");
                 throw new Error(`Error ${response.status}`);
             }
             
             const allEvents = await response.json();
             
             if (!Array.isArray(allEvents) || allEvents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center;">No events found for your campus.</td></tr>';
+                eventsList.innerHTML = '<div class="empty-state-list">No events found for your campus.</div>';
                 return;
             }
 
-            // --- 1. SPLIT EVENTS (MIDNIGHT RESET FIX) ---
+            // Split Events (Midnight cutoff)
             const cutoff = new Date();
-            cutoff.setHours(0, 0, 0, 0); // Set to 00:00:00 Today
-
-            // Upcoming = Today + Future
+            cutoff.setHours(0, 0, 0, 0); 
             const upcomingEvents = allEvents.filter(e => new Date(e.date_time) >= cutoff);
-            
-            // Past = Yesterday and before
             const pastEvents = allEvents.filter(e => new Date(e.date_time) < cutoff);
-            // --------------------------------------------
-
-            // --- SORTING LOGIC ---
-            // Upcoming: Ascending (Soonest first)
-            upcomingEvents.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
             
-            // Past: Descending (Most recent history first) -> Changed this for better UX
+            // Sorting: Upcoming (Soonest first), Past (Most recent first)
+            upcomingEvents.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
             pastEvents.sort((a, b) => new Date(b.date_time) - new Date(a.date_time));
-            // ---------------------
 
-            // 2. Render Upcoming
-            tbody.innerHTML = '';
+            // Render Upcoming
+            eventsList.innerHTML = '';
             if (upcomingEvents.length === 0) {
-                 tbody.innerHTML = '<tr><td colspan="4" style="padding:20px; text-align:center; color:#999;">No upcoming events. Check history.</td></tr>';
+                 eventsList.innerHTML = '<div class="empty-state-list">No upcoming events. Check history.</div>';
             } else {
                 upcomingEvents.forEach(event => {
-                    tbody.appendChild(createExecutiveRow(event, false)); // false = isHistory
+                    eventsList.appendChild(createExecutiveCard(event, false));
                 });
             }
 
-            // 3. Render History Section
-            const container = document.querySelector('.event-list-container');
-            
-            // Remove existing history section if re-rendering to prevent duplicates
-            const existingHistory = document.getElementById('historySection');
-            if (existingHistory) existingHistory.remove();
+            // Render History
+            const historyContainer = document.getElementById('historySectionContainer');
+            historyContainer.innerHTML = ''; 
 
             if (pastEvents.length > 0) {
-                const historyHtml = `
-                    <style>
-                        /* Mobile Responsive Styles for History Table */
-                        .history-responsive-wrapper {
-                            width: 100%;
-                            overflow-x: auto;
-                            -webkit-overflow-scrolling: touch;
-                            margin-top: 15px;
-                            border: 1px solid #eee;
-                            border-radius: 8px;
-                            background: #fafafa;
-                        }
-                        
-                        .history-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            min-width: 600px;
-                        }
-
-                        .history-table th {
-                            background-color: #f1f3f5;
-                            color: #6c757d;
-                            font-size: 0.75rem;
-                            text-transform: uppercase;
-                            letter-spacing: 0.5px;
-                            padding: 12px 15px;
-                            border-bottom: 2px solid #e9ecef;
-                            white-space: nowrap;
-                        }
-
-                        #historyTableBody tr {
-                            background-color: #fff;
-                            color: #666;
-                        }
-                    </style>
-
-                    <div id="historySection" style="margin-top: 40px; padding-top: 20px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                            <button onclick="toggleHistory()" style="background: #f8f9fa; border: 1px solid #e9ecef; color: #495057; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: 6px; width: 100%; justify-content: space-between; transition: all 0.2s;">
-                                <span style="display:flex; align-items:center; gap:8px;">
-                                    🕒 Past Events History 
-                                    <span style="background:#e9ecef; color:#666; font-size:0.75rem; padding:2px 6px; border-radius:10px;">${pastEvents.length}</span>
-                                </span>
-                                <span id="historyArrow" style="color:#adb5bd;">▼</span>
-                            </button>
-                        </div>
-                        
-                        <div id="historyTableContainer" style="display:none;">
-                            <div class="history-responsive-wrapper">
-                                <table class="history-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="text-align: left;">Title</th>
-                                            <th style="text-align: left;">Date</th>
-                                            <th style="text-align: center;">Spots</th>
-                                            <th style="text-align: right;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="historyTableBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
+                historyContainer.innerHTML = `
+                    <div class="history-toggle-wrapper">
+                        <button onclick="toggleHistory()" class="btn-history-toggle">
+                            <span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                Past Events History 
+                                <span class="history-badge">${pastEvents.length}</span>
+                            </span>
+                            <span id="historyArrow">▼</span>
+                        </button>
+                    </div>
+                    
+                    <div id="historyListContainer" style="display:none;" class="exec-list-wrapper is-history">
+                        <div id="historyEventsList" class="exec-event-list"></div>
                     </div>
                 `;
-                
-                container.insertAdjacentHTML('beforeend', historyHtml);
 
-                const historyBody = document.getElementById('historyTableBody');
+                const historyList = document.getElementById('historyEventsList');
                 pastEvents.forEach(event => {
-                    historyBody.appendChild(createExecutiveRow(event, true)); // true = isHistory
+                    historyList.appendChild(createExecutiveCard(event, true)); 
                 });
             }
 
-            // Re-attach listeners
-            document.querySelectorAll('.exec-event-row').forEach(row => {
-                row.addEventListener('click', () => {
-                     // Get the ID directly from the row we clicked
-                     renderAttendanceSheet(row.dataset.id); 
+            // Attach Click Listeners
+            document.querySelectorAll('.exec-event-card').forEach(card => {
+                card.addEventListener('click', () => {
+                     renderAttendanceSheet(card.dataset.id); 
                 });
             });
 
         } catch (err) {
             console.error(err);
-            tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">${err.message}</td></tr>`;
+            eventsList.innerHTML = `<div class="empty-state-list" style="color:#ef4444;">${err.message}</div>`;
         }
     }
 
-    // --- HELPER 1: Create Row HTML ---
+    // --- HELPER 1: Create Card HTML ---
+    function createExecutiveCard(event, isHistory) {
+        const card = document.createElement('div');
+        card.className = `exec-event-card ${isHistory ? 'is-history' : 'is-upcoming'}`; 
+        card.dataset.id = event.id;
 
-    function createExecutiveRow(event, isHistory) {
-        const tr = document.createElement('tr');
-        // Add a class and dataset ID to the row itself
-        tr.className = 'exec-event-row'; 
-        tr.dataset.id = event.id;
-        
-        // Styling to make it act like a button
-        tr.style.borderBottom = '1px solid #eee';
-        tr.style.cursor = 'pointer'; 
-        tr.style.transition = 'background-color 0.2s ease'; // Smooth hover effect
-        if (isHistory) tr.style.background = '#fafafa';
-
-        // Add a hover effect directly via JS event listeners (or you can use CSS)
-        tr.onmouseenter = () => tr.style.background = isHistory ? '#f0f0f0' : '#f9f9f9';
-        tr.onmouseleave = () => tr.style.background = isHistory ? '#fafafa' : 'transparent';
-
-        // Time calculations (UTC Fixed)
         const startDate = new Date(event.date_time);
-        const dateStr = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Johannesburg'});
+        const dateStr = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Johannesburg'});
         const durationMs = (parseFloat(event.duration_hours) || 0) * 60 * 60 * 1000;
         const endDate = new Date(startDate.getTime() + durationMs);
         const startTimeStr = startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg'});
         const endTimeStr = endDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Johannesburg'});
 
-        // Visual indicator colors
-        const indicatorColor = isHistory ? '#ccc' : '#E35205';
-
-        tr.innerHTML = `
-            <td style="padding: 15px; font-weight: 600; color: var(--text-main); width: 50%;">
-                ${event.title}
-                <div style="font-size: 0.75rem; color: #999; font-weight: normal; margin-top:2px;">${event.campus}</div>
-            </td>
-
-            <td style="padding: 15px; color: var(--text-main); width: 45%;">
-                ${dateStr}
-                <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">
-                     ⏰ ${startTimeStr} - ${endTimeStr} 
-                     <span style="color:#bbb;">(${event.duration_hours}h)</span>
-                </div>
-            </td>
-            
-            <td style="padding: 15px; text-align: right; width: 5%;">
-                <span style="color: ${indicatorColor}; font-size: 1.2rem; font-weight: bold;">❯</span>
-            </td>
+        // Compact Two-Line Layout
+        card.innerHTML = `
+            <div class="exec-card-top">
+                <span class="exec-card-title">${event.title}</span>
+                <span class="exec-card-date">${dateStr}</span>
+            </div>
+            <div class="exec-card-bottom">
+                <span class="exec-card-meta">
+                    <span class="meta-tag campus">${event.campus}</span>
+                    <span class="meta-tag time">${startTimeStr} - ${endTimeStr} (${event.duration_hours}h)</span>
+                </span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="action-chevron">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </div>
         `;
-        return tr;
+        return card;
     }
 
     // --- HELPER 2: Toggle History ---
     window.toggleHistory = function() {
-        const div = document.getElementById('historyTableContainer');
+        const div = document.getElementById('historyListContainer');
         const arrow = document.getElementById('historyArrow');
         if (div.style.display === 'none') {
             div.style.display = 'block';
@@ -3205,11 +3276,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('inputTitle').value = event.title; 
         document.getElementById('inputCampus').value = event.campus;
         document.getElementById('inputDuration').value = event.duration_hours;
-        document.getElementById('inputSpots').value = event.total_spots;
+        
+        const spotsField = document.getElementById('total_spots');
+        if (spotsField) spotsField.value = event.total_spots !== null ? event.total_spots : '';
+        
         document.getElementById('inputDesc').value = event.description;
         document.getElementById('inputDetails').value = event.details;
         document.getElementById('inputAdditional').value = event.additional_details || '';
-        document.getElementById('inputDate').value = '';
+        
+        const dateOnlyField = document.getElementById('inputDateOnly');
+        if (dateOnlyField) dateOnlyField.value = '';
+        
+        const startTimeField = document.getElementById('inputStartTime');
+        if (startTimeField) startTimeField.value = '';
+        
+        const endTimeField = document.getElementById('inputEndTime');
+        if (endTimeField) endTimeField.value = '';
 
         const checkboxes = document.querySelectorAll('input[name="role_types"]');
         checkboxes.forEach(cb => cb.checked = false); 
@@ -3236,7 +3318,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('inputTitle').value = event.title;
         document.getElementById('inputCampus').value = event.campus;
         document.getElementById('inputDuration').value = event.duration_hours;
-        document.getElementById('inputSpots').value = event.total_spots;
+        
+        const spotsField = document.getElementById('total_spots');
+        if (spotsField) spotsField.value = event.total_spots !== null ? event.total_spots : '';
+        
         document.getElementById('inputDesc').value = event.description;
         document.getElementById('inputDetails').value = event.details;
         document.getElementById('inputAdditional').value = event.additional_details || '';
@@ -3244,8 +3329,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (event.date_time) {
             const d = new Date(event.date_time);
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            document.getElementById('inputDate').value = d.toISOString().slice(0, 16);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            
+            const dateOnlyField = document.getElementById('inputDateOnly');
+            if (dateOnlyField) dateOnlyField.value = `${year}-${month}-${day}`;
+            
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            const startTimeField = document.getElementById('inputStartTime');
+            if (startTimeField) startTimeField.value = `${hours}:${mins}`;
+            
+            if (event.duration_hours) {
+                const end = new Date(d.getTime() + event.duration_hours * 60 * 60 * 1000);
+                const endHours = String(end.getHours()).padStart(2, '0');
+                const endMins = String(end.getMinutes()).padStart(2, '0');
+                const endTimeField = document.getElementById('inputEndTime');
+                if (endTimeField) endTimeField.value = `${endHours}:${endMins}`;
+            }
         }
 
         const checkboxes = document.querySelectorAll('input[name="role_types"]');
@@ -4198,6 +4300,489 @@ window.exportToPDF = function(filterType) {
 };
 
 
+// ==========================================
+// CALENDAR VIEW LOGIC
+// ==========================================
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = new Date();
+let allCalendarEvents = []; // Global store for the fetched events
+
+async function renderCalendar() {
+    // 1. Setup the UI Shell
+    mainContent.innerHTML = `
+        <div class="header-section">
+            <h1>Event Calendar</h1>
+            <p>Select a date to view your upcoming events.</p>
+        </div>
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <button id="prevMonthBtn" class="cal-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h2 id="currentMonthYear">Loading...</h2>
+                <button id="nextMonthBtn" class="cal-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+            
+            <div class="calendar-grid">
+                <div class="cal-weekday">Sun</div>
+                <div class="cal-weekday">Mon</div>
+                <div class="cal-weekday">Tue</div>
+                <div class="cal-weekday">Wed</div>
+                <div class="cal-weekday">Thu</div>
+                <div class="cal-weekday">Fri</div>
+                <div class="cal-weekday">Sat</div>
+            </div>
+            <div id="calendarDays" class="calendar-grid"></div>
+
+            <div class="agenda-container" id="agendaContainer">
+                </div>
+        </div>
+    `;
+
+    // 2. Attach Listeners for Month Navigation
+    document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+
+    // 3. Fetch Events from your Django API
+    try {
+        const response = await fetch('/api/activities/');
+        if (response.ok) {
+            allCalendarEvents = await response.json();
+        }
+    } catch (error) {
+        console.error("Failed to load events", error);
+    }
+
+    // 4. Build the actual dates
+    buildCalendarGrid();
+}
+
+// Logic to swap months
+function changeMonth(direction) {
+    currentMonth += direction;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    buildCalendarGrid();
+}
+
+// Logic to draw the days
+function buildCalendarGrid() {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    document.getElementById('currentMonthYear').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+    const daysContainer = document.getElementById('calendarDays');
+    daysContainer.innerHTML = '';
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date();
+
+    // Add empty padding for the start of the month
+    for (let i = 0; i < firstDay; i++) {
+        daysContainer.innerHTML += `<div class="cal-day empty"></div>`;
+    }
+
+    // Build the actual days
+    for (let i = 1; i <= daysInMonth; i++) {
+        // We pad the month/day with a zero so it cleanly matches ISO standard dates
+        const monthStr = String(currentMonth + 1).padStart(2, '0');
+        const dayStr = String(i).padStart(2, '0');
+        const dateString = `${currentYear}-${monthStr}-${dayStr}`; 
+        
+        const cellDate = new Date(currentYear, currentMonth, i);
+
+        // Check if any events exist on this date string
+        const dayEvents = allCalendarEvents.filter(ev => ev.date_time && ev.date_time.startsWith(dateString));
+        const hasEventClass = dayEvents.length > 0 ? 'has-event' : '';
+        const isToday = (cellDate.toDateString() === today.toDateString()) ? 'today' : '';
+        const isSelected = (cellDate.toDateString() === selectedDate.toDateString()) ? 'selected' : '';
+
+        daysContainer.innerHTML += `
+            <div class="cal-day ${isToday} ${hasEventClass} ${isSelected}" data-date="${dateString}">
+                ${i}
+            </div>
+        `;
+    }
+
+    // Add click functionality to each day
+    document.querySelectorAll('.cal-day:not(.empty)').forEach(dayEl => {
+        dayEl.addEventListener('click', function() {
+            // Remove selection from others
+            document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('selected'));
+            this.classList.add('selected'); // Select this one
+            
+            selectedDate = new Date(this.dataset.date);
+            renderAgenda(this.dataset.date);
+        });
+    });
+
+    // Automatically render the agenda for the first valid day viewable
+    let defaultRenderDate = new Date(currentYear, currentMonth, today.getDate());
+    if (currentMonth !== today.getMonth() || currentYear !== today.getFullYear()) {
+        defaultRenderDate = new Date(currentYear, currentMonth, 1);
+    }
+    
+    // Convert default date to YYYY-MM-DD for the agenda renderer
+    const defMonthStr = String(currentMonth + 1).padStart(2, '0');
+    const defDayStr = String(defaultRenderDate.getDate()).padStart(2, '0');
+    renderAgenda(`${currentYear}-${defMonthStr}-${defDayStr}`);
+}
+
+// Logic to draw the agenda list for the selected day
+function renderAgenda(dateString) {
+    const container = document.getElementById('agendaContainer');
+    
+    // Filter events that happen on this specific date
+    const dayEvents = allCalendarEvents.filter(ev => ev.date_time && ev.date_time.startsWith(dateString));
+
+    // Format the title (e.g., "17 June 2026")
+    const dateObj = new Date(dateString);
+    const day = dateObj.getDate();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const month = monthNames[dateObj.getMonth()];
+    const year = dateObj.getFullYear();
+    const formattedDate = `${day} ${month} ${year}`;
+
+    let html = `<h3 class="agenda-title">Schedule for ${formattedDate}</h3>`;
+
+    if (dayEvents.length === 0) {
+        // The minimal empty state for a single day
+        html += `
+            <div style="text-align:center; padding: 30px; color: var(--text-muted); background: #f8fafc; border-radius: 12px; border: 1px dashed rgba(0,0,0,0.1);">
+                No activities scheduled on this date.
+            </div>`;
+    } else {
+        // Map out the event cards
+        dayEvents.forEach(ev => {
+            // Determine time (from and to time)
+            const startDate = new Date(ev.date_time);
+            let timeString = startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const duration = parseFloat(ev.duration_hours);
+            if (!isNaN(duration) && duration > 0) {
+                const endDate = new Date(startDate.getTime() + duration * 60 * 60 * 1000);
+                const toTimeString = endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                timeString = `${timeString} - ${toTimeString}`;
+            }
+
+            // Determine campus location
+            let locationName = ev.campus || 'Campus';
+            if (ev.campus === 'ALL') {
+                locationName = 'All Campuses';
+            } else if (ev.campus && ev.campus !== 'Campus') {
+                locationName = ev.campus + ' Campus';
+            }
+
+            html += `
+                <div class="agenda-event-card">
+                    <div class="agenda-details">
+                        <h4 class="agenda-event-title">${ev.title}</h4>
+                        <div class="agenda-time-row">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>${timeString}</span>
+                        </div>
+                        <div class="agenda-location-row">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>${locationName}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    container.innerHTML = html;
+}
+
+
+async function renderCareerToolkit() {
+    // 1. Update Navigation State
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.getElementById('nav-item-career').classList.add('active');
+
+    // 2. Show Loading State immediately
+    mainContent.innerHTML = `
+        <div class="career-toolkit-container" style="text-align: center; padding: 60px;">
+            <div style="color: #64748b; font-size: 1.1rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin" style="margin-bottom: 10px;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                <br>Loading your verified volunteer data...
+            </div>
+        </div>
+    `;
+
+    try {
+        // 3. Fetch data from your actual backend API
+        const response = await fetch('/api/career-toolkit/stats/');
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load data (Status: ${response.status})`);
+        }
+        
+        const stats = await response.json();
+        
+        // Save stats globally so we can view saved text without fetching the API again
+        window.currentCareerStats = stats;
+
+        // --- HELPER FUNCTION TO BUILD DYNAMIC CARDS ---
+        const buildCard = (type, title, desc, iconSvg) => {
+            // Default status if the backend hasn't implemented it yet
+            const status = (stats.assetStatus && stats.assetStatus[type]) 
+                ? stats.assetStatus[type] 
+                : { exists: false, needs_update: false };
+
+            // Primary Button: "View Saved" or "Generate"
+            const primaryBtn = status.exists 
+                ? `<button class="btn-toolkit" style="flex-grow: 1;" onclick="viewSaved('${type}', '${title}')">View Saved</button>`
+                : `<button class="btn-toolkit" style="flex-grow: 1;" onclick="openGenerator('${type}', this)">Generate ${title}</button>`;
+
+            // Secondary Button: Only show if they have new hours to add!
+            const updateBtn = (status.exists && status.needs_update)
+                ? `<button class="btn-toolkit" style="background: #eff6ff; border-color: #3b82f6; color: #3b82f6;" onclick="openGenerator('${type}', this, true)" title="You have logged new hours! Update to include them.">🔄 Update</button>`
+                : ``;
+
+            return `
+                <div class="toolkit-card">
+                    <div class="card-icon ${type}-icon">${iconSvg}</div>
+                    <h3>${title}</h3>
+                    <p>${desc}</p>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        ${primaryBtn}
+                        ${updateBtn}
+                    </div>
+                </div>
+            `;
+        };
+
+        // 4. Render the Dashboard with real data
+        mainContent.innerHTML = `
+            <div class="career-toolkit-container">
+                
+                <div class="toolkit-header">
+                    <div class="header-content">
+                        <h1>AI Career Toolkit</h1>
+                        <p>Transform your verified C-SHAW (Centre for Student Health and Wellness) experience into professional, career-ready content.</p>
+                    </div>
+                    
+                    <div class="verified-data-bar">
+                        <div class="data-badge"><span class="label">Verified Hours</span> <span class="value">${stats.totalHours}h</span></div>
+                        <div class="data-badge"><span class="label">Events</span> <span class="value">${stats.eventsAttended}</span></div>
+                        <div class="data-badge"><span class="label">Roles</span> <span class="value">${stats.roles}</span></div>
+                        <div class="data-badge"><span class="label">Active</span> <span class="value">${stats.yearsActive}</span></div>
+                    </div>
+                </div>
+
+                <div class="toolkit-grid">
+                    
+                    ${buildCard(
+                        'cv', 
+                        'CV Experience Section', 
+                        'Instantly generate professional, ATS-friendly bullet points detailing your volunteer impact.', 
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>'
+                    )}
+
+                    ${buildCard(
+                        'linkedin', 
+                        'LinkedIn Summary', 
+                        'Create a compelling professional summary highlighting your leadership and community engagement.', 
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>'
+                    )}
+
+                    ${buildCard(
+                        'scholarship', 
+                        'Application Statement', 
+                        'Draft application-ready statements emphasizing your social contribution and personal growth.', 
+                        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+                    )}
+
+                    <div class="toolkit-card highlight-card">
+                        <div class="card-icon report-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        </div>
+                        <h3>Official Impact Report</h3>
+                        <p>Download a verified PDF portfolio of your C-SHAW volunteer history and achievements.</p>
+                        <button class="btn-toolkit-primary" onclick="generateImpactReport(this)">Download PDF Report</button>
+                    </div>
+
+                </div>
+                
+                <div id="toolkitOutputArea" style="margin-top: 40px; display: none;"></div>
+
+            </div>
+        `;
+
+    } catch (error) {
+        console.error("Career Toolkit Error:", error);
+        mainContent.innerHTML = `
+            <div class="career-toolkit-container" style="text-align: center; padding: 60px;">
+                <div style="color: #ef4444; font-size: 1.1rem; font-weight: bold;">
+                    ⚠️ Could not load your volunteer data.
+                </div>
+                <p style="color: #64748b;">Please try refreshing the page or contact support if the issue persists.</p>
+            </div>
+        `;
+    }
+}
+
+window.viewSaved = function(type, title) {
+    const outputArea = document.getElementById('toolkitOutputArea');
+    
+    // Grab the text we saved globally during the render phase
+    const content = window.currentCareerStats.assetStatus[type].content;
+    const formattedContent = content.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+
+    outputArea.style.display = 'block';
+    outputArea.innerHTML = `
+        <div class="ai-output-box success-box">
+            <div class="output-header">
+                <h4>✨ Saved ${title}</h4>
+                <button class="btn-copy" onclick="copyToClipboard(this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+            </div>
+            <div class="output-content">
+                <p>${formattedContent}</p>
+            </div>
+        </div>
+    `;
+
+    outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+// --- AI GENERATION FUNCTION (Attached to window) ---
+window.openGenerator = async function(type, btnElement) {
+    const outputArea = document.getElementById('toolkitOutputArea');
+    const originalText = btnElement.innerText;
+    
+    // 1. Set Loading State
+    btnElement.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin-right: 8px; vertical-align: middle;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+        Generating...
+    `;
+    btnElement.disabled = true;
+    
+    // Smoothly reveal the output area in a "loading" state
+    outputArea.style.display = 'block';
+    outputArea.innerHTML = `
+        <div class="ai-output-box loading-box">
+            <div class="pulse-line"></div>
+            <div class="pulse-line" style="width: 80%"></div>
+            <div class="pulse-line" style="width: 60%"></div>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 16px;">AI is reviewing your verified volunteer history...</p>
+        </div>
+    `;
+
+    try {
+        // 2. Call your Django Backend
+        const csrfToken = typeof getValidCsrfToken === 'function' ? getValidCsrfToken() : ''; 
+        
+        const response = await fetch('/api/career-toolkit/generate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ type: type })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Generation failed.");
+        }
+
+        // 3. Format the Output
+        const formattedContent = data.content.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+
+        let title = "Generated Content";
+        if (type === 'cv') title = "CV Experience Section";
+        if (type === 'linkedin') title = "LinkedIn Professional Summary";
+        if (type === 'scholarship') title = "Application Statement";
+
+        outputArea.innerHTML = `
+            <div class="ai-output-box success-box">
+                <div class="output-header">
+                    <h4>✨ ${title}</h4>
+                    <button class="btn-copy" onclick="copyToClipboard(this)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="output-content">${data.content || content}</div>
+            </div>
+        `;
+
+        outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (error) {
+        console.error(error);
+        outputArea.innerHTML = `
+            <div class="ai-output-box error-box">
+                <h4 style="color: #ef4444; margin-top: 0;">Generation Error</h4>
+                <p>${error.message}</p>
+            </div>
+        `;
+    } finally {
+        // 4. Reset Button
+        btnElement.innerHTML = originalText;
+        btnElement.disabled = false;
+    }
+};
+
+// --- PDF REPORT FUNCTION (Attached to window) ---
+window.generateImpactReport = async function(btnElement) {
+    const originalText = btnElement.innerText;
+    btnElement.innerText = "Preparing PDF...";
+    btnElement.disabled = true;
+
+    try {
+        const response = await fetch('/api/career-toolkit/report/');
+        
+        if (!response.ok) throw new Error("Failed to generate report.");
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'CSHAW_Volunteer_Impact_Report.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+    } catch (error) {
+        console.error(error);
+        alert("Report generation is currently unavailable. Please try again later.");
+    } finally {
+        btnElement.innerText = originalText;
+        btnElement.disabled = false;
+    }
+};
+
+// --- COPY TO CLIPBOARD HELPER (Attached to window) ---
+window.copyToClipboard = function(btnElement) {
+    const contentDiv = btnElement.closest('.ai-output-box').querySelector('.output-content');
+    const textToCopy = contentDiv.innerText;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = `<span style="color: #10B981;">✓ Copied!</span>`;
+        setTimeout(() => {
+            btnElement.innerHTML = originalHtml;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+};
+
+
 
     // Logout Logic
     const logoutBtn = document.getElementById('logoutBtn');
@@ -4252,6 +4837,213 @@ window.exportToPDF = function(filterType) {
         }
         return cookieValue;
     }
+
+
+    const linkAchievements = document.getElementById('link-achievements');
+    if (linkAchievements) {
+        linkAchievements.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Remove active state from all items and links
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            
+            // Highlight achievements
+            const parentLi = linkAchievements.closest('.nav-item');
+            if (parentLi) parentLi.classList.add('active');
+            linkAchievements.classList.add('active');
+            
+            renderAchievements();
+            
+            // Close the sidebar if on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+    }
+
+    async function renderAchievements() {
+        const mainContent = document.getElementById('mainContent');
+        mainContent.innerHTML = '<div class="loader"></div>';
+
+        try {
+            const response = await fetch('/api/users/stats/');
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            
+            const badges = data.badges || [];
+            const awards = data.awards || [];
+            const accolades = data.learning_accolades || [];
+            const totalHours = data.total_hours || 0;
+            
+            const has40 = badges.find(b => b.type === '40_hours');
+            const has80 = badges.find(b => b.type === '80_hours');
+
+            const progress40Percent = Math.min(100, (totalHours / 40) * 100);
+            const progress80Percent = Math.min(100, (totalHours / 80) * 100);
+            
+            const circ = 402.1; // 2 * PI * 64
+            const offset40 = circ - (progress40Percent / 100) * circ;
+            const offset80 = circ - (progress80Percent / 100) * circ;
+
+            let html = `
+                <div class="header-section">
+                    <h2 class="section-title">Achievements & Milestones</h2>
+                </div>
+                
+                <h3 style="margin-top: 20px; color: var(--text-main); font-weight: 800; font-family: var(--font-family);">Hours Milestones</h3>
+                <div class="achievements-grid">
+                    
+                    <div class="achievement-card ${has40 ? 'unlocked' : 'locked'}">
+                        <div class="badge-ring-wrapper">
+                            <svg class="progress-ring" width="150" height="150">
+                                <defs>
+                                    <linearGradient id="grad-40" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#FF8C42" />
+                                        <stop offset="50%" stop-color="#FF5722" />
+                                        <stop offset="100%" stop-color="#FF3D00" />
+                                    </linearGradient>
+                                    <filter id="metallic-glow-40" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#FF5722" flood-opacity="0.3" />
+                                    </filter>
+                                </defs>
+                                <circle class="progress-ring__bg" stroke="#f1f5f9" stroke-width="10" fill="transparent" r="64" cx="75" cy="75"/>
+                                <circle class="progress-ring__bar" stroke="url(#grad-40)" stroke-dasharray="402.1" stroke-dashoffset="${offset40}" stroke-width="10" stroke-linecap="round" fill="transparent" r="64" cx="75" cy="75" filter="${has40 ? 'url(#metallic-glow-40)' : ''}"/>
+                            </svg>
+                            <div class="badge-inner-circle">
+                                <span class="badge-number">${has40 ? '40' : '🔒'}</span>
+                                <span class="badge-unit">HRS</span>
+                            </div>
+                        </div>
+                        <div class="badge-content">
+                            <h4 class="badge-title">40 Hours Milestone</h4>
+                            <div class="badge-status-pill ${has40 ? 'unlocked' : 'locked'}">
+                                ${has40 ? `Earned ${has40.date_earned}` : `${Math.round(progress40Percent)}% Complete (${totalHours}/40h)`}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="achievement-card ${has80 ? 'unlocked' : 'locked'}">
+                        <div class="badge-ring-wrapper">
+                            <svg class="progress-ring" width="150" height="150">
+                                <defs>
+                                    <linearGradient id="grad-80" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#FFD700" />
+                                        <stop offset="50%" stop-color="#FFA000" />
+                                        <stop offset="100%" stop-color="#FF8C00" />
+                                    </linearGradient>
+                                    <filter id="metallic-glow-80" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#FFA000" flood-opacity="0.3" />
+                                    </filter>
+                                </defs>
+                                <circle class="progress-ring__bg" stroke="#f1f5f9" stroke-width="10" fill="transparent" r="64" cx="75" cy="75"/>
+                                <circle class="progress-ring__bar" stroke="url(#grad-80)" stroke-dasharray="402.1" stroke-dashoffset="${offset80}" stroke-width="10" stroke-linecap="round" fill="transparent" r="64" cx="75" cy="75" filter="${has80 ? 'url(#metallic-glow-80)' : ''}"/>
+                            </svg>
+                            <div class="badge-inner-circle">
+                                <span class="badge-number">${has80 ? '80' : '🔒'}</span>
+                                <span class="badge-unit">HRS</span>
+                            </div>
+                        </div>
+                        <div class="badge-content">
+                            <h4 class="badge-title">80 Hours Milestone</h4>
+                            <div class="badge-status-pill ${has80 ? 'unlocked' : 'locked'}">
+                                ${has80 ? `Earned ${has80.date_earned}` : `${Math.round(progress80Percent)}% Complete (${totalHours}/80h)`}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // --- LEARNING ACCOLADES ---
+            html += `
+                <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--border-color);">
+                <h3 style="margin-top: 20px; color: var(--text-main); font-weight: 800; font-family: var(--font-family);">Learning Accolades</h3>
+                <div class="awards-gallery" style="margin-top: 20px;">
+            `;
+
+            if (accolades.length === 0) {
+                html += `
+                    <div class="no-awards-card">
+                        <svg class="no-awards-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        <p class="no-awards-text">No courses mastered yet. Score 100% on quizzes to earn learning accolades!</p>
+                    </div>
+                `;
+            } else {
+                accolades.forEach(acc => {
+                    html += `
+                        <div class="award-gallery-card">
+                            <div class="award-trophy-container">
+                                <div class="award-trophy-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); display:flex; justify-content:center; align-items:center;">
+                                    <span style="font-size: 2rem;">🥇</span>
+                                </div>
+                            </div>
+                            <div class="award-gallery-details">
+                                <span class="award-gallery-date">Completed ${acc.date_completed}</span>
+                                <h4 class="award-gallery-title">${acc.quiz_title}</h4>
+                                <p class="award-gallery-desc">Mastered this course material with a perfect 100% score!</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            html += '</div>';
+
+            html += `
+                <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--border-color);">
+                
+                <h3 style="margin-top: 20px; color: var(--text-main); font-weight: 800; font-family: var(--font-family);">Special Awards</h3>
+                <div class="awards-gallery" style="margin-top: 20px;">
+            `;
+
+            if (awards.length === 0) {
+                html += `
+                    <div class="no-awards-card">
+                        <svg class="no-awards-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        <p class="no-awards-text">No awards achieved yet. Keep up the dedication to unlock achievements!</p>
+                    </div>
+                `;
+            } else {
+                awards.forEach(a => {
+                    html += `
+                        <div class="award-gallery-card">
+                            <div class="award-trophy-container">
+                                <div class="award-trophy-badge" style="background: linear-gradient(135deg, ${a.color || '#fbbf24'} 0%, #b45309 100%);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="trophy-svg">
+                                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                                        <path d="M4 22h16"></path>
+                                        <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"></path>
+                                        <path d="M12 2a6 6 0 0 1 6 6v1H6V8a6 6 0 0 1 6-6z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="award-gallery-details">
+                                <span class="award-gallery-date">Awarded ${a.date_awarded || '2026'}</span>
+                                <h4 class="award-gallery-title">${a.name}</h4>
+                                <p class="award-gallery-desc">${a.description || 'Recognized for outstanding contributions and commitment to the peer education program.'}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            html += '</div>';
+
+            mainContent.innerHTML = html;
+
+        } catch (err) {
+            console.error("Error fetching achievements:", err);
+            mainContent.innerHTML = '<p style="color:red; text-align:center;">Failed to load achievements.</p>';
+        }
+    }
+
 
 
     renderActivities();

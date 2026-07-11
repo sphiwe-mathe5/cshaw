@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-top: 5px solid #E35205; }
+        .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        h1 { color: #E35205; font-size: 28px; margin: 0; }
+        .qr-box { text-align: center; margin: 30px 0; padding: 20px; background: #fff5e6; border-radius: 12px; border: 2px dashed #f5c298; }
+        .qr-box img { max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px;}
+        .pin { font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #E35205; margin-top: 10px; background: white; padding: 10px; border-radius: 8px; display: inline-block;}
+        .footer { text-align: center; font-size: 12px; color: #999; margin-top: 40px; }
+        .highlight { font-size: 18px; font-weight: 600; color: #2c3e50; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚌 You're Going on an Excursion! 🎟️</h1>
+        </div>
+        <p style="font-size: 16px;">Hi <strong>{{ first_name }}</strong>,</p>
+        <p style="font-size: 16px;">Congratulations! Thanks to your amazing dedication and hard work, you've made it into the top volunteers group and have secured your seat for the upcoming C-SHAW excursion!</p>
+        
+        <p class="highlight">Please save this email. Present this QR code or use the fallback PIN when boarding the bus.</p>
+
+        <div class="qr-box">
+            {% if qr_url %}
+            <img src="{{ qr_url }}" alt="Ticket QR Code">
+            <br>
+            {% endif %}
+            <p style="margin: 5px 0 0 0; color: #E35205; font-weight: bold;">YOUR BOARDING PIN:</p>
+            <div class="pin">{{ pin }}</div>
+        </div>
+        
+        <p style="font-size: 16px; text-align: center;">Get ready for an awesome day. Thank you for your incredible dedication to C-SHAW! 🌟</p>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

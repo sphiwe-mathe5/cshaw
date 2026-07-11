@@ -1,95 +1,1229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - Volunteer Portal</title>
-    {% load static %}
-    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    
-    <style>
-        /* Specific styles for About Page */
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f9f9f9; color: #333; margin: 0; }
-        
-        .navbar { background: white; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .logo { font-weight: 800; font-size: 1.5rem; color: #333; text-decoration: none; }
-        .logo span { color: #E35205; }
-        
-        .hero { text-align: center; padding: 80px 20px; background: white; }
-        .hero h1 { font-size: 2.5rem; margin-bottom: 20px; color: #1a1a2e; }
-        .hero p { max-width: 600px; margin: 0 auto; color: #666; font-size: 1.1rem; line-height: 1.6; }
-        
-        .grid-container { max-width: 1000px; margin: 50px auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; padding: 0 20px; }
-        
-        .info-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #E35205; }
-        .info-card h2 { margin-top: 0; color: #E35205; font-size: 1.5rem; }
-        .info-card ul { padding-left: 20px; color: #555; line-height: 1.8; }
-        
-        .cta-section { text-align: center; padding: 60px 20px; }
-        .btn-primary { background: #E35205; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; transition: background 0.3s; }
-        .btn-primary:hover { background: #c94600; }
-        .btn-outline { border: 2px solid #E35205; color: #E35205; padding: 10px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-left: 10px; }
-        .btn-outline:hover { background: #FFF4EC; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — C-SHAW</title>
+  {% load static %}
+  <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 
-        /* Minimal Footer Re-use */
-        .minimal-footer { text-align: center; padding: 30px; color: #999; border-top: 1px solid #eee; margin-top: 50px; }
-    </style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:      #ff6b1a;
+      --accent-dark: #d95510;
+      --accent-bg:   #fff4ee;
+      --bg:          #f7f7f5;
+      --surface:     #ffffff;
+      --surface-2:   #f0efed;
+      --border:      rgba(0,0,0,0.09);
+      --border-md:   rgba(0,0,0,0.15);
+      --text:        #111111;
+      --text-muted:  #666666;
+      --text-dim:    #aaaaaa;
+      --font-d:      'Bebas Neue', sans-serif;
+      --font-b:      'DM Sans', sans-serif;
+      --nav-h:       56px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-b);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    /* ════════════════════════════════
+       NAVBAR — mobile-first, no auth
+    ════════════════════════════════ */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      gap: 0;
+    }
+
+    /* scrollable pill row — no hamburger needed */
+    .nav-links {
+      display: flex;
+      gap: 2px;
+      list-style: none;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      white-space: nowrap;
+      width: 100%;
+      justify-content: center;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+
+    .nav-links a {
+      display: block;
+      padding: 7px 13px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover  { color: var(--accent); background: var(--accent-bg); }
+    .nav-links a.active { color: var(--accent); background: var(--accent-bg); }
+
+    /* ════════════════════════════════
+       SHARED SECTION STYLES
+    ════════════════════════════════ */
+    section { scroll-margin-top: var(--nav-h); }
+
+    .section-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+    @media (min-width: 640px) { .section-wrap { padding: 80px 40px; } }
+
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .display-title {
+      font-family: var(--font-d);
+      font-size: clamp(36px, 8vw, 68px);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .display-title span { color: var(--accent); }
+    .lead {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 300;
+      line-height: 1.75;
+    }
+    @media (min-width: 640px) { .lead { font-size: 15px; } }
+    .divider {
+      width: 40px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 20px 0;
+    }
+
+    /* ════════════════════════════════
+       HERO
+    ════════════════════════════════ */
+    #hero {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+    @media (min-width: 800px) {
+      .hero-inner {
+        flex-direction: row;
+        align-items: center;
+        gap: 60px;
+        padding: 80px 40px 72px;
+      }
+      .hero-left  { flex: 1; }
+      .hero-right { flex: 0 0 380px; }
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-bg);
+      border: 1px solid rgba(255,107,26,0.2);
+      border-radius: 999px;
+      padding: 5px 14px;
+      margin-bottom: 20px;
+    }
+    .hero-tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    .hero-title {
+      font-family: var(--font-d);
+      font-size: clamp(44px, 10vw, 88px);
+      letter-spacing: 0.02em;
+      line-height: 0.95;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 300;
+      line-height: 1.8;
+      margin-bottom: 32px;
+    }
+    @media (min-width: 640px) { .hero-desc { font-size: 15px; } }
+
+    .hero-stats {
+      display: flex;
+      gap: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .hero-stat-num {
+      font-family: var(--font-d);
+      font-size: 32px;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .hero-stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Hero image — shown on ALL screen sizes now */
+    .hero-right { position: relative; }
+    .hero-img-box {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--surface-2);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 800px) { .hero-img-box { aspect-ratio: 4/5; } }
+
+    .hero-img-box img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .img-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-dim);
+    }
+    .img-placeholder svg { opacity: 0.3; }
+    .img-placeholder span { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .hero-img-badge {
+      position: absolute;
+      bottom: -14px;
+      left: -10px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      box-shadow: 0 4px 20px rgba(255,107,26,0.3);
+    }
+    .hero-img-badge strong {
+      font-family: var(--font-d);
+      font-size: 24px;
+      display: block;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    @media (min-width: 800px) {
+      .hero-img-badge { bottom: -16px; left: -16px; padding: 14px 20px; font-size: 11px; }
+      .hero-img-badge strong { font-size: 28px; }
+    }
+
+    /* ════════════════════════════════
+       ABOUT
+    ════════════════════════════════ */
+    #about { background: var(--bg); }
+
+    .about-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+    @media (min-width: 760px) {
+      .about-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 60px;
+        align-items: start;
+      }
+    }
+
+    .about-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .about-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+
+    }
+    @media (min-width: 640px) { .about-card { padding: 20px; } }
+
+    .about-card-icon {
+      width: 34px; height: 34px;
+      background: var(--accent-bg);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+    .about-card h4 { font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+    .about-card p  { font-size: 12px; color: var(--text-muted); font-weight: 300; line-height: 1.55; }
+
+    /* ════════════════════════════════
+       LEARN / DID YOU KNOW
+    ════════════════════════════════ */
+    #learn {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .learn-header { margin-bottom: 32px; }
+
+    .learn-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    @media (min-width: 760px) {
+      .learn-grid {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 32px;
+        align-items: start;
+      }
+    }
+
+    .topic-list { display: flex; flex-direction: column; gap: 3px; }
+
+    /* on mobile, topic list becomes a horizontal scroll row */
+    @media (max-width: 759px) {
+      .topic-list {
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 6px;
+        padding-bottom: 4px;
+      }
+      .topic-list::-webkit-scrollbar { display: none; }
+    }
+
+    .topic-btn {
+      text-align: left;
+      background: none;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+    .topic-btn:hover { background: var(--bg); color: var(--text); }
+    .topic-btn.active {
+      background: var(--accent-bg);
+      color: var(--accent);
+      border-left-color: var(--accent);
+    }
+    /* on mobile, turn border-left into border-bottom */
+    @media (max-width: 759px) {
+      .topic-btn {
+        border-left: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 8px 8px 0 0;
+        padding: 8px 14px;
+      }
+      .topic-btn.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+    }
+
+    .topic-btn .t-num {
+      font-family: var(--font-d);
+      font-size: 14px;
+      color: var(--text-dim);
+      min-width: 20px;
+    }
+    .topic-btn.active .t-num { color: var(--accent); opacity: 0.5; }
+
+    .topic-panel { display: none; }
+    .topic-panel.active { display: block; animation: fadeUp 0.2s ease both; }
+
+    .topic-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    @media (min-width: 640px) { .topic-content { padding: 32px; } }
+
+    .topic-content .tc-eyebrow {
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent); font-weight: 500; margin-bottom: 6px;
+    }
+    .topic-content h3 {
+      font-family: var(--font-d);
+      font-size: clamp(22px, 5vw, 28px);
+      letter-spacing: 0.03em;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .topic-content p {
+      font-size: 14px; color: var(--text-muted);
+      font-weight: 300; line-height: 1.8; margin-bottom: 14px;
+    }
+    .topic-content p:last-child { margin-bottom: 0; }
+    .topic-tag {
+      display: inline-block;
+      font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--accent-bg); color: var(--accent);
+      border: 1px solid rgba(255,107,26,0.18);
+      border-radius: 999px; padding: 3px 11px;
+      margin-right: 5px; margin-bottom: 14px;
+    }
+
+    /* ════════════════════════════════
+       YEARBOOK
+    ════════════════════════════════ */
+    #yearbook { background: var(--bg); }
+
+    .year-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .year-tab {
+      font-family: var(--font-b);
+      font-size: 12px; font-weight: 500;
+      padding: 7px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .year-tab:hover  { border-color: var(--accent); color: var(--accent); }
+    .year-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .year-panel { display: none; }
+    .year-panel.active { display: block; animation: fadeUp 0.25s ease both; }
+
+    .year-label {
+      font-family: var(--font-d);
+      font-size: clamp(52px, 12vw, 80px);
+      letter-spacing: 0.02em;
+      color: var(--surface-2);
+      line-height: 1;
+      margin-bottom: -14px;
+      user-select: none;
+      -webkit-text-stroke: 1px var(--border-md);
+    }
+
+    /* Bento grid */
+    .bento {
+      display: grid;
+      gap: 8px;
+      /* mobile: 2 equal columns, fixed row height */
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 110px;
+    }
+    @media (min-width: 640px) {
+      .bento {
+        grid-template-columns: repeat(12, 1fr);
+        grid-auto-rows: 80px;
+        gap: 10px;
+      }
+    }
+
+    .bento-cell {
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .bento-cell img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+      transition: transform 0.4s;
+    }
+    .bento-cell:hover img { transform: scale(1.04); }
+    .bento-cell .ph {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 6px; color: var(--text-dim);
+    }
+    .bento-cell .ph svg { opacity: 0.3; }
+    .bento-cell .ph span { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .bento-caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.55));
+      padding: 20px 10px 8px;
+      font-size: 10px; color: rgba(255,255,255,0.85);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .bento-cell:hover .bento-caption { opacity: 1; }
+
+    /* Desktop bento span classes */
+    @media (min-width: 640px) {
+      .b-wide   { grid-column: span 8; grid-row: span 4; }
+      .b-tall   { grid-column: span 4; grid-row: span 4; }
+      .b-med    { grid-column: span 6; grid-row: span 3; }
+      .b-sq     { grid-column: span 4; grid-row: span 3; }
+      .b-sm     { grid-column: span 3; grid-row: span 3; }
+      .b-wide2  { grid-column: span 8; grid-row: span 3; }
+      .b-banner { grid-column: span 12; grid-row: span 2; }
+    }
+    /* Mobile: everything 1 col wide, 1 row tall — a couple span 2 for variety */
+    @media (max-width: 639px) {
+      .b-wide, .b-wide2, .b-banner { grid-column: span 2; grid-row: span 2; }
+      .b-tall, .b-med, .b-sq, .b-sm { grid-column: span 1; grid-row: span 1; }
+    }
+
+    /* ════════════════════════════════
+       EXECUTIVE TEAM
+    ════════════════════════════════ */
+    #team { background: var(--surface); border-top: 1px solid var(--border); }
+
+    .campus-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      font-family: var(--font-b);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover  { border-color: var(--accent); color: var(--accent); }
+    .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .campus-panel { display: none; }
+    .campus-panel.active {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      animation: fadeUp 0.25s ease both;
+    }
+    @media (min-width: 500px)  { .campus-panel.active { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 760px)  { .campus-panel.active { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 960px)  { .campus-panel.active { grid-template-columns: repeat(5, 1fr); } }
+
+    .exec-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .exec-card:hover {
+      border-color: rgba(255,107,26,0.35);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(255,107,26,0.07);
+    }
+    .exec-img-wrap {
+      position: relative;
+      height: 160px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    @media (min-width: 640px) { .exec-img-wrap { height: 180px; } }
+
+    .exec-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: top center;
+      display: block; filter: grayscale(15%);
+      transition: filter 0.3s;
+    }
+    .exec-card:hover .exec-img-wrap img { filter: grayscale(0%); }
+    .exec-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface-2);
+    }
+    .exec-initials {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--accent-bg);
+      border: 1px solid rgba(255,107,26,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-d);
+      font-size: 20px; color: var(--accent);
+    }
+    .exec-num {
+      position: absolute; top: 8px; left: 8px;
+      font-family: var(--font-d);
+      font-size: 12px; letter-spacing: 0.06em;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(6px);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,107,26,0.2);
+    }
+    .exec-body {
+      padding: 12px; flex: 1;
+      display: flex; flex-direction: column;
+    }
+    .exec-role {
+      font-size: 8px; font-weight: 500;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 3px;
+    }
+    .exec-name {
+      font-size: 12.5px; font-weight: 500;
+      color: var(--text); margin-bottom: 10px; line-height: 1.3;
+    }
+    .fact-box {
+      margin-top: auto;
+      background: var(--accent-bg);
+      border-radius: 7px; padding: 9px 10px;
+      border: 1px solid rgba(255,107,26,0.12);
+    }
+    .fact-label {
+      font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+      font-weight: 500; color: var(--accent); margin-bottom: 4px;
+      display: flex; align-items: center; gap: 4px; opacity: 0.75;
+    }
+    .fact-text {
+      font-size: 11px; color: var(--text-muted);
+      line-height: 1.5; font-style: italic; font-weight: 300;
+    }
+    .exec-email {
+      display: block; font-size: 9px; color: var(--text-dim);
+      text-decoration: none; padding: 7px 12px;
+      border-top: 1px solid var(--border);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: color 0.15s, background 0.15s;
+    }
+    .exec-email:hover { color: var(--accent); background: var(--accent-bg); }
+
+    /* ════════════════════════════════
+       CONCLUSION
+    ════════════════════════════════ */
+    #conclusion { background: var(--text); color: #fff; }
+
+    .conclusion-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 60px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+    @media (min-width: 760px) {
+      .conclusion-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+        padding: 90px 40px;
+      }
+    }
+
+    .conclusion-inner .display-title { color: #fff; }
+    .conclusion-inner .lead { color: rgba(255,255,255,0.6); max-width: 100%; }
+    .conclusion-inner .divider { background: var(--accent); }
+
+    .conclusion-quote {
+      font-family: var(--font-d);
+      font-size: clamp(22px, 5vw, 40px);
+      letter-spacing: 0.03em;
+      color: var(--accent);
+      line-height: 1.1;
+      border-left: 3px solid var(--accent);
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+    .conclusion-body {
+      font-size: 14px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 300;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    /* ════════════════════════════════
+       FOOTER
+    ════════════════════════════════ */
+    footer {
+      background: #0a0a0a;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+    @media (min-width: 640px) {
+      footer {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 24px 5%;
+        text-align: left;
+      }
+    }
+    .footer-copy { font-size: 11px; color: rgba(255,255,255,0.3); }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .footer-links a {
+      font-size: 11px; color: rgba(255,255,255,0.35);
+      text-decoration: none; transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--accent); }
+
+    /* ════════════════════════════════
+       UTILS
+    ════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    /* Lightbox Styles */
+    .lightbox {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9); z-index: 9999;
+      display: none; flex-direction: column; justify-content: center; align-items: center;
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    .lightbox.active { display: flex; opacity: 1; }
+    .lightbox img {
+      max-width: 90%; max-height: 80vh; border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain;
+    }
+    .lightbox-close {
+      position: absolute; top: 30px; right: 40px;
+      color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; user-select: none;
+    }
+    .lightbox-prev, .lightbox-next {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      color: #fff; font-size: 50px; font-weight: bold; cursor: pointer; user-select: none; padding: 20px;
+    }
+    .lightbox-prev:hover, .lightbox-next:hover, .lightbox-close:hover { color: var(--primary-orange); }
+    .lightbox-prev { left: 20px; }
+    .lightbox-next { right: 20px; }
+    .lightbox-caption {
+      color: #fff; font-size: 1.2rem; margin-top: 15px; text-align: center; max-width: 80%;
+    }
+    .bento-cell img { cursor: pointer; transition: transform 0.2s ease; }
+    .bento-cell img:hover { transform: scale(1.02); }
+  </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <a href="{% url 'index' %}" class="logo">C-SHAW</span></a>
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar" role="navigation" aria-label="Page sections">
+  <ul class="nav-links">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#learn">Learn</a></li>
+    <li><a href="#yearbook">Yearbook</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#conclusion">Vision</a></li>
+  </ul>
+</nav>
+
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-inner">
+
+    <div class="hero-left">
+      <h1 class="hero-title">MAKING A<br>DIFFERENCE<br><span>STARTS HERE</span></h1>
+      <p class="hero-desc">C-SHAW is the Community Service and Health Awareness program at UJ — connecting students with meaningful volunteer opportunities that transform both communities and careers.</p>
+      <div class="hero-stats">
         <div>
-            {% if user.is_authenticated %}
-                <a href="{% url 'index' %}" class="btn-primary">Go to Dashboard</a>
-            {% else %}
-                <a href="/login/" style="text-decoration: none; color: #666; margin-right: 20px; font-weight: 500;">Log In</a>
-                <a href="/register/student/" class="btn-primary">Sign Up</a>
-            {% endif %}
+          <div class="hero-stat-num">4</div>
+          <div class="hero-stat-label">Campuses</div>
         </div>
-    </nav>
-
-    <section class="hero">
-        <h1>Connecting Campus & Community</h1>
-        <p>The C-SHAW Volunteer Portal bridges the gap between students and meaningful community engagement. We track impact, manage events, and empower students to make a difference.</p>
-    </section>
-
-    <div class="grid-container">
-        <div class="info-card">
-            <h2>For Students</h2>
-            <p>Take charge of your volunteer journey.</p>
-            <ul>
-                <li><strong>Browse Events:</strong> Find opportunities at APB, DFC, APK, and SWC.</li>
-                <li><strong>Track Hours:</strong> Automatically log your service hours.</li>
-                <li><strong>Earn Badges:</strong> Get recognized for your contribution (Top Volunteer, Peer Educator).</li>
-                <li><strong>History:</strong> View your full activity history for your CV.</li>
-            </ul>
+        <div>
+          <div class="hero-stat-num">20+</div>
+          <div class="hero-stat-label">Executives</div>
         </div>
-
-        <div class="info-card" style="border-top-color: #1a1a2e;">
-            <h2 style="color: #1a1a2e;">For Coordinators</h2>
-            <p>Simplify event management and reporting.</p>
-            <ul>
-                <li><strong>Create Events:</strong> Post new opportunities in seconds.</li>
-                <li><strong>Digital Attendance:</strong> Say goodbye to paper. Manage RSVPs and attendance digitally.</li>
-                <li><strong>Live Stats:</strong> Monitor how many spots are left in real-time.</li>
-                <li><strong>Reports:</strong> Generate automated reports.</li>
-            </ul>
+        <div>
+          <div class="hero-stat-num">100+</div>
+          <div class="hero-stat-label">Students Reached</div>
         </div>
+      </div>
     </div>
 
-    {% if not user.is_authenticated %}
-    <section class="cta-section">
-        <h3>Ready to get started?</h3>
-        <p style="margin-bottom: 30px; color: #666;">Join the community today.</p>
-        <a href="/register/student/" class="btn-primary">Register as Student</a>
-    </section>
-    {% endif %}
+    <div class="hero-right">
+      <div class="hero-img-box">
+        <img src="{% static 'images/hero.jpeg' %}" alt="C-SHAW volunteers">
+      </div>
+    </div>
 
-    <footer class="minimal-footer">
-        &copy; {% now "Y" %} Volunteer Hub. All rights reserved.
-    </footer>
+  </div>
+</section>
+
+
+<!-- ══ ABOUT ══ -->
+<section id="about">
+  <div class="section-wrap">
+    <div class="about-grid">
+      <div class="about-left">
+        <p class="eyebrow">What is C-SHAW</p>
+        <h2 class="display-title">BUILT ON<br><span>PURPOSE</span></h2>
+        <div class="divider"></div>
+        <p class="lead">C-SHAW — Community Service and Health Awareness — is a student-led program operating across all four University of Johannesburg campuses. We bridge the gap between campus life and meaningful community engagement.</p>
+        <br>
+        <p class="lead">Founded to create structured volunteer opportunities, C-SHAW empowers students to log hours, earn recognition, and develop real-world skills while giving back. Every event, every hour, every student makes a measurable difference.</p>
+      </div>
+      <div class="about-cards">
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h4>Community First</h4>
+          <p>Every initiative is designed with community impact at its core — not just student hours.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h4>Health Awareness</h4>
+          <p>Campaigns that educate students and surrounding communities year-round.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h4>Track Progress</h4>
+          <p>Students log every hour digitally. No more paper sign-in sheets.</p>
+        </div>
+        <div class="about-card">
+          <div class="about-card-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+          </div>
+          <h4>Recognition</h4>
+          <p>Top volunteers earn badges and certificates that carry weight on CVs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ LEARN ══ -->
+<section id="learn">
+  <div class="section-wrap">
+    <div class="learn-header">
+      <p class="eyebrow">Knowledge Hub</p>
+      <h2 class="display-title">DID YOU<br><span>KNOW?</span></h2>
+      <p class="lead">Select a topic to learn more about C-SHAW, our history, and how we operate.</p>
+    </div>
+    <div class="learn-grid">
+      <div class="topic-list" id="topicList">
+        <button class="topic-btn active" data-topic="t1"><span class="t-num">01</span>Our Origins</button>
+        <button class="topic-btn" data-topic="t2"><span class="t-num">02</span>How We Operate</button>
+        <button class="topic-btn" data-topic="t3"><span class="t-num">03</span>Why Volunteer</button>
+        <button class="topic-btn" data-topic="t4"><span class="t-num">04</span>Health Campaigns</button>
+        <button class="topic-btn" data-topic="t5"><span class="t-num">05</span>Getting Involved</button>
+        <button class="topic-btn" data-topic="t6"><span class="t-num">06</span>Recognition</button>
+      </div>
+
+      <div id="topicContent">
+
+        <div class="topic-panel active" id="t1">
+          <div class="topic-content">
+            <p class="tc-eyebrow">C-SHAW History</p>
+            <h3>Our Origins</h3>
+            <p>C-SHAW — Community Service and Health Awareness — was established at the University of Johannesburg to create a structured platform for students who wanted to give back but lacked a coordinated channel to do so.</p>
+            <p>What started as a small initiative on one campus quickly expanded across all four UJ campuses: APK, APB, SWC, and DFC. Each campus has its own executive team but they all operate under one shared mission: community before self.</p>
+          </div>
+        </div>
+
+        <div class="topic-panel" id="t2">
+          <div class="topic-content">
+            <p class="tc-eyebrow">Structure & Governance</p>
+            <h3>How We Operate</h3>
+            <span class="topic-tag">Campus-based</span><span class="topic-tag">Student-led</span>
+            <p>Each campus is run by an executive team of five: a Chairperson, Deputy Chairperson, Training Officer, Campaigns Officer, and Secretary. Executives serve a one-year term and are responsible for organising events, managing volunteers, and maintaining community partnerships.</p>
+            <p>The portal digitises everything — from event creation and RSVP management to attendance tracking and automated reporting — making C-SHAW one of the most tech-forward volunteer programs in the country.</p>
+          </div>
+        </div>
+
+        <div class="topic-panel" id="t3">
+          <div class="topic-content">
+            <p class="tc-eyebrow">Why Volunteer</p>
+            <h3>Volunteering Benefits</h3>
+            <span class="topic-tag">Career</span><span class="topic-tag">Skills</span><span class="topic-tag">Wellbeing</span>
+            <p>Research consistently shows that students who volunteer regularly develop stronger leadership skills, greater empathy, and higher employability rates. C-SHAW gives you the structure to make those hours count.</p>
+            <p>Every verified hour is logged on your profile and contributes toward recognition awards. These carry real weight — employers love seeing initiative and community engagement on a CV.</p>
+          </div>
+        </div>
+
+        <div class="topic-panel" id="t4">
+          <div class="topic-content">
+            <p class="tc-eyebrow">Health Awareness</p>
+            <h3>Health Campaigns</h3>
+            <span class="topic-tag">HIV/AIDS</span><span class="topic-tag">Mental Health</span><span class="topic-tag">Wellness</span>
+            <p>Health awareness is at the core of C-SHAW's mission. Throughout the year, campuses run campaigns covering HIV/AIDS awareness, mental health destigmatisation, nutrition, substance abuse prevention, and sexual health education.</p>
+            <p>These campaigns involve workshops, information stalls, peer educator sessions, and community outreach — all coordinated by the campus Campaigns Officers and student volunteers.</p>
+          </div>
+        </div>
+
+        <div class="topic-panel" id="t5">
+          <div class="topic-content">
+            <p class="tc-eyebrow">Join Us</p>
+            <h3>Getting Involved</h3>
+            <span class="topic-tag">Register</span><span class="topic-tag">Browse Events</span>
+            <p>Getting involved is simple. Register as a student on the portal, browse upcoming events on your campus, and RSVP. Show up, contribute, and your hours are automatically logged.</p>
+            <p>No experience required — just a willingness to show up. Whether you have two hours or twenty, every contribution matters and every hour is tracked and recognised.</p>
+          </div>
+        </div>
+
+        <div class="topic-panel" id="t6">
+          <div class="topic-content">
+            <p class="tc-eyebrow">Awards System</p>
+            <h3>Recognition & Badges</h3>
+            <span class="topic-tag">Top Volunteer</span><span class="topic-tag">Peer Educator</span>
+            <p>C-SHAW runs a tiered recognition system. As you accumulate volunteer hours, you unlock badges: Newcomer, Active Volunteer, Peer Educator, Campus Champion, and the prestigious Top Volunteer award.</p>
+            <p>At the end of each academic year, top volunteers are formally recognised at an awards ceremony and receive certificates that can be attached to their academic transcripts.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ EXECUTIVE TEAM ══ -->
+<section id="team">
+  <div class="section-wrap">
+    <p class="eyebrow">Who we are</p>
+    <h2 class="display-title">THE STARTING <span>FIVE</span></h2>
+    <p class="lead" style="margin-bottom:32px;">Meet the executive teams driving the vision across all campuses.</p>
+    <div class="campus-tabs" id="tabs"></div>
+    <div id="panels"></div>
+  </div>
+</section>
+
+
+<!-- ══ YEARBOOK ══ -->
+<section id="yearbook">
+  <div class="section-wrap">
+    <p class="eyebrow">Memories</p>
+    <h2 class="display-title">THE<br><span>YEARBOOK</span></h2>
+    <p class="lead" style="margin-bottom:32px;">A visual journal of every event, campaign, and moment that made C-SHAW what it is.</p>
+
+    <div class="year-tabs" id="yearTabs">
+      <button class="year-tab active" data-year="y2024">2025</button>
+      <button class="year-tab" data-year="y2023">2024</button>
+    </div>
+
+    <!-- 2024 -->
+    <div class="year-panel active" id="y2024">
+      <div class="year-label">2025</div>
+      <div class="bento">
+        <div class="bento-cell b-wide"><img src="{% static 'images/sh1.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2025 Executive Team</div></div>
+        <div class="bento-cell b-tall"><img src="{% static 'images/sh8.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Mountain Hiking</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/sh3.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">UJ Staff Day</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/sh4.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Halloween Year End Function</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/sh5.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Sizwe's Scary Outfit</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/sh6.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Receiving of Awards</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/sh7.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Emihle and Bontle Demonstration</div></div>
+        <div class="bento-cell b-wide2"><img src="{% static 'images/sh2.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">UFS Student Summit</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/sh9.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">APK - Campus of the Year</div></div>
+      </div>
+    </div>
+
+    <!-- 2023 -->
+    <div class="year-panel" id="y2023">
+      <div class="year-label">2024</div>
+      <div class="bento">
+        <div class="bento-cell b-wide"><img src="{% static 'images/s5.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Travelling to the 2024 year end function</div></div>
+        <div class="bento-cell b-tall"><img src="{% static 'images/s8.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Emihle Peer educator of the year 2024</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/s3.png' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2024 Hiking</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/s6.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Some Braii</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/s1.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2024 First Aid Training</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/s4.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2024 Hiking</div></div>
+        <div class="bento-cell b-sm"><img src="{% static 'images/s7.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">Pillow Talk</div></div>
+        <div class="bento-cell b-wide2"><img src="{% static 'images/s2.jpeg' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2024 Hiking</div></div>
+        <div class="bento-cell b-sq"><img src="{% static 'images/s9.png' %}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" alt="Yearbook Photo"><div class="bento-caption">2024 Hiking</div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══ CONCLUSION ══ -->
+<section id="conclusion">
+  <div class="conclusion-inner">
+    <div>
+      <p class="eyebrow">Our Vision</p>
+      <h2 class="display-title">MORE THAN<br><span>VOLUNTEER HOURS</span></h2>
+      <div class="divider"></div>
+      <p class="lead">C-SHAW is building a generation of graduates who understand that leadership isn't just about ambition — it's about service. Every hour logged is a step toward that future.</p>
+    </div>
+    <div>
+      <div class="conclusion-quote">"Service is the rent we pay for the privilege of living on this earth."</div>
+      <p class="conclusion-body">We believe that the most meaningful university experiences happen outside the lecture hall. C-SHAW is your invitation to step out, show up, and be part of something bigger than yourself.</p>
+      <p class="conclusion-body">Whether you are joining as a first-year looking to build your CV, or a final-year wanting to leave a legacy — there is a place for you in C-SHAW.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <span class="footer-copy">&copy; {% now "Y" %} C-SHAW Volunteer Hub.All rights reserved.</span>
+  <div class="footer-links">
+    <a href="/privacy/">Privacy Policy</a>
+    <a href="/terms/">Terms of Use</a>
+  </div>
+</footer>
+
+
+<script>
+  /* ── Topic tabs ── */
+  document.querySelectorAll('.topic-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.topic-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.topic).classList.add('active');
+    });
+  });
+
+  /* ── Year tabs ── */
+  document.querySelectorAll('.year-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.year-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.year).classList.add('active');
+    });
+  });
+
+  /* ── Executive team ── */
+  const campuses = [
+    {
+      id: "apk", label: "APK",
+      members: [
+        { num:"01", role:"Chairperson",        name:"Siyabonga Hlatshwayo",      email:"hlatshwayosp735@gmail.com",      img:"{% static 'images/apk-exec-1.png' %}", fact:"Add fun fact here." },
+        { num:"02", role:"Deputy Chairperson", name:"Katlego Makgatho",          email:"kmakgatho7@gmail.com",           img:"{% static 'images/apk-exec-2.png' %}", fact:"Add fun fact here." },
+        { num:"03", role:"Training Officer",   name:"Kamogelo Shayi",            email:"kamogeloshai24@gmail.com",       img:"{% static 'images/kamo.jpeg' %}", fact:"Champions. Zero goals. Maximum vibes☠️💗 Yours sincerely: Pirates Fan, 2026 champion 🏆✨." },
+        { num:"04", role:"Campaigns Officer",  name:"Nothemba Makhanya",         email:"nothembam57@gmail.com",          img:"{% static 'images/nomathemba.png' %}", fact:"I’m literally an open book." },
+        { num:"05", role:"Secretary",          name:"Thembelihle Mdluli",        email:"lihlemdhluli082@gmail.com",      img:"{% static 'images/lihle.png' %}", fact:"I’m inquisitive with a touch of clownery." },
+      ]
+    },
+    {
+      id: "apb", label: "APB",
+      members: [
+        { num:"01", role:"Chairperson",        name:"Thabiso Msomi",             email:"thabisomsomi520@gmail.com",      img:"{% static 'images/doc.png' %}", fact:"On my first day at university, I spent an hour lost trying to find my class. When I finally found it and sat down, I realised it was the wrong class." },
+        { num:"02", role:"Deputy Chairperson", name:"Charlotte Thulisile Mabena",email:"thulimbuduma@gmail.com",         img:"{% static 'images/charlo.png' %}", fact:"I am basically a human detective in conversations. I can't help but notice the tiny detail and quirky patterns others might miss. It's like my brain always connect the dots, spotting hidden links and subtle vibes that make chats way more interesting  😉." },
+        { num:"03", role:"Training Officer",   name:"Nompumelelo Chiliza",       email:"nompumelelochiliza54@gmail.com", img:"{% static 'images/apb-exec-3.png' %}", fact:"Add fun fact here." },
+        { num:"04", role:"Campaigns Officer",  name:"Sphesihle Chamane",         email:"chamanesphesihle961@gmail.com",  img:"{% static 'images/sphe.png' %}", fact:"I was once voted the most friendly learner in the entire school on my 7th grade." },
+        { num:"05", role:"Secretary",          name:"Rorisang Xoliswa Manopole", email:"xoliswamanopole@gmail.com",      img:"{% static 'images/rori.png' %}", fact:" I am a middle child on both my mom's and dad's side 🧍🏿‍♀️😭." },
+      ]
+    },
+    {
+      id: "swc", label: "SWC",
+      members: [
+        { num:"01", role:"Chairperson",        name:"Lindokuhle Mokoena",        email:"mokoenalindokuhle84@gmail.com",  img:"{% static 'images/lindokuhle.png' %}", fact:" I can catch feelings from one good conversation and one forehead kiss." },
+        { num:"03", role:"Training Officer",   name:"Tsepo Masango",             email:"masangotsepo7@gmail.com",        img:"{% static 'images/swc-exec-3.png' %}", fact:"Add fun fact here." },
+        { num:"04", role:"Campaigns Officer",  name:"Nhlavutelo Hope Ndhlovu",   email:"nhlavutelondlovu49@gmail.com",   img:"{% static 'images/nka.png' %}", fact:"I’m socially awkward." },
+        { num:"05", role:"Secretary",          name:"Mukundi Nemufulwi",         email:"nemufulwimukundi@gmail.com",     img:"{% static 'images/muku.png' %}", fact:"I love reading novels." },
+      ]
+    },
+    {
+      id: "dfc", label: "DFC",
+      members: [
+        { num:"01", role:"Chairperson",        name:"Nkosinathi Msiza",          email:"nmsiza155@gmail.com",            img:"{% static 'images/mro.png' %}", fact:"I am a boring talkative person and I do not know how to swim." },
+        { num:"02", role:"Deputy Chairperson", name:"Nadine Hlungwane",          email:"hlungwanenadine@gmail.com",      img:"{% static 'images/nadine.png' %}", fact:"Add fun fact here." },
+        { num:"03", role:"Training Officer",   name:"Vuyiswa Mbena",             email:"vuyiswa.mbena@gmail.com",        img:"{% static 'images/vuyiswa.png' %}", fact:"Add fun fact here." },
+        { num:"04", role:"Campaigns Officer",  name:"Nobuhle Sangweni",          email:"nobuhleangel23@gmail.com",       img:"{% static 'images/dfc-exec-4.png' %}", fact:"I live for aesthetics 🤷🏽‍♀️." },
+        { num:"05", role:"Secretary",          name:"Kwena Ratau",               email:"maibelodivine17@gmail.com",      img:"{% static 'images/dfc-exec-5.png' %}", fact:"Add fun fact here." },
+      ]
+    },
+  ];
+
+  function getInitials(n) {
+    return n.trim().split(/\s+/).slice(0,2).map(p => p[0]).join('').toUpperCase();
+  }
+
+  function buildCard(m) {
+    return `<div class="exec-card">
+      <div class="exec-img-wrap">
+        <img src="${m.img}" alt="${m.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="exec-placeholder" style="display:none">
+          <div class="exec-initials">${getInitials(m.name)}</div>
+        </div>
+        <span class="exec-num">${m.num}</span>
+      </div>
+      <div class="exec-body">
+        <div class="exec-role">${m.role}</div>
+        <p class="exec-name">${m.name}</p>
+        <div class="fact-box">
+          <div class="fact-label">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            Fun fact
+          </div>
+          <p class="fact-text">${m.fact}</p>
+        </div>
+      </div>
+      <a href="mailto:${m.email}" class="exec-email" title="${m.email}">${m.email}</a>
+    </div>`;
+  }
+
+  const tabsEl   = document.getElementById('tabs');
+  const panelsEl = document.getElementById('panels');
+
+  campuses.forEach((campus, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = campus.label;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.campus-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + campus.id).classList.add('active');
+    });
+    tabsEl.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'campus-panel' + (i === 0 ? ' active' : '');
+    panel.id = 'panel-' + campus.id;
+    panel.innerHTML = campus.members.map(buildCard).join('');
+    panelsEl.appendChild(panel);
+  });
+
+  /* ── Scroll-spy nav highlight ── */
+  const navAs = document.querySelectorAll('.nav-links a');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navAs.forEach(a => a.classList.remove('active'));
+        const a = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+        if (a) {
+          a.classList.add('active');
+          /* keep active link visible in the scrollable nav row */
+          a.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+        }
+      }
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  document.querySelectorAll('section[id]').forEach(s => obs.observe(s));
+  /* ── Lightbox Gallery Logic ── */
+  const lightbox = document.createElement('div');
+  lightbox.className = 'lightbox';
+  lightbox.innerHTML = `
+    <span class="lightbox-close" id="lightbox-close">&times;</span>
+    <span class="lightbox-prev" id="lightbox-prev">&#10094;</span>
+    <img id="lightbox-img" src="" alt="Gallery Image">
+    <div id="lightbox-caption" class="lightbox-caption"></div>
+    <span class="lightbox-next" id="lightbox-next">&#10095;</span>
+  `;
+  document.body.appendChild(lightbox);
+
+  const lightboxImg = document.getElementById('lightbox-img');
+  const lightboxCaption = document.getElementById('lightbox-caption');
+  let currentImages = [];
+  let currentIndex = 0;
+
+  document.querySelectorAll('.year-panel img').forEach(img => {
+    img.addEventListener('click', function() {
+      const panel = this.closest('.year-panel');
+      if (!panel) return;
+      currentImages = Array.from(panel.querySelectorAll('img'));
+      currentIndex = currentImages.indexOf(this);
+      showLightboxImage();
+      lightbox.classList.add('active');
+    });
+  });
+
+  function showLightboxImage() {
+    if (currentImages.length > 0) {
+      const img = currentImages[currentIndex];
+      lightboxImg.src = img.src;
+      
+      const cell = img.closest('.bento-cell');
+      const captionEl = cell ? cell.querySelector('.bento-caption') : null;
+      lightboxCaption.textContent = captionEl ? captionEl.textContent : '';
+    }
+  }
+
+  document.getElementById('lightbox-close').addEventListener('click', () => lightbox.classList.remove('active'));
+  document.getElementById('lightbox-next').addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % currentImages.length;
+    showLightboxImage();
+  });
+  document.getElementById('lightbox-prev').addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length;
+    showLightboxImage();
+  });
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) lightbox.classList.remove('active');
+  });
+</script>
 
 </body>
 </html>

@@ -1,11 +1,9 @@
 from pyexpat.errors import messages
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from rest_framework import generics, permissions
-from django.contrib import messages
 from core.forms import FeedbackForm
-from .models import VolunteerActivity, ActivitySignup, Feedback, Feedback
+from .models import CareerToolkitAsset, VolunteerActivity, ActivitySignup, Feedback, Feedback
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,9 +13,9 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from .serializers import VolunteerActivitySerializer, ActivitySignupSerializer, ActivityRSVPSerializer, ActivitySerializer, FeedbackSerializer
 from users.permissions import IsCoordinator, IsAuthorizedExecutiveOrCoordinator 
-from django.db.models import Sum, Count
 from django.db.models.functions import ExtractMonth, ExtractYear
 import calendar
+from django.db.models import Sum, Count, F, Case, When, Value, IntegerField
 from datetime import date, timedelta, datetime
 from users.services import BackgroundEmailService, send_new_event_email, send_signup_confirmation_email , send_series_event_email
 from django.db.models import Q
@@ -28,12 +26,13 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.http import HttpResponse
 from django.core.mail import EmailMultiAlternatives, get_connection
-from users.models import User
+from users.models import User, VolunteerBadge
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.views.generic import CreateView, CreateView, TemplateView
 import json
 import os
+from openai import OpenAI
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.views import View
@@ -43,10 +42,27 @@ import urllib.request
 import urllib.parse
 from django.core.cache import cache
 from django.db.models import Sum, F, Q, DecimalField
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from datetime import timedelta
 
 
 def index_page(request):
-    return render(request, 'core/index.html')
+    event_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
+    event_hours = event_hours_dict['hours_earned__sum'] or 0.0
+
+    manual_hours_dict = User.objects.filter(role=User.Roles.STUDENT).aggregate(Sum('manual_bonus_hours'))
+    manual_hours = manual_hours_dict['manual_bonus_hours__sum'] or 0.0
+
+    global_total_hours = float(event_hours) + float(manual_hours)
+
+    context = {
+
+        'global_total_hours': int(global_total_hours) 
+    }
+    
+    return render(request, 'core/index.html', context)
 
 def about_page(request):
     return render(request, 'core/about.html')
@@ -64,19 +80,15 @@ class ActivityListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        
         # Default: Get all events
         queryset = VolunteerActivity.objects.all().order_by('-date_time')
-
         # 1. Visitor (Not logged in) -> See ALL
         if not user.is_authenticated:
             return queryset
-
         # 2. Coordinator or Superuser -> See ALL
         # We explicitly check if the role is 'COORDINATOR'
         if user.is_superuser or user.role == 'COORDINATOR':
             return queryset
-
         # 3. Student / Executive -> Filter by Campus
         # Only apply filter if they are NOT a coordinator
         if getattr(user, 'campus', None):
@@ -558,12 +570,10 @@ class StudentStatsView(APIView):
             motivation = f"👋 Welcome to {current_year}! New year, new grind. Let's get it."
 
         recruits_count = user.recruits.count()
-
-        # 👇 --- FIXED RANKING LOGIC --- 👇
         
         # 1. Get all students
         # (Assuming your User model is imported. Adjust import if needed)
-        from users.models import User 
+        from users.models import User, VolunteerBadge 
         all_students = User.objects.filter(role=User.Roles.STUDENT)
         
         # 2. Start a dictionary with EVERY student's bonus hours
@@ -596,7 +606,48 @@ class StudentStatsView(APIView):
             if uid in campus_student_ids and peer_hours > total_hours and uid != user.id:
                 campus_rank += 1
                 
-        # 👆 ------------------------------ 👆
+        
+        punctuality_data = ActivitySignup.objects.filter(
+            user=user, 
+            attended=True, 
+            sign_out_time__year=current_year,
+            sign_in_time__isnull=False # Ensure they actually signed in
+        ).annotate(
+            is_early=Case(
+                When(sign_in_time__lte=F('activity__date_time'), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            ),
+            is_late=Case(
+                When(sign_in_time__gt=F('activity__date_time'), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        ).aggregate(
+            early_total=Sum('is_early'),
+            late_total=Sum('is_late')
+        )
+
+        early_count = punctuality_data['early_total'] or 0
+        late_count = punctuality_data['late_total'] or 0
+
+
+        if early_count > late_count:
+            punctuality_status = "Usually Early"
+            punc_color = "#10B981" # Success Green
+            punc_bg = "rgba(16, 185, 129, 0.15)"
+        elif late_count > early_count:
+            punctuality_status = "Usually Late"
+            punc_color = "#ef4444" # Danger Red
+            punc_bg = "rgba(239, 68, 68, 0.15)"
+        elif early_count == late_count and early_count > 0:
+            punctuality_status = "Perfectly Even"
+            punc_color = "#f59e0b" # Warning Orange
+            punc_bg = "rgba(245, 158, 11, 0.15)"
+        else:
+            punctuality_status = "No Data Yet"
+            punc_color = "#64748b" # Muted Slate
+            punc_bg = "rgba(100, 116, 139, 0.15)"
 
         # --- FORMAT MONTHLY DATA ---
         monthly_data = ActivitySignup.objects.filter(
@@ -618,7 +669,26 @@ class StudentStatsView(APIView):
             })
 
         user_awards = user.awards.all()
-        awards_data = [{'name': a.name, 'icon': a.icon, 'color': a.color} for a in user_awards]
+        awards_data = [{'name': a.name, 'icon': a.icon, 'color': a.color, 'description': a.description, 'date_awarded': a.date_awarded} for a in user_awards]
+        
+        # --- BADGES LOGIC ---
+        if total_hours >= 40:
+            VolunteerBadge.objects.get_or_create(user=user, badge_type='40_hours')
+        if total_hours >= 80:
+            VolunteerBadge.objects.get_or_create(user=user, badge_type='80_hours')
+            
+        user_badges = VolunteerBadge.objects.filter(user=user)
+        badges_data = [{'type': b.badge_type, 'date_earned': b.date_earned.strftime("%b %d, %Y")} for b in user_badges]
+        
+        # --- LEARNING ACCOLADES LOGIC ---
+        from lms.models import StudentProgress
+        accolades = StudentProgress.objects.filter(user=user, score=100.0).select_related('quiz')
+        learning_accolades = [
+            {
+                'quiz_title': acc.quiz.title,
+                'date_completed': acc.completed_at.strftime("%b %d, %Y")
+            } for acc in accolades
+        ]
         
         recent_events = ActivitySignup.objects.filter(
             user=user, 
@@ -652,6 +722,13 @@ class StudentStatsView(APIView):
             "monthly": formatted_months,
             "history": events_list,
             "awards": awards_data,
+            "badges": badges_data,
+            "learning_accolades": learning_accolades,
+            "punctuality_status": punctuality_status,
+            "punctuality_color": punc_color,
+            "punctuality_bg": punc_bg,
+            "early_count": early_count,
+            "late_count": late_count,
             "executive_position": user.executive_position,
         })
         
@@ -810,8 +887,6 @@ def email_quarterly_pdf(request):
         print(f"Email Error: {e}")
         return Response({"error": "Failed to send email."}, status=500)
     
-
-
 class SendAnnouncementView(APIView):
     permission_classes = [IsAuthorizedExecutiveOrCoordinator] 
 
@@ -921,7 +996,6 @@ class LeaderboardAPIView(APIView):
 
         return Response(response_data)    
         
-        
 class VideoGuidesView(TemplateView):
     template_name = 'core/video_guides.html' 
 
@@ -943,14 +1017,11 @@ class VideoGuidesView(TemplateView):
             },
         ]
         return context
-    
-    
 
 @permission_classes([IsCoordinator]) # Or your standard login decorators
 def leaderboard_page_view(request):
     # Render a dedicated HTML template (we will create this in Step 3)
     return render(request, 'core/leaderboard_race.html')
-
 
 # --- 2. THE DATA API VIEW ---
 @api_view(['GET'])
@@ -1033,8 +1104,6 @@ def leaderboard_race_data(request):
 
     return Response(race_timeline)
 
-
-
 class StudentFeedbackView(LoginRequiredMixin, CreateView):
     model = Feedback
     form_class = FeedbackForm
@@ -1062,8 +1131,6 @@ class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
         context['feedbacks'] = Feedback.objects.all().order_by('-created_at')
         return context
     
-
-
 def quarterly_report_view(request):
     now = timezone.now()
 
@@ -1174,9 +1241,6 @@ def quarterly_report_view(request):
     all_time_rsvps = ActivitySignup.objects.count()
     all_time_attended = ActivitySignup.objects.filter(attended=True).count()
     attendance_rate = round((all_time_attended / all_time_rsvps) * 100) if all_time_rsvps > 0 else 0
-
-
-
     # ==========================================
     # 4. PUNCTUALITY METRICS
     # ==========================================
@@ -1207,8 +1271,6 @@ def quarterly_report_view(request):
         'total_events': total_events,
         'total_registered': total_registered,
         'active_peers': active_peers,
-
-        
         # Javascript Charts 
         'chart_labels': json.dumps(turnout_labels),
         'chart_expected': expected_data,
@@ -1219,9 +1281,312 @@ def quarterly_report_view(request):
         'punctuality_excused': excused_count,
         
         'feedbacks': all_feedbacks,
-        
         # Unpack all campus dictionary variables dynamically
         **campus_context, 
     }
 
     return render(request, 'core/quarterly_report.html', context)
+
+
+client = OpenAI(api_key=getattr(settings, 'OPENAI_API_KEY', ''))
+
+class CareerToolkitStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # 1. Gather Verified Data (Same as before)
+        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
+            total_hours=Sum('hours_earned'),
+            total_events=Count('id')
+        )
+        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
+        events_attended = stats['total_events'] or 0
+        
+        roles = "Peer Educator Volunteer"
+        if getattr(user, 'executive_position', None):
+            roles = f"{user.executive_position}, Peer Educator Volunteer"
+            
+        first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
+        start_year = first_event.sign_in_time.year if first_event else timezone.now().year
+        current_year = timezone.now().year
+        years_active = f"{start_year} - Present" if start_year != current_year else f"{current_year}"
+
+        # 2. Check Saved Assets & Staleness
+        saved_assets = CareerToolkitAsset.objects.filter(user=user)
+        asset_status = {
+            'cv': {'exists': False, 'needs_update': False},
+            'linkedin': {'exists': False, 'needs_update': False},
+            'scholarship': {'exists': False, 'needs_update': False},
+        }
+
+        for asset in saved_assets:
+            # Check if their current hours/events are higher than when the asset was generated
+            needs_update = (total_hours > asset.hours_at_generation) or (events_attended > asset.events_at_generation)
+            
+            asset_status[asset.asset_type] = {
+                'exists': True,
+                'needs_update': needs_update,
+                'content': asset.generated_content # Send the saved text!
+            }
+
+        return Response({
+            "totalHours": total_hours,
+            "eventsAttended": events_attended,
+            "roles": roles,
+            "yearsActive": years_active,
+            "assetStatus": asset_status # <-- Pass the asset statuses to the frontend
+        })
+         
+class CareerToolkitGenerateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        gen_type = request.data.get('type') 
+        force_update = request.data.get('force_update', False) # True if user clicks "Update"
+        user = request.user
+
+        if gen_type not in ['cv', 'linkedin', 'scholarship']:
+            return Response({"error": "Invalid generation type."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        # 1. Re-fetch exact verified data to feed to OpenAI
+        # Adjust 'ActivitySignup' and fields based on your actual model names
+        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
+            total_hours=Sum('hours_earned'),
+            total_events=Count('id')
+        )
+        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
+        events_attended = stats['total_events'] or 0
+        
+        # --- 2. 10-HOUR RULE CHECK ---
+        if force_update:
+            existing_asset = CareerToolkitAsset.objects.filter(user=user, asset_type=gen_type).first()
+            if existing_asset and total_hours < existing_asset.hours_at_generation + 10:
+                needed_hours = existing_asset.hours_at_generation + 10
+                return Response({
+                    "error": f"You need to log at least 10 more hours to update this section to save system resources. Keep volunteering! (Current: {total_hours}h, Needed: {needed_hours}h)"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Rate Limiting (Max 5 generations per user per month)
+        # We only count times we actually hit the OpenAI API
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        recent_generations = CareerToolkitAsset.objects.filter(user=user, last_updated__gte=thirty_days_ago).count()
+        
+        if force_update and recent_generations >= 5:
+            return Response({"error": "You have reached the monthly limit for AI generations. Please try again next month."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        roles = "Campus Peer Educator Volunteer"
+        if getattr(user, 'executive_position', None):
+            roles = f"{user.executive_position} & Peer Educator Volunteer"
+
+        first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
+        start_date = first_event.sign_in_time.strftime("%B %Y") if first_event else timezone.now().strftime("%B %Y")
+
+        # Fetch completed courses from LMS
+        from lms.models import StudentProgress
+        completed_quizzes = StudentProgress.objects.filter(user=user, score=100.0).select_related('quiz')
+        completed_courses = [progress.quiz.title for progress in completed_quizzes]
+        completed_courses_str = ", ".join(completed_courses) if completed_courses else "None yet"
+
+        # 3. Construct the Grounded Context Data
+        volunteer_context = f"""
+        Student Name: {user.first_name} {user.last_name}
+        Organization: C-SHAW - Centre for Student Health and Wellness | University of Johannesburg
+        Role(s) Held: {roles}
+        Timeframe: {start_date} – Present
+        Total Verified Hours: {total_hours} hours
+        Total Events Attended: {events_attended} events
+        Completed Training/Courses: {completed_courses_str}
+        """
+
+        # 4. Build Strict OpenAI Prompts
+        system_prompt = (
+            "You are a professional career coach helping a university student translate their verified "
+            "volunteer data into highly professional career content. Write in a calm, grounded, and highly realistic tone. "
+            "DO NOT exaggerate, use hyperbole, or sound like an AI chatbot. Base everything strictly on the provided facts. "
+            "Use ONLY the data provided. Emphasize employability, leadership, and community impact realistically.\n"
+            "CRITICAL INSTRUCTION: You MUST explicitly include and state the student's 'Total Verified Hours' "
+            "somewhere in the generated text (e.g. within a bullet point or summary sentence).\n\n"
+            "CRITICAL FORMATTING RULE: Do not use any markdown formatting. Do not use asterisks (**), "
+            "underscores (_), or header hashes (#). Return pure, clean plaintext with normal line breaks."
+        )
+
+        if gen_type == 'cv':
+            user_prompt = (
+                f"Based on the following data, write a beautifully structured CV experience section.\n"
+                f"Start with the Role Title, Organization Name, and Date Range on separate lines.\n"
+                f"Follow with exactly 4 concise, action-oriented bullet points detailing the impact.\n"
+                f"Use a standard literal bullet character (•) for each bullet point.\n\n"
+                f"Data:\n{volunteer_context}"
+            )
+        
+        elif gen_type == 'linkedin':
+            user_prompt = f"Based on the following data, write a 2-paragraph professional LinkedIn summary in the first person. Separate the paragraphs with a single blank line. Do not include any title headers.\n\nData:\n{volunteer_context}"
+        
+        elif gen_type == 'scholarship':
+            user_prompt = f"Based on the following data, draft a 3-paragraph application statement suitable for a scholarship or leadership program. Write in the first person. Separate paragraphs with a single blank line. Do not include headers.\n\nData:\n{volunteer_context}"
+
+        # 6. Call OpenAI API (Using the v1.0.0+ syntax)
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo", 
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7, 
+                max_tokens=400
+            )
+            
+            # 1. Extract the text FIRST
+            generated_text = response.choices[0].message.content.strip()
+            
+            # 2. THEN save it to the database
+            asset, created = CareerToolkitAsset.objects.update_or_create(
+                user=user,
+                asset_type=gen_type,
+                defaults={
+                    'generated_content': generated_text,
+                    'hours_at_generation': total_hours,
+                    'events_at_generation': events_attended
+                }
+            )
+            
+            # 3. Return it to the frontend
+            return Response({"content": generated_text})
+            
+        except Exception as e:
+            return Response({"error": f"AI Generation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CareerToolkitReportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # 1. Fetch Verified Data
+        # Ensure 'ActivitySignup' matches your actual model name
+        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
+            total_hours=Sum('hours_earned'),
+            total_events=Count('id')
+        )
+        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
+        events_attended = stats['total_events'] or 0
+        
+        roles = "Peer Educator Volunteer"
+        if getattr(user, 'executive_position', None):
+            roles = f"{user.executive_position}"
+
+        first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
+        start_year = first_event.sign_in_time.year if first_event else timezone.now().year
+        current_year = timezone.now().year
+        years_active = f"{start_year} - Present" if start_year != current_year else f"{current_year}"
+
+        # 2. Setup the PDF Response
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="CSHAW_Impact_Report_{user.last_name}.pdf"'
+
+        # 3. Create the PDF Canvas
+        p = canvas.Canvas(response, pagesize=letter)
+        width, height = letter
+
+        # --- Define Brand Colors ---
+        NAVY = colors.HexColor("#0f172a")
+        ORANGE = colors.HexColor("#E35205")
+        LIGHT_GREY = colors.HexColor("#f8fafc")
+        BORDER_GREY = colors.HexColor("#e2e8f0")
+        TEXT_MAIN = colors.HexColor("#1e293b")
+        TEXT_MUTED = colors.HexColor("#64748b")
+
+        # --- 1. HEADER (Deep Navy with Orange Accent) ---
+        p.setFillColor(NAVY)
+        p.rect(0, height - 110, width, 110, fill=1, stroke=0)
+        
+        # Orange Accent Line
+        p.setFillColor(ORANGE)
+        p.rect(0, height - 115, width, 5, fill=1, stroke=0)
+        
+        # Header Text
+        p.setFillColor(colors.white)
+        p.setFont("Helvetica-Bold", 24)
+        p.drawString(40, height - 55, "OFFICIAL IMPACT REPORT")
+        
+        p.setFillColor(colors.HexColor("#cbd5e1"))
+        p.setFont("Helvetica", 11)
+        p.drawString(40, height - 80, "C-SHAW | Centre for Student Health and Wellness | University of Johannesburg")
+
+        # --- 2. DOCUMENT META ---
+        p.setFillColor(TEXT_MUTED)
+        p.setFont("Helvetica", 10)
+        p.drawString(40, height - 150, f"Issued: {timezone.now().strftime('%d %B %Y')}")
+        p.drawString(40, height - 165, "Document Type: Verified Volunteer Record")
+
+        # --- 3. STUDENT PROFILE BOX (Light Grey Rounded Rectangle) ---
+        p.setFillColor(LIGHT_GREY)
+        p.setStrokeColor(BORDER_GREY)
+        p.roundRect(40, height - 280, width - 80, 90, radius=8, fill=1, stroke=1)
+
+        # Profile Labels
+        p.setFillColor(TEXT_MUTED)
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(60, height - 220, "VOLUNTEER NAME")
+        p.drawString(260, height - 220, "PRIMARY ROLE")
+        p.drawString(450, height - 220, "ACTIVE PERIOD")
+
+        # Profile Values
+        p.setFillColor(TEXT_MAIN)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(60, height - 245, f"{user.first_name} {user.last_name}")
+
+        p.setFont("Helvetica", 12)
+        # Truncate role if it's too long to fit the box cleanly
+        display_role = roles[:22] + "..." if len(roles) > 22 else roles
+        p.drawString(260, height - 245, display_role)
+        p.drawString(450, height - 245, str(years_active))
+
+        # --- 4. THE METRICS DASHBOARD ---
+        
+        # Badge 1: Total Hours (Highlighted with Orange)
+        p.setFillColor(colors.white)
+        p.setStrokeColor(ORANGE)
+        p.roundRect(40, height - 400, 240, 90, radius=8, fill=1, stroke=1)
+
+        p.setFillColor(ORANGE)
+        p.setFont("Helvetica-Bold", 32)
+        p.drawString(60, height - 355, f"{total_hours}")
+        
+        p.setFillColor(TEXT_MAIN)
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(60, height - 380, "Total Verified Hours")
+
+        # Badge 2: Events Attended
+        p.setFillColor(colors.white)
+        p.setStrokeColor(BORDER_GREY)
+        p.roundRect(310, height - 400, width - 350, 90, radius=8, fill=1, stroke=1)
+
+        p.setFillColor(NAVY)
+        p.setFont("Helvetica-Bold", 32)
+        p.drawString(330, height - 355, f"{events_attended}")
+        
+        p.setFillColor(TEXT_MUTED)
+        p.setFont("Helvetica", 12)
+        p.drawString(330, height - 380, "Events Supported")
+
+        # --- 5. VERIFICATION FOOTER ---
+        # A clean line above the footer
+        p.setStrokeColor(BORDER_GREY)
+        p.line(40, 70, width - 40, 70)
+
+        p.setFillColor(TEXT_MUTED)
+        p.setFont("Helvetica-Oblique", 9)
+        p.drawString(40, 50, "This is an automated, official record generated by the C-SHAW Volunteer Management System.")
+        p.drawString(40, 35, "All hours represented here have been actively verified by campus executives and clinic staff.")
+
+        # Save and close the PDF
+        p.showPage()
+        p.save()
+
+        return response

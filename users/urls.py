@@ -9,11 +9,13 @@ from .views import (
     LogoutView,
     AssignExecutiveView,
     StudentListView,
+    Toggle2FAView,
     UserProfileView,
     UserDeleteView, 
     ChangePasswordView,   
     AwardListView,
     StudentUpdateView,
+    VerifyOTPView,
     
     login_page,
     student_register_page,
@@ -54,11 +56,13 @@ urlpatterns = [
          auth_views.PasswordResetCompleteView.as_view(template_name='users/password_reset_complete.html'), 
          name='password_reset_complete'),
 
-    #path('login/', login_page, name='login-page'),
-    #path('register/student/', student_register_page, name='student-register-page'),
+    path('login/', login_page, name='login-page'),
+    path('register/student/', student_register_page, name='student-register-page'),
+    path('api/auth/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('api/users/toggle-2fa/', Toggle2FAView.as_view(), name='toggle_2fa'),
     
-    path('login/', views.index_page, name='login-page'),
-    path('register/student/', views.index_page, name='student-register-page'),
+    #path('login/', views.index_page, name='login-page'),
+    #path('register/student/', views.index_page, name='student-register-page'),
     
     
     #path('register/coordinator/', coordinator_register_page, name='coordinator-register-page'),

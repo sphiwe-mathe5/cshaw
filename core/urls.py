@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import excursion_views
 from django.views.generic import TemplateView
 
 urlpatterns = [
@@ -34,4 +35,14 @@ urlpatterns = [
     path('timeline-race/', views.leaderboard_page_view, name='leaderboard_race_page'),
     path('api/activities/leaderboard-race/', views.leaderboard_race_data, name='api_leaderboard_race'),
     path('quarterly-report/', views.quarterly_report_view, name='quarterly-report'),
+    path('api/career-toolkit/stats/',views.CareerToolkitStatsView.as_view(), name='career_toolkit_stats'),
+    path('api/career-toolkit/generate/', views.CareerToolkitGenerateView.as_view(), name='career_toolkit_generate'),
+    path('api/career-toolkit/report/', views.CareerToolkitReportView.as_view(), name='career_toolkit_report'),
+    
+    # Excursion Endpoints
+    path('excursions/scanner/', excursion_views.scanner_dashboard_view, name='scanner-dashboard'),
+    path('api/excursions/generate/', excursion_views.GenerateTicketsAPIView.as_view(), name='generate-tickets'),
+    path('api/excursions/revoke/', excursion_views.RevokeTicketAPIView.as_view(), name='revoke-ticket'),
+    path('api/excursions/validate/', excursion_views.ValidateTicketAPIView.as_view(), name='validate-ticket'),
+
 ]

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>New Course Material</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #F3F4F6;
+            margin: 0;
+            padding: 0;
+            color: #1F2937;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .header {
+            background-color: #FF8C42;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #FFFFFF;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .content p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4B5563;
+        }
+        .course-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1F2937;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #F9FAFB;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+        }
+        .cta-button {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 28px;
+            background-color: #FF8C42;
+            color: #FFFFFF !important;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        .footer {
+            background-color: #F9FAFB;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #6B7280;
+            border-top: 1px solid #E5E7EB;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>New Learning Material!</h1>
+        </div>
+        <div class="content">
+            <p>Hi there,</p>
+            <p>A new learning unit has just been uploaded to the C-SHAW Volunteer Hub. It's time to boost your knowledge and earn more points!</p>
+            
+            <div class="course-title">
+                {{ topic_title }}<br>
+                <span style="font-size: 16px; font-weight: normal; color: #6B7280;">{{ unit_title }}</span>
+            </div>
+            
+            <a href="{{ link }}" class="cta-button">Go to Learning Hub</a>
+        </div>
+        <div class="footer">
+            <p>Keep up the great work!</p>
+            <p>&copy; The C-SHAW Volunteer Hub Team</p>
+        </div>
+    </div>
+</body>
+</html>

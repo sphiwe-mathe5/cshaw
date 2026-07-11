@@ -2,58 +2,193 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Privacy Policy - Volunteer Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - C-SHAW Volunteer Hub</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/auth.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
     <style>
-        body { background: #f9f9f9; color: #333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .legal-container { max-width: 800px; margin: 40px auto; background: white; padding: 50px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { color: #1a1a2e; border-bottom: 2px solid #E35205; padding-bottom: 15px; margin-bottom: 30px; }
-        h2 { color: #E35205; font-size: 1.2rem; margin-top: 30px; }
-        p, li { line-height: 1.6; color: #555; }
-        ul { padding-left: 20px; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: 500; }
-        .back-link:hover { color: #E35205; }
+        :root {
+            --navy: #0f172a;
+            --orange: #E35205;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body { 
+            background: var(--bg-body); 
+            color: var(--text-main); 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.7;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .legal-wrapper {
+            max-width: 850px;
+            margin: 40px auto;
+        }
+
+        .back-link { 
+            display: inline-flex; 
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--orange); }
+
+        .legal-container { 
+            background: var(--bg-card); 
+            padding: 50px 60px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03); 
+            border: 1px solid var(--border);
+        }
+
+        .legal-header {
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 30px;
+            margin-bottom: 40px;
+        }
+
+        h1 { 
+            color: var(--navy); 
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0 0 10px 0; 
+            letter-spacing: -0.5px;
+        }
+
+        .last-updated {
+            color: var(--orange);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 { 
+            color: var(--navy); 
+            font-size: 1.35rem; 
+            margin-top: 40px; 
+            margin-bottom: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Subtle orange dot before headings */
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--orange);
+            border-radius: 50%;
+        }
+
+        p, li { color: var(--text-muted); font-size: 1.05rem; }
+        
+        ul { 
+            padding-left: 20px; 
+            margin-bottom: 24px;
+        }
+
+        li { margin-bottom: 10px; }
+        strong { color: var(--text-main); font-weight: 700; }
+
+        a.contact-link {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        a.contact-link:hover { text-decoration: underline; }
+
+        .legal-footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .legal-container { padding: 30px 20px; }
+            h1 { font-size: 2rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="legal-container">
-        <a href="{% url 'index' %}" class="back-link">&larr; Back to Hub</a>
+    <div class="legal-wrapper">
+        <a href="{% url 'index' %}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back to Hub
+        </a>
         
-        <h1>Privacy Policy</h1>
-        <p><strong>Last Updated:</strong> March 2026</p>
+        <div class="legal-container">
+            <div class="legal-header">
+                <h1>Privacy Policy</h1>
+                <div class="last-updated">Last Updated: June 2026</div>
+            </div>
 
-        <p>The Volunteer Hub ("we", "our") is committed to protecting the privacy of our students and staff. This policy outlines how we handle your personal information.</p>
+            <p>The C-SHAW Volunteer Hub ("we", "our") is committed to protecting the privacy of our students, staff, and volunteers. This policy outlines how we handle your personal information in accordance with South African privacy standards, including the Protection of Personal Information Act (POPIA).</p>
 
-        <h2>1. Information We Collect</h2>
-        <p>We collect information necessary to manage volunteer activities and academic records:</p>
-        <ul>
-            <li><strong>Personal Details:</strong> Name, Surname, Student/Staff Number, and Email Address.</li>
-            <li><strong>Activity Data:</strong> Volunteer hours logged, events attended, and campus affiliations.</li>
-        </ul>
+            <h2>1. Information We Collect</h2>
+            <p>We collect information necessary to manage volunteer activities, academic records, and career development tools:</p>
+            <ul>
+                <li><strong>Personal Identifiers:</strong> Name, Surname, Student/Staff Number, and University Email Address.</li>
+                <li><strong>Activity Data:</strong> Volunteer hours logged, specific events attended, roles held, and campus affiliations.</li>
+                <li><strong>System Data:</strong> Standard access logs, session tokens, and login timestamps to ensure platform security.</li>
+            </ul>
 
-        <h2>2. How We Use Your Data</h2>
-        <p>Your data is used exclusively for:</p>
-        <ul>
-            <li>Verifying student identity and academic standing.</li>
-            <li>Tracking community engagement hours for certification.</li>
-            <li>Generating aggregate reports for the Centre of Student Health and Wellness(C-SHAW).</li>
-        </ul>
+            <h2>2. How We Use Your Data</h2>
+            <p>Your data is used exclusively to enhance your student experience and manage our programs:</p>
+            <ul>
+                <li>Verifying student identity and maintaining academic standing integrity.</li>
+                <li>Tracking and authenticating community engagement hours for official certification.</li>
+                <li>Generating aggregate, anonymized reports for the Centre of Student Health and Wellness (C-SHAW) management.</li>
+                <li>Providing automated career development services (e.g., generating CV bullet points based on your verified hours).</li>
+            </ul>
 
-        <h2>3. Data Sharing</h2>
-        <p>We do not sell or share your personal data with third parties. Data is only accessible by:</p>
-        <ul>
-            <li><strong>Portal Administrators:</strong> To manage the platform.</li>
-            <li><strong>Coordinators:</strong> To verify attendance for events you RSVP to.</li>
-        </ul>
+            <h2>3. Third-Party Services & AI Processing</h2>
+            <p>We do not sell or trade your personal data. However, to provide advanced platform features, we utilize trusted third-party service providers:</p>
+            <ul>
+                <li><strong>AI Career Toolkit:</strong> To generate professional CV summaries and statements, your <em>verified hours, roles, and event names</em> are securely transmitted to an external Artificial Intelligence provider (e.g., OpenAI API). <strong>We do not send your contact information, and your data is explicitly opted-out of being used to train their public AI models.</strong></li>
+                <li><strong>Hosting & Email:</strong> We use secure cloud infrastructure to host our database and manage automated email communications (e.g., RSVP confirmations).</li>
+            </ul>
 
-        <h2>4. Data Security</h2>
-        <p>We implement security measures including password encryption (hashing) and secure session management to protect your account.</p>
+            <h2>4. Data Security & Retention</h2>
+            <p>We implement stringent security measures, including password encryption (hashing), secure session management, and SSL encryption, to protect your account. Your data is retained only for as long as you are an active student or alumni engaging with C-SHAW, or as required by university data retention policies. Unused accounts and associated data may be anonymized or securely deleted after a period of prolonged inactivity.</p>
 
-        <h2>5. Contact Us</h2>
-        <p>If you have questions about your data, please contact us at <a href="mailto:support@cshaw.co.za">support@cshaw.co.za</a>.</p>
+            <h2>5. Your Privacy Rights</h2>
+            <p>Under POPIA, you have the right to:</p>
+            <ul>
+                <li>Request a copy of the personal data we hold about you.</li>
+                <li>Request corrections to any inaccurate or incomplete data.</li>
+                <li>Request the deletion of your account and associated personal data (subject to university record-keeping requirements).</li>
+            </ul>
+
+            <h2>6. Contact Us</h2>
+            <p>If you have questions about your data, wish to exercise your privacy rights, or have concerns about this policy, please contact our administrative team at <a href="mailto:support@cshaw.co.za" class="contact-link">support@cshaw.co.za</a>.</p>
+            
+            <div class="legal-footer">
+                &copy; 2026 Centre of Student Health and Wellness (C-SHAW)
+            </div>
+        </div>
     </div>
 </body>
 </html>

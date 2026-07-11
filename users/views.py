@@ -24,6 +24,13 @@ from django.db import transaction
 from .services import BackgroundEmailService, send_welcome_email
 from .models import User, Award
 from .permissions import IsCoordinator
+from django.utils import timezone
+from datetime import timedelta
+import random
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
 
 
 def verify_recaptcha(recaptcha_token):
@@ -48,7 +55,37 @@ def verify_recaptcha(recaptcha_token):
         print(f"reCAPTCHA Error: {e}")
         return False
 
+def send_postmark_otp(recipient_email, otp_code, first_name="Volunteer"):
+    subject = "C-SHAW Hub: Your Login Verification Code"
+    
+    # Load the HTML template and pass the variables
+    html_content = render_to_string('users/otp_email.html', {
+        'otp_code': otp_code,
+        'first_name': first_name
+    })
+    
+    # Create a plain-text fallback automatically
+    text_content = strip_tags(html_content)
 
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_content,
+        from_email=settings.DEFAULT_FROM_EMAIL, # Uses 'info@cshaw.co.za' from settings
+        to=[recipient_email]
+    )
+    
+    # Attach the HTML version
+    msg.attach_alternative(html_content, "text/html")
+    
+    # Tell Anymail to use the transactional stream
+    msg.message_stream = "outbound" 
+    
+    try:
+        msg.send()
+    except Exception as e:
+        print(f"Failed to send OTP via Anymail: {e}")
+        
+        
 class StudentRegistrationView(generics.CreateAPIView):
     serializer_class = StudentRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -139,7 +176,6 @@ class LoginView(views.APIView):
     def post(self, request):
         # --- 1. VERIFY RECAPTCHA ---
         recaptcha_token = request.data.get('g-recaptcha-response')
-
         if not recaptcha_token:
             return Response({'error': 'Missing reCAPTCHA token.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -152,9 +188,7 @@ class LoginView(views.APIView):
 
             if not result.get('success') or result.get('score', 0) < 0.5:
                 return Response({'error': 'Spam detected. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
-
         except Exception as e:
-            print(f"reCAPTCHA Error: {e}")
             return Response({'error': 'Captcha verification failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # --- 2. AUTHENTICATE ---
@@ -166,6 +200,26 @@ class LoginView(views.APIView):
             user = authenticate(request, email=email, password=password)
 
             if user:
+                # --- 3. CHECK FOR 2FA ---
+                if user.is_2fa_enabled:
+                    # Generate a 6-digit code
+                    otp = str(random.randint(100000, 999999))
+                    user.otp_code = otp
+                    user.otp_created_at = timezone.now()
+                    user.save()
+
+                    # Save their ID temporarily in the session so we know who is trying to verify
+                    request.session['pre_2fa_user_id'] = user.id
+                    
+                    # Send the email via Postmark
+                    send_postmark_otp(user.email, otp)
+
+                    return Response({
+                        "requires_2fa": True, 
+                        "message": "OTP sent to your email."
+                    }, status=status.HTTP_200_OK)
+
+                # If 2FA is off, log them in normally
                 login(request, user)
                 return Response({
                     "message": "Login successful",
@@ -175,9 +229,46 @@ class LoginView(views.APIView):
                 }, status=status.HTTP_200_OK)
 
             return Response({"error": "Invalid credentials. Please check your email and password."}, status=status.HTTP_401_UNAUTHORIZED)
-
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class VerifyOTPView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        otp_entered = request.data.get('otp')
+        user_id = request.session.get('pre_2fa_user_id')
+
+        if not user_id or not otp_entered:
+            return Response({"error": "Session expired. Please log in again."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if OTP has expired (10-minute limit)
+        expiration_time = user.otp_created_at + timedelta(minutes=10)
+        if timezone.now() > expiration_time:
+            return Response({"error": "OTP has expired. Please log in again to receive a new code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify the code
+        if user.otp_code == otp_entered:
+            # Clear the OTP data for security
+            user.otp_code = None
+            user.save()
+            
+            # Formally log the user in
+            login(request, user)
+            del request.session['pre_2fa_user_id'] # Clear the temporary session var
+            
+            return Response({
+                "message": "Login successful",
+                "role": user.role,
+                "campus": user.campus,
+                "is_executive": user.is_executive
+            }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid verification code."}, status=status.HTTP_401_UNAUTHORIZED)
+    
 class LogoutView(views.APIView):
     def post(self, request):
         logout(request)
@@ -309,7 +400,23 @@ class UserDeleteView(APIView):
         user.delete()
         return Response({"message": "Account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
+class Toggle2FAView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
+    def post(self, request):
+        user = request.user
+        
+        # Toggle the boolean state
+        user.is_2fa_enabled = not user.is_2fa_enabled
+        user.save()
+        
+        status_msg = "enabled" if user.is_2fa_enabled else "disabled"
+        return Response({
+            "message": f"Two-Factor Authentication is now {status_msg}.",
+            "is_2fa_enabled": user.is_2fa_enabled
+        }, status=status.HTTP_200_OK)
+        
+        
 def login_page(request):
     context = {
         'RECAPTCHA_SITE_KEY': config('RECAPTCHA_SITE_KEY')

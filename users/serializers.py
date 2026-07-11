@@ -127,10 +127,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             'first_name', 'last_name', 'email', 
             'student_number', 'campus', 'role', 'role_label',
-            'receive_notifications'
+            'receive_notifications', 'is_2fa_enabled'
         ]
         # These fields cannot be changed by the user
-        read_only_fields = ['email', 'role', 'role_label', 'student_number']
+        read_only_fields = ['email', 'role', 'role_label', 'student_number', 'is_2fa_enabled']
 
 class UserManageSerializer(serializers.ModelSerializer):
     # We use PrimaryKeyRelatedField for WRITING (sending IDs like [1, 2])

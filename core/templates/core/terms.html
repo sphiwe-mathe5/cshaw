@@ -2,48 +2,186 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terms of Use - Volunteer Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Use - C-SHAW Volunteer Hub</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/auth.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
     <style>
-        body { background: #f9f9f9; color: #333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        .legal-container { max-width: 800px; margin: 40px auto; background: white; padding: 50px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { color: #1a1a2e; border-bottom: 2px solid #E35205; padding-bottom: 15px; margin-bottom: 30px; }
-        h2 { color: #E35205; font-size: 1.2rem; margin-top: 30px; }
-        p, li { line-height: 1.6; color: #555; }
-        .back-link { display: inline-block; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: 500; }
-        .back-link:hover { color: #E35205; }
+        :root {
+            --navy: #0f172a;
+            --orange: #E35205;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body { 
+            background: var(--bg-body); 
+            color: var(--text-main); 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.7;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .legal-wrapper {
+            max-width: 850px;
+            margin: 40px auto;
+        }
+
+        .back-link { 
+            display: inline-flex; 
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--orange); }
+
+        .legal-container { 
+            background: var(--bg-card); 
+            padding: 50px 60px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03); 
+            border: 1px solid var(--border);
+        }
+
+        .legal-header {
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 30px;
+            margin-bottom: 40px;
+        }
+
+        h1 { 
+            color: var(--navy); 
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0 0 10px 0; 
+            letter-spacing: -0.5px;
+        }
+
+        .last-updated {
+            color: var(--orange);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 { 
+            color: var(--navy); 
+            font-size: 1.35rem; 
+            margin-top: 40px; 
+            margin-bottom: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--orange);
+            border-radius: 50%;
+        }
+
+        p, li { color: var(--text-muted); font-size: 1.05rem; }
+        
+        ul { 
+            padding-left: 20px; 
+            margin-bottom: 24px;
+        }
+
+        li { margin-bottom: 10px; }
+        strong { color: var(--text-main); font-weight: 700; }
+
+        a.contact-link {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        a.contact-link:hover { text-decoration: underline; }
+
+        .legal-footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 600px) {
+            .legal-container { padding: 30px 20px; }
+            h1 { font-size: 2rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="legal-container">
-        <a href="{% url 'index' %}" class="back-link">&larr; Back to Hub</a>
+    <div class="legal-wrapper">
+        <a href="{% url 'index' %}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back to Hub
+        </a>
+        
+        <div class="legal-container">
+            <div class="legal-header">
+                <h1>Terms of Use</h1>
+                <div class="last-updated">Last Updated: June 2026</div>
+            </div>
 
-        <h1>Terms of Use</h1>
-        <p>By accessing the Volunteer Hub, you agree to the following terms and conditions.</p>
+            <p>By accessing and utilizing the C-SHAW Volunteer Hub, you agree to comply with and be bound by the following terms and conditions. These terms govern your participation in volunteer activities and your use of our digital platforms.</p>
 
-        <h2>1. User Code of Conduct</h2>
-        <p>All users (Students and Coordinators) agree to:</p>
-        <ul>
-            <li>Provide accurate and truthful information during registration.</li>
-            <li><strong>Honesty in Reporting:</strong> Students must only log hours for work actually performed. Falsifying hours is an offense.</li>
-            <li>Respect the community partners and fellow volunteers during events.</li>
-        </ul>
+            <h2>1. User Code of Conduct & Academic Integrity</h2>
+            <p>All users (Students, Executives, and Coordinators) agree to maintain the highest standards of integrity:</p>
+            <ul>
+                <li><strong>Honesty in Reporting:</strong> Students must only log hours for volunteer work actively performed. Falsifying hours, attempting to sign in remotely without being present, or logging hours on behalf of an absent student is a severe offense.</li>
+                <li><strong>Accurate Information:</strong> You agree to provide accurate and truthful information during registration and profile updates.</li>
+                <li><strong>Community Respect:</strong> You agree to act respectfully toward community partners, clinic staff, and fellow volunteers at all C-SHAW events.</li>
+            </ul>
 
-        <h2>2. Account Security</h2>
-        <p>You are responsible for maintaining the confidentiality of your login credentials. Notify us immediately of any unauthorized access.</p>
+            <h2>2. AI Career Toolkit Fair Use</h2>
+            <p>The platform provides an AI-powered Career Toolkit to assist students in generating professional documents based on verified hours.</p>
+            <ul>
+                <li><strong>No Guarantees:</strong> While the AI tools are designed to enhance employability, C-SHAW does not guarantee job placement, scholarships, or academic admission based on the generated outputs.</li>
+                <li><strong>Rate Limiting:</strong> To ensure fair access for all students, the generation of AI documents is subject to monthly limits. Attempting to bypass these limits or manipulate the system is strictly prohibited.</li>
+            </ul>
 
-        <h2>3. Intellectual Property</h2>
-        <p>All platform content, logos , and code are the property of the Centre of Student Health and Wellness (C-SHAW).</p>
+            <h2>3. Educational Content & Certificates</h2>
+            <p>The platform may offer micro-courses and health literacy quizzes.</p>
+            <ul>
+                <li><strong>Non-Academic Credit:</strong> Digital badges and certificates awarded through the platform signify the completion of specific health literacy modules. Unless explicitly stated otherwise, these do not carry formal academic weight or university course credits.</li>
+            </ul>
 
+            <h2>4. Account Security</h2>
+            <p>You are solely responsible for maintaining the confidentiality of your login credentials. You agree not to share your account access with any other individual. Please notify us immediately of any suspected unauthorized access or security breaches.</p>
 
-        <h2>4. Termination</h2>
-        <p>We reserve the right to suspend or terminate accounts that violate these terms, particularly in cases of falsified volunteer records.</p>
+            <h2>5. Intellectual Property</h2>
+            <p>All platform content, software code, UI designs, and C-SHAW logos are the intellectual property of the Centre of Student Health and Wellness (C-SHAW) and the Nazire Mathe. You may not copy, reverse-engineer, or distribute any part of the platform without explicit written consent.</p>
 
-        <h2>5. Contact Us</h2>
-        <p>If you have questions about your data, please contact us at <a href="mailto:support@cshaw.co.za">support@cshaw.co.za</a>.</p>
+            <h2>6. Termination and Disciplinary Action</h2>
+            <p>We reserve the right to suspend or permanently terminate the accounts of users who violate these terms. In cases of intentional fraud (such as falsifying official volunteer records), C-SHAW reserves the right to report the user to the relevant university disciplinary committees.</p>
+
+            <h2>7. Contact Us</h2>
+            <p>If you have any questions regarding these Terms of Use, please contact the administrative team at <a href="mailto:support@cshaw.co.za" class="contact-link">support@cshaw.co.za</a>.</p>
+
+            <div class="legal-footer">
+                &copy; 2026 Centre of Student Health and Wellness (C-SHAW)
+            </div>
+        </div>
     </div>
 </body>
 </html>

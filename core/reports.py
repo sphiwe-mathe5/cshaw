@@ -210,6 +210,7 @@ def get_detailed_quarterly_stats(year):
         })
 
     return final_report
+
 def get_or_create_ai_insight(activity, stats, comparison):
     if activity.ai_insight: return activity.ai_insight
 

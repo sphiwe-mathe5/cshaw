@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 #ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['cshaw.co.za', 'www.cshaw.co.za', 'cshaw-production.up.railway.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['cshaw.co.za', 'www.cshaw.co.za']
 
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 FIELD_ENCRYPTION_KEY = [config('FIELD_ENCRYPTION_KEY')]
@@ -30,25 +30,33 @@ INSTALLED_APPS = [
     'core',
     'users',
     'anymail',
+    'lms',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # Must be before AuthenticationMiddleware
+    'django.contrib.sessions.middleware.SessionMiddleware',  
     'csp.middleware.CSPMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Must be after SessionMiddleware
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# CORS settings
 CORS_ALLOW_CREDENTIALS = True
+#CORS_ALLOWED_ORIGINS = [
+#    'http://localhost:8000',
+#    'http://127.0.0.1:8000',
+#    'https://cshaw.co.za',
+#    'https://www.cshaw.co.za',
+#    'https://cshaw-production.up.railway.app',
+#]
+
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
     'https://cshaw-production.up.railway.app',
@@ -73,6 +81,7 @@ CACHES = {
     }
 }
 
+# Session and CSRF cookie settings
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600
 SESSION_COOKIE_HTTPONLY = True
@@ -95,9 +104,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_SAVE_EVERY_REQUEST = True
-
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 
+# Django REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -143,11 +152,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-
-
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
@@ -156,8 +160,6 @@ DATABASES = {
 }
 
 # Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -174,9 +176,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
 
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Africa/Johannesburg'
@@ -186,15 +187,10 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "config/static")]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-
 
 
 DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
@@ -216,18 +212,11 @@ GS_CREDENTIALS = service_account.Credentials.from_service_account_info({
     "universe_domain": config("GOOGLE_CLOUD_UNIVERSE_DOMAIN", default="googleapis.com")
 })
 GS_DEFAULT_ACL = 'publicRead'
-
-
-
-MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
+# Email configuration using Anymail with Postmark
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
-
 ANYMAIL = {
-    # Postmark uses Server API Token for authentication. 
-    # If you used EMAIL_HOST_PASSWORD before, it's the exact same token!
     "POSTMARK_SERVER_TOKEN": config('EMAIL_HOST_PASSWORD'), 
 }
 
@@ -236,6 +225,7 @@ FROM_EMAIL_ADDRESS = 'info@cshaw.co.za'
 DEFAULT_FROM_EMAIL = f"C-SHAW Hub <{FROM_EMAIL_ADDRESS}>"
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
+# Security settings
 RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY')
 RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY')
 
@@ -302,5 +292,8 @@ CSP_IMG_SRC = (
 CSP_FORM_ACTION = ("'self'",)
 CSP_FRAME_ANCESTORS = ("'self'",)
 SECURE_CROSS_ORIGIN_RESOURCE_POLICY = "same-origin"
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 900
+SESSION_SAVE_EVERY_REQUEST = True
 
 LOGIN_URL = 'login-page'
