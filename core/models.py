@@ -89,6 +89,7 @@ class ActivitySignup(models.Model):
     sign_in_time = models.DateTimeField(null=True, blank=True)
     sign_out_time = models.DateTimeField(null=True, blank=True)
     hours_earned = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    session_history = models.JSONField(default=list, blank=True)
 
     class Meta:
         unique_together = ('user', 'activity') 

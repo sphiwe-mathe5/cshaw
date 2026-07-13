@@ -634,5 +634,55 @@
         })();
     </script>
 
+
+{% if request.user.role == 'STUDENT' and not request.user.volunteer_status and not request.user.is_superuser %}
+<div id="volunteerStatusModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 99999;">
+   <div style="background: white; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+       <h2 style="margin-top: 0; color: #333;">Welcome to the Program! 🎉</h2>
+       <p style="color: #666; font-size: 1.05rem; margin-bottom: 30px; line-height: 1.5;">Before you dive in, we need to know your experience level with the C-SHAW volunteer program.</p>
+       
+       <div style="display: flex; flex-direction: column; gap: 15px;">
+           <button onclick="submitVolunteerStatus('SENIOR')" style="background: #E35205; color: white; padding: 20px; border: none; border-radius: 12px; cursor: pointer; text-align: left; transition: transform 0.2s; display: flex; flex-direction: column; gap: 5px;">
+               <strong style="font-size: 1.2rem;">I am a Senior Volunteer 🎓</strong>
+               <span style="font-size: 0.9rem; opacity: 0.9;">I have participated in the C-SHAW volunteer program in previous years.</span>
+           </button>
+           
+           <button onclick="submitVolunteerStatus('NEWCOMER')" style="background: #f8f9fa; border: 2px solid #E35205; color: #E35205; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; transition: transform 0.2s; display: flex; flex-direction: column; gap: 5px;">
+               <strong style="font-size: 1.2rem;">I am a Newcomer 🌱</strong>
+               <span style="font-size: 0.9rem; color: #666;">This is my first time joining the C-SHAW volunteer program!</span>
+           </button>
+       </div>
+       
+       <p style="font-size: 0.85rem; color: #888; margin-top: 25px; font-style: italic;">Note: This refers to your time in the C-SHAW program, not your academic year. Once confirmed, this selection cannot be changed.</p>
+   </div>
+</div>
+
+<script>
+    function submitVolunteerStatus(status) {
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        fetch('/api/users/update-volunteer-status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => {
+            if (response.ok) {
+                const modal = document.getElementById('volunteerStatusModal');
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => modal.remove(), 500);
+            } else {
+                alert('An error occurred while saving. Please try again.');
+            }
+        })
+        .catch(err => console.error('Status save error:', err));
+    }
+</script>
+{% endif %}
+
 </body>
+
 </html>

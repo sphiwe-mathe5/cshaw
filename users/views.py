@@ -434,3 +434,22 @@ def coordinator_register_page(request):
         'RECAPTCHA_SITE_KEY': config('RECAPTCHA_SITE_KEY')
     }
     return render(request, 'users/coordinator_register.html', context)
+class UpdateVolunteerStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        
+        if user.role != User.Roles.STUDENT:
+            return Response({"error": "Only students can set this."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if user.volunteer_status:
+            return Response({"error": "Status already set."}, status=status.HTTP_400_BAD_REQUEST)
+
+        status_value = request.data.get('status')
+        if status_value not in User.VolunteerStatus.values:
+            return Response({"error": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.volunteer_status = status_value
+        user.save()
+        return Response({"message": "Status updated successfully."})

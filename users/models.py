@@ -21,6 +21,10 @@ class User(AbstractUser):
     Custom User Model for Students and Coordinators.
     """
     
+    class VolunteerStatus(models.TextChoices):
+        SENIOR = 'SENIOR', 'Senior (Returning)'
+        NEWCOMER = 'NEWCOMER', 'Newcomer (First Time)'
+
     class Roles(models.TextChoices):
         STUDENT = 'STUDENT', 'Student'
         COORDINATOR = 'COORDINATOR', 'Coordinator'
@@ -44,6 +48,7 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.STUDENT)
     campus = models.CharField(max_length=10, choices=Campuses.choices, null=True, blank=True)
+    volunteer_status = models.CharField(max_length=20, choices=VolunteerStatus.choices, null=True, blank=True)
 
     student_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     

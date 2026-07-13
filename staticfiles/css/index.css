@@ -290,7 +290,8 @@ ul { list-style: none; }
     position: fixed;
     top: 0; 
     left: 0;
-    height: 100vh; 
+    height: 100vh; /* Fallback */
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
     width: 280px;
     background-color: #ffffff;
     border-right: 1px solid rgba(0, 0, 0, 0.08);
@@ -378,6 +379,7 @@ ul { list-style: none; }
 .nav-item.bottom-link {
     margin-top: auto;
     padding-top: 20px;
+    padding-bottom: 20px; /* Extra padding to ensure it's not cut off by mobile browser UI */
     border-top: 1px solid rgba(0,0,0,0.05);
 }
 

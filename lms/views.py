@@ -224,14 +224,15 @@ class AdminContentUploadView(APIView):
                     'link': request.build_absolute_uri('/learning-hub/')
                 }
                 html_message = render_to_string('lms/emails/new_course.html', context)
-                text_message = f"New learning material has been added: {topic.title} - {learning_unit.title}"
+                text_message = f"System Notification: New learning material has been added to {topic.title} - {learning_unit.title}."
                 
                 email = EmailMultiAlternatives(
-                    subject="New Learning Material Available!",
+                    subject=f"System Notification: New Material in {topic.title}",
                     body=text_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[settings.DEFAULT_FROM_EMAIL], # Place sender in 'To' field
-                    bcc=student_emails                # All students are BCC'd for privacy
+                    to=[settings.DEFAULT_FROM_EMAIL],
+                    bcc=student_emails,
+                    headers={'X-Priority': '1', 'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply'}
                 )
                 email.attach_alternative(html_message, "text/html")
                 email.send(fail_silently=True)

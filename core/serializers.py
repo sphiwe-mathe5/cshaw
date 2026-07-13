@@ -129,7 +129,7 @@ class ActivityRSVPSerializer(serializers.ModelSerializer):
         model = ActivitySignup
         fields = [
             'id', 'student_name', 'student_surname', 'student_email', 
-            'role_name', 'sign_in_time', 'sign_out_time', 'hours_earned'
+            'role_name', 'sign_in_time', 'sign_out_time', 'hours_earned', 'session_history'
         ]
 
     def get_role_name(self, obj):

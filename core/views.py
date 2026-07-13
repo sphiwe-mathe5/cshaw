@@ -408,7 +408,20 @@ class AttendanceActionView(views.APIView):
 
             # Failsafe max-cap just in case
             max_allowed = float(signup.activity.duration_hours or 0)
-            final_hours = max_allowed if (max_allowed > 0 and actual_hours > max_allowed) else actual_hours
+            
+            # 🚨 FIX: Track this specific session chunk
+            session_data = {
+                "in": effective_sign_in.isoformat(),
+                "out": signup.sign_out_time.isoformat(),
+                "hours": round(actual_hours, 2)
+            }
+            if not isinstance(signup.session_history, list):
+                signup.session_history = []
+            signup.session_history.append(session_data)
+            
+            # Add to total accumulated hours
+            new_total = float(signup.hours_earned) + actual_hours
+            final_hours = max_allowed if (max_allowed > 0 and new_total > max_allowed) else new_total
 
             signup.hours_earned = round(final_hours, 2)
             signup.sign_out_facilitator = request.user

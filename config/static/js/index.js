@@ -1216,7 +1216,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     const signInTimeStr = signInDate.toLocaleTimeString('en-GB', timeFmt);
                     
                     statusBadge = '<span style="background:#e8f5e9; color:#2e7d32; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:500;">● In Progress</span>';
-                    timeLog = `<span style="color:#2e7d32; font-weight:600;">In: ${signInTimeStr}</span>`;
+                    
+                    let historyHtml = '';
+                    if (rsvp.session_history && rsvp.session_history.length > 0) {
+                        rsvp.session_history.forEach((sess, idx) => {
+                            const sin = new Date(sess.in).toLocaleTimeString('en-GB', timeFmt);
+                            const sout = new Date(sess.out).toLocaleTimeString('en-GB', timeFmt);
+                            historyHtml += `<div style="font-size:0.75rem; color:#666; margin-bottom:4px;">
+                                ${idx === 0 ? 'Initial:' : 'Re-Sign In:'} ${sin} - ${sout} (${sess.hours} Hrs)
+                            </div>`;
+                        });
+                    }
+                    
+                    timeLog = `
+                        ${historyHtml}
+                        <span style="color:#2e7d32; font-weight:600;">Current: In at ${signInTimeStr}</span>
+                    `;
                     
                     // Allow sign out (Min time = Sign In time)
                     const signOutMin = signInDate.toLocaleTimeString('en-GB', timeFmt);
@@ -1232,12 +1247,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     statusBadge = '<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:12px; font-size:0.85rem; font-weight:500;">✓ Completed</span>';
                     
+                    let historyHtml = '';
+                    if (rsvp.session_history && rsvp.session_history.length > 0) {
+                        historyHtml += `<div style="margin-top: 6px; border-top: 1px dashed #ddd; padding-top: 4px;">`;
+                        rsvp.session_history.forEach((sess, idx) => {
+                            const sin = new Date(sess.in).toLocaleTimeString('en-GB', timeFmt);
+                            const sout = new Date(sess.out).toLocaleTimeString('en-GB', timeFmt);
+                            historyHtml += `<div style="font-size:0.75rem; color:#666; margin-bottom:2px;">
+                                ${idx === 0 ? 'Initial:' : 'Re-Sign In:'} ${sin} - ${sout} <strong style="color:#444;">(+${sess.hours}h)</strong>
+                            </div>`;
+                        });
+                        historyHtml += `</div>`;
+                    }
+
                     timeLog = `
                         <div style="line-height:1.2;">
-                            <strong style="color:#333; font-size:1rem;">${rsvp.hours_earned} Hrs</strong>
-                            <div style="font-size:0.75rem; color:#888; margin-top:2px;">
-                                (Last out: ${outTime})
-                            </div>
+                            <strong style="color:#333; font-size:1rem; display:block;">Total: ${rsvp.hours_earned} Hrs</strong>
+                            ${historyHtml}
                         </div>
                     `;
                     
