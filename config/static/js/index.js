@@ -981,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderAttendanceSheet(activityId, backHandler) {
         
         // 1. Check who is logged in
-        const userRole = localStorage.getItem('user_role'); 
+        const userRole = typeof CURRENT_USER_ROLE !== 'undefined' ? CURRENT_USER_ROLE : 'STUDENT';
         
         // 2. Set the default page based on their role
         const defaultBackPage = (userRole === 'COORDINATOR') 
@@ -1120,6 +1120,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Note: We need the Start Time String (HH:MM) for manual sign-ins later
             const rawStartTime = startDate.toLocaleTimeString('en-GB', { ...timeOptions }); 
 
+            let downloadBtnHtml = '';
+            if (typeof CURRENT_USER_ROLE !== 'undefined' && CURRENT_USER_ROLE === 'COORDINATOR') {
+                downloadBtnHtml = `
+                    <a href="/api/activities/${activityId}/export_rsvps/" target="_blank" style="margin-left: 8px; color: #3498db; text-decoration: none;" title="Download CSV">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </a>
+                `;
+            }
+
             const infoHtml = `
                 <span style="color: var(--primary-orange); font-weight:700; font-size: 1.1rem;">${activity.title}</span>
                 <span style="color: #ccc; margin: 0 8px;">|</span>
@@ -1132,6 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span style="background: #e2e8f0; color: #334155; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">
                     👤 ${rsvps.length} RSVP${rsvps.length === 1 ? '' : 's'}
                 </span>
+                ${downloadBtnHtml}
             `;
             
             document.getElementById('activityHeader').innerHTML = infoHtml;
@@ -1403,14 +1413,40 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.history.length === 0) {
                 eventsHtml = '<p style="color:#999; text-align:center;">No events attended.</p>';
             } else {
+                eventsHtml = '<div style="max-height: 350px; overflow-y: auto; padding-right: 8px;">';
                 data.history.forEach((e, index) => {
+                    const eventDate = new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    
+                    let historySubtext = '';
+                    if (e.session_history && e.session_history.length > 0) {
+                        historySubtext += `<div style="font-size: 0.75rem; color: #666; margin-top: 4px; border-top: 1px dashed #eee; padding-top: 4px;">`;
+                        e.session_history.forEach((sess, idx) => {
+                            const label = idx === 0 ? 'Initial' : 'Re-Sign In';
+                            historySubtext += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                <span>${label}</span>
+                                <strong>+${sess.hours}h</strong>
+                            </div>`;
+                        });
+                        historySubtext += `</div>`;
+                    }
+                    
                     eventsHtml += `
-                        <div class="stat-list-item">
-                            <span class="stat-label">${index + 1}. ${e.title}</span>
-                            <span class="stat-val" style="font-size:0.85rem; color:#27ae60;">Done</span>
+                        <div class="stat-list-item" style="flex-direction: column; align-items: flex-start; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 4px;">
+                                <span class="stat-label" style="font-weight: 600; color: #2c3e50;">${index + 1}. ${e.title}</span>
+                                <span class="stat-val" style="font-size:0.85rem; font-weight: bold; color:#27ae60;">${e.hours} Hrs</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #7f8c8d; margin-bottom: 4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                ${eventDate}
+                            </div>
+                            <div style="width: 100%;">
+                                ${historySubtext}
+                            </div>
                         </div>
                     `;
                 });
+                eventsHtml += '</div>';
             }
 
             let awardsListHtml = '';

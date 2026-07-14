@@ -565,6 +565,7 @@
 
     <script>
     const isUserLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
+    const CURRENT_USER_ROLE = "{{ user.role|default:'' }}";
     </script>
     <script src="{% static 'js/index.js' %}"></script>
 

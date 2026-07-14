@@ -32,6 +32,7 @@ from django.utils.html import strip_tags
 from django.views.generic import CreateView, CreateView, TemplateView
 import json
 import os
+import csv
 from openai import OpenAI
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -404,9 +405,8 @@ class AttendanceActionView(views.APIView):
             
             # We don't need min() here anymore because we already capped action_time above!
             duration = signup.sign_out_time - effective_sign_in
-            actual_hours = duration.total_seconds() / 3600
+            actual_hours = max(0.0, duration.total_seconds() / 3600)
 
-            # Failsafe max-cap just in case
             max_allowed = float(signup.activity.duration_hours or 0)
             
             # 🚨 FIX: Track this specific session chunk
@@ -421,9 +421,8 @@ class AttendanceActionView(views.APIView):
             
             # Add to total accumulated hours
             new_total = float(signup.hours_earned) + actual_hours
-            final_hours = max_allowed if (max_allowed > 0 and new_total > max_allowed) else new_total
 
-            signup.hours_earned = round(final_hours, 2)
+            signup.hours_earned = round(new_total, 2)
             signup.sign_out_facilitator = request.user
             signup.attended = True
             signup.save()
@@ -486,20 +485,61 @@ def bulk_signout_view(request, pk):
         signup.sign_out_time = end_time
         
         # B. Calculate Hours
-        duration = signup.sign_out_time - signup.sign_in_time
-        actual_hours = duration.total_seconds() / 3600
+        # --- STRICT TIME BOUNDING CALCULATION ---
+        effective_sign_in = max(signup.sign_in_time, activity.date_time)
         
-        # Cap hours at the max duration (just in case of weird data)
-        max_allowed = float(activity.duration_hours)
-        final_hours = min(actual_hours, max_allowed)
+        duration = signup.sign_out_time - effective_sign_in
+        actual_hours = max(0.0, duration.total_seconds() / 3600)
         
-        signup.hours_earned = round(final_hours, 2)
+        # 🚨 FIX: Track this specific session chunk
+        session_data = {
+            "in": effective_sign_in.isoformat(),
+            "out": signup.sign_out_time.isoformat(),
+            "hours": round(actual_hours, 2)
+        }
+        if not isinstance(signup.session_history, list):
+            signup.session_history = []
+        signup.session_history.append(session_data)
+        
+        # Add to total accumulated hours (DO NOT OVERWRITE!)
+        new_total = float(signup.hours_earned) + actual_hours
+        
+        signup.hours_earned = round(new_total, 2)
         signup.sign_out_facilitator = request.user
         signup.attended = True
         signup.save()
         count += 1
 
     return Response({"message": f"Successfully signed out {count} students."})
+
+@api_view(['GET'])
+@permission_classes([IsAuthorizedExecutiveOrCoordinator])
+def export_rsvps_csv(request, pk):
+    try:
+        activity = VolunteerActivity.objects.get(pk=pk)
+    except VolunteerActivity.DoesNotExist:
+        return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    signups = ActivitySignup.objects.filter(activity=activity).select_related('user')
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="rsvps_{activity.id}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['First Name', 'Last Name', 'Student Number', 'Campus', 'Status', 'Total Hours'])
+    
+    for s in signups:
+        status_text = 'Attended' if s.attended else 'RSVPed'
+        writer.writerow([
+            s.user.first_name, 
+            s.user.last_name, 
+            s.user.student_number or '', 
+            s.user.campus or '',
+            status_text,
+            s.hours_earned
+        ])
+        
+    return response
 
 class ExecutiveCampusEventsView(generics.ListAPIView):
     serializer_class = VolunteerActivitySerializer
@@ -707,12 +747,13 @@ class StudentStatsView(APIView):
             user=user, 
             attended=True,
             sign_out_time__year=current_year 
-        ).order_by('-sign_out_time')[:5]
+        ).order_by('-sign_out_time')
         
         events_list = [{
             'title': e.activity.title,
             'date': e.sign_out_time,
-            'hours': e.hours_earned
+            'hours': e.hours_earned,
+            'session_history': e.session_history
         } for e in recent_events]
 
         return Response({

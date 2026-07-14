@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/activities/<int:pk>/signup/', views.SignupCreateView.as_view(), name='activity-signup'),
     path('api/activities/executive-list/', views.ExecutiveCampusEventsView.as_view(), name='executive-campus-events'),
     path('api/activities/<int:pk>/bulk_signout/', views.bulk_signout_view, name='bulk-signout'),
+    path('api/activities/<int:pk>/export_rsvps/', views.export_rsvps_csv, name='export-rsvps'),
     path('api/reports/event/<int:pk>/', views.event_report_view, name='event-report'),
     path('api/reports/quarterly/', views.quarterly_report_view, name='quarterly-report'),
     path('api/reports/event/<int:pk>/download/', views.download_report_pdf, name='report-download'),
