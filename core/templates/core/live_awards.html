@@ -1,0 +1,508 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Awards Leaderboard | Coordinators</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-orange: #E35205;
+            --primary-orange-light: #fff2ed;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --gold: #fbbf24;
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(227, 82, 5, 0.05), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(30, 41, 59, 0.05), transparent 25%);
+            color: var(--slate-800);
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .title-wrapper h1 {
+            font-size: 2.8rem;
+            color: var(--slate-900);
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, var(--slate-900), var(--slate-700));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-wrapper p {
+            color: var(--slate-700);
+            font-size: 1.1rem;
+            margin-top: 5px;
+            font-weight: 400;
+        }
+
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            padding: 12px 24px;
+            border-radius: 50px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #10b981;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            background-color: rgba(16, 185, 129, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 1; }
+            50% { transform: scale(1.6); opacity: 0; }
+            100% { transform: scale(0.8); opacity: 0; }
+        }
+
+        .last-updated {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--slate-700);
+            letter-spacing: 0.5px;
+        }
+
+        .awards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .award-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .award-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: var(--slate-900);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .award-title-icon {
+            background: var(--slate-100);
+            padding: 8px;
+            border-radius: 12px;
+            display: flex;
+        }
+
+        .contender-1 {
+            background: linear-gradient(135deg, #ffffff 0%, var(--slate-50) 100%);
+            border: 2px solid var(--primary-orange);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 0 10px 20px -5px rgba(227, 82, 5, 0.15);
+        }
+
+        .crown-icon {
+            font-size: 2.2rem;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            border-radius: 50%;
+            padding: 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border: 1px solid var(--slate-100);
+        }
+
+        .contender-1-header {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .contender-1 .name {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--slate-900);
+            letter-spacing: -0.5px;
+        }
+
+        .contender-1 .score-badge {
+            display: inline-block;
+            background: var(--primary-orange);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-top: 8px;
+            box-shadow: 0 4px 10px rgba(227, 82, 5, 0.3);
+        }
+
+        .stats-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-bar-container {
+            margin-bottom: 5px;
+        }
+
+        .stat-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--slate-700);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            color: var(--slate-900);
+            font-weight: 800;
+        }
+
+        .stat-track {
+            height: 6px;
+            background: var(--slate-100);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .stat-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fill-hours { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .fill-events { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+        .fill-punctuality { background: linear-gradient(90deg, #10b981, #34d399); }
+        .fill-points { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        .runner-ups {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .runner-up-item {
+            background: #ffffff;
+            border: 1px solid var(--slate-100);
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .runner-up-item:hover {
+            border-color: var(--slate-700);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .runner-up-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .runner-up-rank {
+            color: var(--slate-700);
+            width: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .runner-up-name {
+            flex-grow: 1;
+            color: var(--slate-800);
+            font-size: 1.1rem;
+        }
+
+        .runner-up-score {
+            color: var(--slate-900);
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        
+        .runner-up-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--slate-100);
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+            border-radius: 8px;
+            height: 20px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--slate-700);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 25px;
+            transition: color 0.2s;
+            font-size: 1.05rem;
+        }
+        .back-link:hover {
+            color: var(--primary-orange);
+        }
+
+        .weight-pill {
+            font-size: 0.65rem;
+            background: var(--slate-100);
+            color: var(--slate-700);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 5px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="/" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Dashboard
+    </a>
+
+    <header class="header">
+        <div class="title-wrapper">
+            <h1>Live Awards Leaderboard</h1>
+            <p>Real-time normalized "Power Score" rankings calculated from verified hours, events, punctuality, and LMS points.</p>
+        </div>
+        <div class="live-status">
+            <div class="pulse-dot"></div>
+            <span class="last-updated" id="lastUpdatedText">Syncing data...</span>
+        </div>
+    </header>
+
+    <div class="awards-grid">
+        <!-- Award 1 -->
+        <div class="award-card highlight" id="award-overall">
+            <h2 class="award-title">
+                <span class="award-title-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-orange);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </span>
+                Peer Educator of the Year
+            </h2>
+            <div class="contender-list">
+                <div class="skeleton" style="height: 200px; margin-bottom: 20px; border-radius: 16px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- Award 2 -->
+        <div class="award-card highlight" id="award-newcomer">
+            <h2 class="award-title">
+                <span class="award-title-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9z"></path><path d="M12 22c-4.97 0-9-4.03-9-9 4.97 0 9 4.03 9 9z"></path><path d="M12 22V2"></path><path d="M7 8c2.76 0 5-2.24 5-5"></path><path d="M17 13c-2.76 0-5 2.24-5 5"></path></svg>
+                </span>
+                Best Junior Peer Educator
+            </h2>
+            <div class="contender-list">
+                <div class="skeleton" style="height: 200px; margin-bottom: 20px; border-radius: 16px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- Award 3 -->
+        <div class="award-card" id="award-campus">
+            <h2 class="award-title">
+                <span class="award-title-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--slate-700);"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>
+                </span>
+                Best Performing Campus
+            </h2>
+            <div class="contender-list">
+                <div class="skeleton" style="height: 200px; margin-bottom: 20px; border-radius: 16px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+                <div class="skeleton" style="height: 100px; margin-bottom: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatScore(score) {
+            return parseFloat(score).toFixed(2);
+        }
+
+        function createStatBar(label, weight, value, rawValue, rawSuffix, fillClass) {
+            return `
+                <div class="stat-bar-container">
+                    <div class="stat-label-row">
+                        <span>${label} <span class="weight-pill">${weight}%</span></span>
+                        <span class="stat-value" title="${rawValue} ${rawSuffix}">${formatScore(value)} <span style="font-size:0.7rem;color:#94a3b8;">/ ${weight}</span></span>
+                    </div>
+                    <div class="stat-track">
+                        <div class="stat-fill ${fillClass}" style="width: ${(value/weight)*100}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderContenders(containerId, items, isCampus = false) {
+            const container = document.querySelector(`#${containerId} .contender-list`);
+            
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p style="color:#94a3b8; text-align:center; padding: 30px; font-weight: 500;">Awaiting data to calculate scores.</p>';
+                return;
+            }
+
+            const topContender = items[0];
+            const topName = isCampus ? topContender.campus : topContender.name;
+            const topScore = isCampus ? topContender.avg_score : topContender.power_score;
+            
+            const hoursVal = topContender.score_hours;
+            const eventsVal = topContender.score_events;
+            const puncVal = topContender.score_punctuality;
+            const pointsVal = topContender.score_points;
+
+            const rawHours = isCampus ? topContender.avg_raw_hours : topContender.hours;
+            const rawEvents = isCampus ? topContender.avg_raw_events : topContender.events;
+            const rawPunc = isCampus ? topContender.score_punctuality/0.15 : topContender.punctuality_pct; 
+            const rawPoints = isCampus ? topContender.avg_raw_points : topContender.points;
+
+            let html = `
+                <div class="contender-1">
+                    <div class="crown-icon">👑</div>
+                    <div class="contender-1-header">
+                        <div class="name">${topName || 'Unknown'}</div>
+                        <div class="score-badge">${formatScore(topScore)} PWR</div>
+                    </div>
+                    <div class="stats-breakdown">
+                        ${createStatBar('Hours', 50, hoursVal, formatScore(rawHours), 'hrs', 'fill-hours')}
+                        ${createStatBar('Events', 25, eventsVal, rawEvents, 'events', 'fill-events')}
+                        ${createStatBar('Punctual', 15, puncVal, formatScore(rawPunc), '%', 'fill-punctuality')}
+                        ${createStatBar('Learning', 10, pointsVal, rawPoints, 'pts', 'fill-points')}
+                    </div>
+                </div>
+                <div class="runner-ups">
+            `;
+
+            for (let i = 1; i < items.length; i++) {
+                const item = items[i];
+                const name = isCampus ? item.campus : item.name;
+                const score = isCampus ? item.avg_score : item.power_score;
+                
+                const rHoursVal = item.score_hours;
+                const rEventsVal = item.score_events;
+                const rPuncVal = item.score_punctuality;
+                const rPointsVal = item.score_points;
+                
+                const rRawHours = isCampus ? item.avg_raw_hours : item.hours;
+                const rRawEvents = isCampus ? item.avg_raw_events : item.events;
+                const rRawPunc = isCampus ? item.score_punctuality/0.15 : item.punctuality_pct;
+                const rRawPoints = isCampus ? item.avg_raw_points : item.points;
+
+                html += `
+                    <div class="runner-up-item">
+                        <div class="runner-up-header">
+                            <span class="runner-up-rank">#${i + 1}</span>
+                            <span class="runner-up-name">${name || 'Unknown'}</span>
+                            <span class="runner-up-score">${formatScore(score)}</span>
+                        </div>
+                        <div class="runner-up-details">
+                            ${createStatBar('Hrs', 50, rHoursVal, formatScore(rRawHours), 'hrs', 'fill-hours')}
+                            ${createStatBar('Evts', 25, rEventsVal, rRawEvents, 'events', 'fill-events')}
+                            ${createStatBar('Punc', 15, rPuncVal, formatScore(rRawPunc), '%', 'fill-punctuality')}
+                            ${createStatBar('LMS', 10, rPointsVal, rRawPoints, 'pts', 'fill-points')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        async function fetchLiveLeaderboard() {
+            try {
+                const response = await fetch('/api/live-awards/');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                
+                renderContenders('award-overall', data.overall);
+                renderContenders('award-newcomer', data.newcomers);
+                renderContenders('award-campus', data.campuses, true);
+                
+                const now = new Date();
+                document.getElementById('lastUpdatedText').textContent = `Live Sync: ${now.toLocaleTimeString()}`;
+            } catch (error) {
+                console.error("Failed to fetch live awards:", error);
+                document.getElementById('lastUpdatedText').textContent = `Reconnecting...`;
+            }
+        }
+
+        // Initial fetch
+        fetchLiveLeaderboard();
+
+        // Poll every 15 seconds
+        setInterval(fetchLiveLeaderboard, 15000);
+    </script>
+</body>
+</html>

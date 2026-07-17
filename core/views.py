@@ -1,5 +1,6 @@
 from pyexpat.errors import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from rest_framework import generics, permissions
 from core.forms import FeedbackForm
@@ -1644,3 +1645,153 @@ class CareerToolkitReportView(APIView):
         p.save()
 
         return response
+
+@login_required
+def live_awards_page(request):
+    from users.models import User
+    if request.user.role != User.Roles.COORDINATOR:
+        from django.shortcuts import redirect
+        return redirect('index')
+    return render(request, 'core/live_awards.html')
+
+class LiveAwardsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoordinator]
+
+    def get(self, request):
+        from users.models import User
+        from django.db.models import Sum, Count, Case, When, Value, IntegerField, F
+        from django.utils import timezone
+        
+        current_year = timezone.now().year
+        
+        stats = ActivitySignup.objects.filter(
+            user__role=User.Roles.STUDENT,
+            attended=True,
+            sign_out_time__year=current_year
+        ).values('user').annotate(
+            total_hours=Sum('hours_earned'),
+            events_attended=Count('id'),
+            early_count=Sum(
+                Case(
+                    When(sign_in_time__lte=F('activity__date_time'), then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField()
+                )
+            )
+        )
+        
+        user_stats_map = {}
+        for s in stats:
+            user_stats_map[s['user']] = {
+                'total_hours': float(s['total_hours'] or 0.0),
+                'events_attended': s['events_attended'],
+                'early_count': s['early_count'] or 0
+            }
+            
+        students = User.objects.filter(role=User.Roles.STUDENT)
+        all_students = students.values('id', 'first_name', 'last_name', 'points', 'manual_bonus_hours', 'campus', 'volunteer_status')
+        
+        max_hours = 0.0
+        max_events = 0
+        max_points = 0
+        
+        compiled_data = []
+        
+        for student in all_students:
+            uid = student['id']
+            base_points = student['points'] or 0
+            bonus = float(student['manual_bonus_hours'] or 0.0)
+            
+            s_data = user_stats_map.get(uid, {'total_hours': 0.0, 'events_attended': 0, 'early_count': 0})
+            
+            t_hours = s_data['total_hours'] + bonus
+            t_events = s_data['events_attended']
+            
+            if t_hours > max_hours:
+                max_hours = t_hours
+            if t_events > max_events:
+                max_events = t_events
+            if base_points > max_points:
+                max_points = base_points
+                
+            compiled_data.append({
+                'id': uid,
+                'name': f"{student['first_name']} {student['last_name']}",
+                'campus': student['campus'],
+                'volunteer_status': student['volunteer_status'],
+                'hours': t_hours,
+                'events': t_events,
+                'points': base_points,
+                'early_count': s_data['early_count']
+            })
+            
+        if max_hours == 0: max_hours = 1
+        if max_events == 0: max_events = 1
+        if max_points == 0: max_points = 1
+        
+        for data in compiled_data:
+            score_hours = (data['hours'] / max_hours) * 100 * 0.50
+            score_events = (data['events'] / max_events) * 100 * 0.25
+            score_points = (data['points'] / max_points) * 100 * 0.10
+            punctuality_pct = (data['early_count'] / data['events']) * 100 if data['events'] > 0 else 0
+            score_punctuality = punctuality_pct * 0.15
+            
+            data['punctuality_pct'] = round(punctuality_pct, 1)
+            data['score_hours'] = round(score_hours, 2)
+            data['score_events'] = round(score_events, 2)
+            data['score_points'] = round(score_points, 2)
+            data['score_punctuality'] = round(score_punctuality, 2)
+            
+            data['power_score'] = round(score_hours + score_events + score_points + score_punctuality, 2)
+            
+        compiled_data.sort(key=lambda x: x['power_score'], reverse=True)
+        overall_top_5 = compiled_data[:5]
+        
+        newcomers = [d for d in compiled_data if d['volunteer_status'] == 'NEWCOMER']
+        newcomers_top_5 = newcomers[:5]
+        
+        campus_totals = {}
+        for d in compiled_data:
+            c = d['campus']
+            if not c:
+                continue
+            if c not in campus_totals:
+                campus_totals[c] = {
+                    'total_score': 0, 'count': 0,
+                    'total_hours_score': 0, 'total_events_score': 0,
+                    'total_points_score': 0, 'total_punctuality_score': 0,
+                    'raw_hours': 0, 'raw_events': 0, 'raw_points': 0
+                }
+            campus_totals[c]['total_score'] += d['power_score']
+            campus_totals[c]['total_hours_score'] += d['score_hours']
+            campus_totals[c]['total_events_score'] += d['score_events']
+            campus_totals[c]['total_points_score'] += d['score_points']
+            campus_totals[c]['total_punctuality_score'] += d['score_punctuality']
+            campus_totals[c]['raw_hours'] += d['hours']
+            campus_totals[c]['raw_events'] += d['events']
+            campus_totals[c]['raw_points'] += d['points']
+            campus_totals[c]['count'] += 1
+            
+        campus_avg = []
+        for c, totals in campus_totals.items():
+            cnt = totals['count']
+            if cnt > 0:
+                campus_avg.append({
+                    'campus': c,
+                    'avg_score': round(totals['total_score'] / cnt, 2),
+                    'score_hours': round(totals['total_hours_score'] / cnt, 2),
+                    'score_events': round(totals['total_events_score'] / cnt, 2),
+                    'score_points': round(totals['total_points_score'] / cnt, 2),
+                    'score_punctuality': round(totals['total_punctuality_score'] / cnt, 2),
+                    'avg_raw_hours': round(totals['raw_hours'] / cnt, 1),
+                    'avg_raw_events': round(totals['raw_events'] / cnt, 1),
+                    'avg_raw_points': round(totals['raw_points'] / cnt, 1)
+                })
+            
+        campus_avg.sort(key=lambda x: x['avg_score'], reverse=True)
+        
+        return Response({
+            'overall': overall_top_5,
+            'newcomers': newcomers_top_5,
+            'campuses': campus_avg
+        })
