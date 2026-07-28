@@ -573,7 +573,7 @@ class CoordinatorMyEventsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get_queryset(self):
-        return VolunteerActivity.objects.filter(created_by=self.request.user).order_by('-date_time')
+        return VolunteerActivity.objects.all().order_by('-date_time')
 
 class StudentStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
