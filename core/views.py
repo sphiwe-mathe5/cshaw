@@ -82,8 +82,8 @@ class ActivityListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        # Default: Get all events
-        queryset = VolunteerActivity.objects.all().order_by('-date_time')
+        # Default: Get all events, but exclude manual hours dummy events
+        queryset = VolunteerActivity.objects.exclude(description="Manual hours allocation event").order_by('-date_time')
         # 1. Visitor (Not logged in) -> See ALL
         if not user.is_authenticated:
             return queryset
@@ -573,7 +573,7 @@ class CoordinatorMyEventsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]
 
     def get_queryset(self):
-        return VolunteerActivity.objects.all().order_by('-date_time')
+        return VolunteerActivity.objects.exclude(description="Manual hours allocation event").order_by('-date_time')
 
 class StudentStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -1650,9 +1650,80 @@ class CareerToolkitReportView(APIView):
 def live_awards_page(request):
     from users.models import User
     if request.user.role != User.Roles.COORDINATOR:
-        from django.shortcuts import redirect
-        return redirect('index')
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Only coordinators can view this page.")
     return render(request, 'core/live_awards.html')
+
+@login_required
+def allocate_hours_page(request):
+    from users.models import User
+    from .models import VolunteerActivity
+    if request.user.role != User.Roles.COORDINATOR and not request.user.is_superuser:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Only coordinators can view this page.")
+        
+    # Fetch history of manual allocations
+    manual_events = VolunteerActivity.objects.filter(description="Manual hours allocation event").order_by('-date_time')
+    
+    context = {
+        'manual_events': manual_events
+    }
+    return render(request, 'core/allocate_hours.html', context)
+
+class ManualHoursAllocationAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoordinator]
+
+    def post(self, request):
+        event_name = request.data.get('event_name')
+        hours = request.data.get('hours')
+        student_ids = request.data.get('student_ids', [])
+
+        if not event_name or not hours or not student_ids:
+            return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            hours = float(hours)
+        except ValueError:
+            return Response({"error": "Invalid hours format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a proxy activity for the manual allocation
+        activity = VolunteerActivity.objects.create(
+            title=event_name,
+            date_time=timezone.now(),
+            duration_hours=hours,
+            created_by=request.user,
+            description="Manual hours allocation event",
+            details="Manually allocated hours by coordinator."
+        )
+
+        from users.models import User
+        from users.services import BackgroundEmailService
+        students = User.objects.filter(id__in=student_ids, role=User.Roles.STUDENT)
+
+        for student in students:
+            ActivitySignup.objects.create(
+                user=student,
+                activity=activity,
+                attended=True,
+                sign_in_time=timezone.now(),
+                sign_out_time=timezone.now(),
+                hours_earned=hours,
+                session_history=[{"type": "Manual added hours", "hours": hours}]
+            )
+            
+            # Send Notification Email
+            html_content = render_to_string('core/emails/manual_hours.html', {
+                'first_name': student.first_name,
+                'hours': hours,
+                'event_name': event_name
+            })
+            BackgroundEmailService._send_async(
+                subject="You've been allocated new hours!",
+                to_emails=[student.email],
+                html_content=html_content
+            )
+
+        return Response({"message": f"Successfully allocated {hours} hours to {students.count()} students for '{event_name}'."})
 
 class LiveAwardsAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCoordinator]

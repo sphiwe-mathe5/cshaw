@@ -1421,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (e.session_history && e.session_history.length > 0) {
                         historySubtext += `<div style="font-size: 0.75rem; color: #666; margin-top: 4px; border-top: 1px dashed #eee; padding-top: 4px;">`;
                         e.session_history.forEach((sess, idx) => {
-                            const label = idx === 0 ? 'Initial' : 'Re-Sign In';
+                            const label = sess.type ? sess.type : (idx === 0 ? 'Initial' : 'Re-Sign In');
                             historySubtext += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                                 <span>${label}</span>
                                 <strong>+${sess.hours}h</strong>

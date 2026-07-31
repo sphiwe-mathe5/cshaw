@@ -1,0 +1,473 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allocate Manual Hours | Coordinator Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-orange: #E35205;
+            --primary-orange-light: #fff2ed;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(227, 82, 5, 0.05), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(30, 41, 59, 0.05), transparent 25%);
+            color: var(--slate-800);
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: var(--slate-700);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 25px;
+            transition: color 0.2s;
+            font-size: 1.05rem;
+        }
+        .back-link:hover {
+            color: var(--primary-orange);
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--slate-900);
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: var(--slate-700);
+            font-size: 1.1rem;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            color: var(--slate-800);
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid var(--slate-100);
+            border-radius: 12px;
+            font-size: 1rem;
+            color: var(--slate-900);
+            transition: all 0.2s;
+            background: white;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(227, 82, 5, 0.1);
+        }
+
+        .select2-container--default .select2-selection--multiple {
+            border: 2px solid var(--slate-100);
+            border-radius: 12px;
+            min-height: 52px;
+            padding: 5px 10px;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: var(--primary-orange);
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: var(--primary-orange-light);
+            border: 1px solid var(--primary-orange);
+            color: var(--primary-orange);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: var(--primary-orange);
+            margin-right: 6px;
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--primary-orange);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(227, 82, 5, 0.2);
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(227, 82, 5, 0.3);
+            background: #d44a04;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .alert-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 550px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .history-item {
+            background: #ffffff;
+            border: 1px solid var(--slate-100);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            border-color: var(--slate-700);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .history-title {
+            font-weight: 800;
+            color: var(--slate-900);
+            font-size: 1.1rem;
+        }
+
+        .history-hours {
+            background: var(--slate-100);
+            color: var(--slate-800);
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.85rem;
+            color: var(--slate-700);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: var(--slate-700);
+            padding: 40px 20px;
+            background: var(--slate-50);
+            border-radius: 16px;
+            border: 1px dashed var(--slate-100);
+        }
+
+        /* CSRF token setup */
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <a href="/" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Dashboard
+    </a>
+
+    <div class="header">
+        <h1>Allocate Manual Hours</h1>
+        <p>Distribute and track manual hours allocated to students.</p>
+    </div>
+
+    <div class="layout-grid">
+        
+        <!-- Allocation Form -->
+        <div class="card">
+            <h2 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                New Allocation
+            </h2>
+            <div id="alert-box" class="alert"></div>
+
+            <form id="allocateForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="eventName">Event Name / Reason</label>
+                    <input type="text" id="eventName" class="form-control" placeholder="e.g. Weekend Outreach Prep" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="hours">Hours to Allocate</label>
+                    <input type="number" id="hours" class="form-control" step="0.1" min="0.1" placeholder="e.g. 2.5" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentSelect">
+                        Select Students 
+                        <span id="studentCounter" style="font-size: 0.85rem; color: var(--primary-orange); float: right; font-weight: 800;">0 Selected</span>
+                    </label>
+                    <select id="studentSelect" class="form-control" multiple="multiple" style="width: 100%;" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">Allocate Hours</button>
+            </form>
+        </div>
+
+        <!-- Allocation History -->
+        <div class="card">
+            <h2 class="card-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Allocation History
+            </h2>
+            
+            <div class="history-list">
+                {% if manual_events %}
+                    {% for event in manual_events %}
+                    <div class="history-item">
+                        <div class="history-header">
+                            <div class="history-title">{{ event.title }}</div>
+                            <div class="history-hours">+{{ event.duration_hours }}h</div>
+                        </div>
+                        <div class="history-meta">
+                            <div class="meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                {{ event.date_time|date:"d M Y" }}
+                            </div>
+                            <div class="meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                By {{ event.created_by.first_name }}
+                            </div>
+                            <div class="meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                {{ event.signups.count }} Students
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-history">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--slate-700)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 15px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        <p>No manual hours have been allocated yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2
+            $('#studentSelect').select2({
+                placeholder: "Search for students by name or ID...",
+                allowClear: true
+            });
+
+            // Fetch students
+            fetch('/api/users/students/')
+                .then(response => response.json())
+                .then(data => {
+                    const select = $('#studentSelect');
+                    data.forEach(student => {
+                        const campusInfo = student.campus ? `(${student.campus})` : '';
+                        const text = `${student.first_name} ${student.last_name} ${campusInfo} - ${student.student_number || student.email}`;
+                        const option = new Option(text, student.id, false, false);
+                        select.append(option);
+                    });
+                    select.trigger('change');
+                })
+                .catch(error => {
+                    console.error('Error fetching students:', error);
+                    showAlert('Failed to load student list.', 'error');
+                });
+
+            // Update Counter on selection change
+            $('#studentSelect').on('change', function() {
+                const selected = $(this).val();
+                const count = selected ? selected.length : 0;
+                $('#studentCounter').text(count + ' Selected');
+            });
+
+            // Handle Form Submission
+            $('#allocateForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const btn = $('#submitBtn');
+                btn.prop('disabled', true).text('Allocating...');
+                hideAlert();
+
+                const eventName = $('#eventName').val();
+                const hours = $('#hours').val();
+                const studentIds = $('#studentSelect').val();
+
+                if (!studentIds || studentIds.length === 0) {
+                    showAlert('Please select at least one student.', 'error');
+                    btn.prop('disabled', false).text('Allocate Hours');
+                    return;
+                }
+
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                fetch('/api/allocate-manual-hours/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        event_name: eventName,
+                        hours: hours,
+                        student_ids: studentIds
+                    })
+                })
+                .then(response => response.json().then(data => ({status: response.status, body: data})))
+                .then(result => {
+                    if (result.status >= 200 && result.status < 300) {
+                        showAlert(result.body.message, 'success');
+                        // Reset form
+                        $('#eventName').val('');
+                        $('#hours').val('');
+                        $('#studentSelect').val(null).trigger('change');
+                        
+                        // Automatically reload page after 1.5 seconds to refresh the history list
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert(result.body.error || 'An error occurred.', 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('A network error occurred.', 'error');
+                })
+                .finally(() => {
+                    btn.prop('disabled', false).text('Allocate Hours');
+                });
+            });
+
+            function showAlert(message, type) {
+                const box = $('#alert-box');
+                box.removeClass('alert-success alert-error');
+                box.addClass(type === 'success' ? 'alert-success' : 'alert-error');
+                box.text(message);
+                box.fadeIn();
+            }
+
+            function hideAlert() {
+                $('#alert-box').hide();
+            }
+        });
+    </script>
+</body>
+</html>

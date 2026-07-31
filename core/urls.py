@@ -46,7 +46,10 @@ urlpatterns = [
     path('api/excursions/revoke/', excursion_views.RevokeTicketAPIView.as_view(), name='revoke-ticket'),
     path('api/excursions/validate/', excursion_views.ValidateTicketAPIView.as_view(), name='validate-ticket'),
     
-    path('live-awards/', views.live_awards_page, name='live-awards'),
+    path('api/allocate-manual-hours/', views.ManualHoursAllocationAPIView.as_view(), name='api-allocate-manual-hours'),
+
+    path('live-awards/', views.live_awards_page, name='live-awards-page'),
+    path('allocate-hours/', views.allocate_hours_page, name='allocate-hours-page'),
     path('api/live-awards/', views.LiveAwardsAPIView.as_view(), name='api-live-awards'),
 
 ]
