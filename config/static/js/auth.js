@@ -179,6 +179,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Standard login successful (2FA is off)
                         window.location.href = nextUrl;
                     }
+                } else if (response.status === 429) {
+                    showError('Too many requests. Please try again later.');
+                    submitBtn.disabled = false;
+                    loader.classList.add('hidden');
                 } else {
                     // Handle invalid passwords or backend errors
                     showError(data.error || 'Login failed. Please try again.');
@@ -188,7 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (err) {
                 console.error("Login error:", err);
-                showError("Something went wrong. Please refresh and try again.");
+                if (typeof response !== 'undefined' && response.status === 403) {
+                    showError('Too many attempts. Your account has been temporarily locked.');
+                } else if (typeof response !== 'undefined' && response.status === 429) {
+                    showError('Too many requests. Please try again later.');
+                } else {
+                    showError('Login failed. Please try again.');
+                }
                 submitBtn.disabled = false;
                 loader.classList.add('hidden');
             }

@@ -1662,8 +1662,10 @@ def allocate_hours_page(request):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("Only coordinators can view this page.")
         
-    # Fetch history of manual allocations
-    manual_events = VolunteerActivity.objects.filter(description="Manual hours allocation event").order_by('-date_time')
+    # Fetch history of manual allocations with student data
+    manual_events = VolunteerActivity.objects.filter(
+        description="Manual hours allocation event"
+    ).select_related('created_by').prefetch_related('signups__user').order_by('-date_time')
     
     context = {
         'manual_events': manual_events

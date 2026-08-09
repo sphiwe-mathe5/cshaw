@@ -111,7 +111,7 @@ class StudentRegistrationView(generics.CreateAPIView):
             # Check success AND score (0.0 = Bot, 1.0 = Human)
             # A score of < 0.5 is usually considered suspicious
             if not result.get('success') or result.get('score', 0) < 0.5:
-                return Response({'error': 'Spam detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Unusual activity detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
             # Log the error internally, but give a generic error to user
@@ -151,7 +151,7 @@ class CoordinatorRegistrationView(generics.CreateAPIView):
             }).json()
 
             if not result.get('success') or result.get('score', 0) < 0.5:
-                return Response({'error': 'Spam detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Unusual activity detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             print(f"reCAPTCHA Error: {e}")
@@ -170,8 +170,12 @@ class AwardListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
 
+from rest_framework.throttling import ScopedRateThrottle
+
 class LoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth_burst'
 
     def post(self, request):
         # --- 1. VERIFY RECAPTCHA ---
@@ -187,7 +191,7 @@ class LoginView(views.APIView):
             }).json()
 
             if not result.get('success') or result.get('score', 0) < 0.5:
-                return Response({'error': 'Spam detected. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Unusual activity detected. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': 'Captcha verification failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -378,7 +382,7 @@ class CustomPasswordResetView(PasswordResetView):
         # --- 1. RECAPTCHA CHECK ---
         recaptcha_token = self.request.POST.get('g-recaptcha-response')
         if not verify_recaptcha(recaptcha_token):
-            messages.error(self.request, 'Spam detected. Please try again.')
+            messages.error(self.request, 'Unusual activity detected. Please try again.')
             return self.form_invalid(form)
 
         # --- 2. EMAIL EXISTS CHECK ---

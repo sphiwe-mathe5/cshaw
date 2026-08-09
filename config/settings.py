@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'users',
     'anymail',
     'lms',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -44,6 +45,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',  
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 # CORS settings
@@ -66,9 +68,15 @@ CORS_ALLOWED_ORIGINS = [
 AUTH_USER_MODEL = 'users.User'
 
 AUTHENTICATION_BACKENDS = [
-
+    'axes.backends.AxesBackend',
     'django.contrib.auth.backends.ModelBackend', 
 ]
+
+# Django-Axes Rules
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 15  # Minutes
+AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_LOCKOUT_TEMPLATE = None # Return 403 response instead of HTML if None (we will handle it)
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
@@ -95,8 +103,6 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = False
 CSRF_USE_SESSIONS = False
 CSRF_TRUSTED_ORIGINS = [  
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
     'https://cshaw-production.up.railway.app',
@@ -123,7 +129,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',  # Unregistered users can only make 100 requests a day
-        'user': '1000/day'  # Logged in users can make 1000 a day
+        'user': '1000/day', # Logged in users can make 1000 a day
+        'auth_burst': '5/minute'
     }
 }
 

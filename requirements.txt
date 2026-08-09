@@ -1,6 +1,6 @@
 Django==5.2.7
 django-allauth==65.1.0
-django-axes==7.0.1
+django-axes==8.3.1
 django-ckeditor-5==0.2.19
 django-cors-headers==4.9.0
 django-crispy-forms==2.2

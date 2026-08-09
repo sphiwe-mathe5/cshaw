@@ -89,28 +89,26 @@ def send_new_event_email(activity):
     else:
         students = User.objects.filter(role=User.Roles.STUDENT, campus=activity.campus)
     
-    student_emails = list(students.values_list('email', flat=True))
-
-    if not student_emails:
+    if not students.exists():
         print("⚠️ No matching students found for email notification.")
         return 
+        
+    for student in students:
+        context = {
+            'first_name': student.first_name,
+            'title': activity.title,
+            'date': activity.date_time.strftime('%d %B %Y at %H:%M'),
+            'location': activity.campus,
+            'description': activity.description,
+            'link': "https://cshaw.co.za/"
+        }
+        html_content = render_to_string('users/new_event_email.html', context)
 
-    context = {
-        'title': activity.title,
-        'date': activity.date_time.strftime('%d %B %Y at %H:%M'),
-        'location': activity.campus,
-        'description': activity.description,
-        'link': "https://cshaw.co.za/" 
-    }
-    html_content = render_to_string('users/new_event_email.html', context)
-
-    # 2. Use BCC to send ONE mass email instead of looping through hundreds of users!
-    BackgroundEmailService._send_async(
-        subject=subject,
-        to_emails=[settings.DEFAULT_FROM_EMAIL], # Send to yourself
-        bcc_emails=student_emails,               # Blind copy all students
-        html_content=html_content
-    )
+        BackgroundEmailService._send_async(
+            subject=subject,
+            to_emails=[student.email],
+            html_content=html_content
+        )
 
 def send_signup_confirmation_email(user, activity):
     subject = f"You're Going! ✅ {activity.title}"

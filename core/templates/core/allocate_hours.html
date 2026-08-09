@@ -351,6 +351,15 @@
                                 {{ event.signups.count }} Students
                             </div>
                         </div>
+                        
+                        <div style="margin-top: 10px; font-size: 0.85rem; color: var(--slate-700); background: var(--slate-50); padding: 10px; border-radius: 8px; border: 1px solid var(--slate-100);">
+                            <strong style="color: var(--slate-800); display: block; margin-bottom: 5px;">Allocated to:</strong>
+                            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                {% for signup in event.signups.all %}
+                                    <span style="background: white; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 4px;">{{ signup.user.first_name }} {{ signup.user.last_name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                     {% endfor %}
                 {% else %}
