@@ -59,7 +59,7 @@ urlpatterns = [
          name='password_reset_complete'),
 
     path('login/', login_page, name='login-page'),
-    path('register/student/', student_register_page, name='student-register-page'),
+    #path('register/student/', student_register_page, name='student-register-page'),
     path('api/auth/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     path('api/users/toggle-2fa/', Toggle2FAView.as_view(), name='toggle_2fa'),
     
