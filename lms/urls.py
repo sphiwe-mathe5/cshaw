@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from .views import (
     TopicViewSet,
@@ -16,5 +16,5 @@ router.register(r'quizzes', QuizViewSet, basename='quiz')
 urlpatterns = [
     path('', include(router.urls)),
     path('quiz-list/', QuizListView.as_view(), name='quiz-list'),
-    path('admin/upload-nested/', AdminContentUploadView.as_view(), name='admin-upload-nested'),
+    re_path(r'^admin/upload-nested/?$', AdminContentUploadView.as_view(), name='admin-upload-nested'),
 ]
