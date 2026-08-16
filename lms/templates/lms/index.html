@@ -263,6 +263,7 @@
             </div>
             
             <form id="quizForm" method="post" onsubmit="event.preventDefault();">
+                {% csrf_token %}
                 <input type="hidden" id="activeQuizId" name="quiz_id">
                 <div id="quizQuestionsContainer" style="display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px;">
                     <!-- Questions injected here -->

@@ -13,6 +13,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function getCsrfToken() {
+    const inputToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (inputToken && inputToken.value) {
+        return inputToken.value;
+    }
+    return getCookie('csrftoken') || getCookie('__Host-csrftoken') || '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     async function renderLMS() {
         const lmsContentArea = document.getElementById('lmsContentArea');
@@ -209,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({ answers })
                 });
@@ -290,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/api/lms/units/${unitId}/`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': getCsrfToken()
                 }
             });
             if (res.ok) {
