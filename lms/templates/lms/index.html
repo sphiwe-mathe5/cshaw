@@ -262,7 +262,7 @@
                 <button onclick="closeQuizModal()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #6b7280; line-height: 1;">&times;</button>
             </div>
             
-            <form id="quizForm">
+            <form id="quizForm" method="post" onsubmit="event.preventDefault();">
                 <input type="hidden" id="activeQuizId" name="quiz_id">
                 <div id="quizQuestionsContainer" style="display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px;">
                     <!-- Questions injected here -->

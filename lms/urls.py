@@ -14,7 +14,8 @@ router.register(r'units', LearningUnitViewSet, basename='learningunit')
 router.register(r'quizzes', QuizViewSet, basename='quiz')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('quiz-list/', QuizListView.as_view(), name='quiz-list'),
+    re_path(r'^quizzes/(?P<pk>\d+)/submit/?$', QuizViewSet.as_view({'post': 'submit'}), name='quiz-submit'),
     re_path(r'^admin/upload-nested/?$', AdminContentUploadView.as_view(), name='admin-upload-nested'),
+    path('quiz-list/', QuizListView.as_view(), name='quiz-list'),
+    path('', include(router.urls)),
 ]
