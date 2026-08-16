@@ -84,14 +84,32 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="lms-unit-content">
                                     ${unit.content_text}
                                 </div>
-                                ${unit.quiz ? `
+                                ${unit.quiz ? (() => {
+                                    const totalQ = unit.quiz.total_questions || Math.max(1, Math.round(unit.quiz.points_awarded / 2));
+                                    let statusBadge = '';
+                                    let pointsText = '';
+
+                                    if (unit.quiz.completed) {
+                                        if (unit.quiz.user_passed) {
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✅ Passed (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.user_points} Points Earned (${totalQ} Qs · 2 pts each)</span>`;
+                                        } else {
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">❌ Attempted (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #64748b; font-weight: 600; background: #f1f5f9; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">0 / ${unit.quiz.points_awarded} Points (${totalQ} Qs · 70%+ required)</span>`;
+                                        }
+                                    } else {
+                                        statusBadge = `<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>`;
+                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points (${totalQ} Questions · 2 pts each)</span>`;
+                                    }
+
+                                    return `
                                     <div class="quiz-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                         <div class="quiz-info">
                                             <h5 style="margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                                 📝 ${unit.quiz.title}
-                                                ${unit.quiz.completed ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 600;">✅ Completed (' + unit.quiz.user_score + '%)</span>' : '<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>'}
+                                                ${statusBadge}
                                             </h5>
-                                            <span class="quiz-points">+${unit.quiz.points_awarded} Points</span>
+                                            ${pointsText}
                                         </div>
                                         ${unit.quiz.completed ? `
                                             <button class="btn-take-quiz" disabled style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;">Already Attempted</button>
@@ -99,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <button class="btn-take-quiz" onclick="openQuizModal(${unit.quiz.id})">Take Quiz</button>
                                         `}
                                     </div>
-                                ` : ''}
+                                    `;
+                                })() : ''}
                             </div>
                         `;
                     });
@@ -204,21 +223,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     const title = document.getElementById('resultTitle');
                     const score = document.getElementById('resultScore');
                     const message = document.getElementById('resultMessage');
+                    const earnedPoints = document.getElementById('resultEarnedPoints');
+                    const pointsRate = document.getElementById('resultPointsRate');
                     const totalPoints = document.getElementById('resultTotalPoints');
 
-                    score.innerText = `Score: ${data.score}%`;
+                    score.innerText = `Score: ${data.score}% (${data.correct_count} of ${data.total_questions} Correct)`;
                     totalPoints.innerText = data.total_user_points;
 
                     if (data.passed) {
                         icon.innerText = '🏆';
                         title.innerText = 'Quiz Passed!';
                         title.style.color = '#16a34a';
-                        message.innerText = `Great job! You earned ${data.points_earned} points for mastering this material.`;
+                        message.innerText = `Outstanding! You answered ${data.correct_count} out of ${data.total_questions} questions correctly and earned +${data.points_earned} points.`;
+                        earnedPoints.innerText = `+${data.points_earned} Pts`;
+                        earnedPoints.style.color = '#16a34a';
+                        pointsRate.innerText = `${data.total_questions} questions · 2 pts each`;
                     } else {
                         icon.innerText = '💪';
                         title.innerText = 'Keep Learning!';
                         title.style.color = '#eab308';
-                        message.innerText = `You didn't pass this time (70% required). Don't give up, you'll get the next one!`;
+                        message.innerText = `You scored ${data.score}% (${data.correct_count}/${data.total_questions} correct). 70% is required to pass and earn points.`;
+                        earnedPoints.innerText = `+0 Pts`;
+                        earnedPoints.style.color = '#64748b';
+                        pointsRate.innerText = `Score < 70% (Need 70%+)`;
                     }
 
                     resultModal.style.display = 'flex';

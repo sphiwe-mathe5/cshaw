@@ -14,34 +14,48 @@ from .serializers import (
     QuestionSerializer, ChoiceSerializer, StudentProgressSerializer
 )
 
-class LMSPermissionMixin:
+class LMSPermission(permissions.BasePermission):
     """
-    Mixin to routing permissions: Read-only for authenticated students, 
-    full write access for coordinators.
+    - Read operations (GET, HEAD, OPTIONS): Any authenticated user (Student, Coordinator, Admin).
+    - Quiz submission (POST to submit action): Any authenticated user.
+    - Content modifications (POST, PUT, PATCH, DELETE): Only Coordinators, Staff, or Superusers.
     """
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'submit']:
-            return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated(), IsCoordinator()]
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
 
-class TopicViewSet(LMSPermissionMixin, viewsets.ModelViewSet):
+        # Read-only operations allowed for all authenticated users
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Quiz submission allowed for all authenticated users
+        if getattr(view, 'action', None) == 'submit':
+            return True
+
+        # Modification actions (create/update/delete topics, units, quizzes) restricted to Coordinators
+        return bool(request.user.role == 'COORDINATOR' or request.user.is_staff or request.user.is_superuser)
+
+class TopicViewSet(viewsets.ModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
+    permission_classes = [LMSPermission]
 
-class LearningUnitViewSet(LMSPermissionMixin, viewsets.ModelViewSet):
+class LearningUnitViewSet(viewsets.ModelViewSet):
     queryset = LearningUnit.objects.all()
     serializer_class = LearningUnitSerializer
+    permission_classes = [LMSPermission]
 
     def destroy(self, request, *args, **kwargs):
         unit = self.get_object()
         topic = unit.topic
-        # The user requested that deleting a unit deletes everything, including the topic
+        # Deleting a unit deletes everything including the topic
         topic.delete() 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class QuizViewSet(LMSPermissionMixin, viewsets.ModelViewSet):
+class QuizViewSet(viewsets.ModelViewSet):
     queryset = Quiz.objects.all()
     serializer_class = QuizSerializer
+    permission_classes = [LMSPermission]
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def submit(self, request, pk=None):

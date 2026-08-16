@@ -18,10 +18,12 @@ class QuizSerializer(serializers.ModelSerializer):
     completed = serializers.SerializerMethodField()
     user_score = serializers.SerializerMethodField()
     user_points = serializers.SerializerMethodField()
+    user_passed = serializers.SerializerMethodField()
+    total_questions = serializers.SerializerMethodField()
 
     class Meta:
         model = Quiz
-        fields = ['id', 'learning_unit', 'title', 'points_awarded', 'questions', 'completed', 'user_score', 'user_points']
+        fields = ['id', 'learning_unit', 'title', 'points_awarded', 'questions', 'completed', 'user_score', 'user_points', 'user_passed', 'total_questions']
 
     def get_completed(self, obj):
         request = self.context.get('request')
@@ -44,6 +46,17 @@ class QuizSerializer(serializers.ModelSerializer):
             if progress:
                 return progress.points_earned
         return 0
+
+    def get_user_passed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            progress = StudentProgress.objects.filter(user=request.user, quiz=obj).first()
+            if progress:
+                return progress.score >= 70.0
+        return False
+
+    def get_total_questions(self, obj):
+        return obj.questions.count()
 
 class LearningUnitSerializer(serializers.ModelSerializer):
     quiz = QuizSerializer(read_only=True)
