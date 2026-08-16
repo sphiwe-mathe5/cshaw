@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Course | C-SHAW Learning Hub</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/lms.css' %}">
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <style>
+        :root {
+            --primary-orange: #ff6b1a;
+            --primary-orange-hover: #e55a0f;
+            --primary-blue: #111827;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --font-family: 'DM Sans', sans-serif;
+            --font-display: 'Bebas Neue', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        /* Top Navigation */
+        .builder-nav {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .builder-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .builder-back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            transition: all 0.2s;
+        }
+
+        .builder-back-btn:hover {
+            background: #e2e8f0;
+            color: var(--primary-blue);
+        }
+
+        .builder-brand {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            letter-spacing: 1px;
+            color: var(--primary-blue);
+        }
+
+        .builder-brand span {
+            color: var(--primary-orange);
+        }
+
+        .builder-container {
+            max-width: 960px;
+            margin: 36px auto 80px auto;
+            padding: 0 20px;
+        }
+
+        .builder-header {
+            margin-bottom: 28px;
+        }
+
+        .builder-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+            margin: 0 0 6px 0;
+        }
+
+        .builder-subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            margin: 0;
+        }
+
+        /* Alert / Notification Banners */
+        .builder-alert {
+            display: none;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .builder-alert-danger {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .builder-alert-success {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Cards */
+        .builder-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 28px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            transition: border-color 0.2s;
+        }
+
+        .builder-card:focus-within {
+            border-color: #cbd5e1;
+        }
+
+        .card-step-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary-orange);
+            background: #fff4ed;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .card-heading {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin: 0 0 6px 0;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin: 0 0 24px 0;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            font-family: inherit;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: #ffffff;
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.15);
+        }
+
+        /* Topic Selector Toggle */
+        .topic-type-toggle {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .topic-type-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .topic-type-btn.active {
+            background: #fff4ed;
+            border-color: var(--primary-orange);
+            color: var(--primary-orange);
+        }
+
+        /* Quill Editor Styling */
+        #editorContainer {
+            min-height: 220px;
+            background: white;
+            font-family: inherit;
+            font-size: 1rem;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .ql-toolbar.ql-snow {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-color: var(--border-color);
+            background: #f8fafc;
+        }
+
+        .ql-container.ql-snow {
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            border-color: var(--border-color);
+        }
+
+        /* Question Builder Cards */
+        .question-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .question-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .question-number-tag {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-remove-q {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .btn-remove-q:hover {
+            background: #fee2e2;
+        }
+
+        .choices-wrapper {
+            margin-top: 18px;
+        }
+
+        .choices-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .choice-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .choice-radio-label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .choice-radio {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary-orange);
+            cursor: pointer;
+        }
+
+        .choice-input {
+            flex: 1;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .choice-input:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+        }
+
+        .btn-remove-choice {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0 6px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .btn-remove-choice:hover {
+            color: var(--danger);
+        }
+
+        .btn-add-choice {
+            background: none;
+            border: 1px dashed #cbd5e1;
+            color: var(--primary-orange);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-add-choice:hover {
+            background: #fff4ed;
+            border-color: var(--primary-orange);
+        }
+
+        .btn-add-question {
+            width: 100%;
+            padding: 14px;
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            color: var(--primary-blue);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-add-question:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        /* Bottom Sticky Action Bar */
+        .builder-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            margin-top: 36px;
+        }
+
+        .points-summary {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .points-summary strong {
+            color: var(--primary-orange);
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .btn-cancel {
+            padding: 12px 24px;
+            background: #f1f5f9;
+            color: var(--text-main);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-publish {
+            padding: 12px 32px;
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(255, 107, 26, 0.35);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-publish:hover {
+            background: var(--primary-orange-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-publish:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.4);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success Overlay */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-modal {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="builder-nav">
+        <div class="builder-nav-left">
+            <a href="{% url 'learning-hub' %}" class="builder-back-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Exit to Hub
+            </a>
+            <div class="builder-brand">C-SHAW <span>LEARNING</span></div>
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">
+            Signed in as <strong>{% if user.is_authenticated %}{{ user.first_name|default:user.email }}{% else %}Coordinator{% endif %}</strong>
+        </div>
+    </nav>
+
+    <div class="builder-container">
+        <!-- Header -->
+        <div class="builder-header">
+            <h1 class="builder-title">🏗️ Course & Quiz Builder</h1>
+            <p class="builder-subtitle">Create structured learning modules, content text, and auto-graded quizzes for students.</p>
+        </div>
+
+        <!-- Inline Error Banner -->
+        <div id="errorBanner" class="builder-alert builder-alert-danger">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; margin-bottom: 2px;">Unable to Publish Course</div>
+                    <div id="errorMessageText">Please correct the highlighted issues below.</div>
+                </div>
+                <button type="button" onclick="hideErrorBanner()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; line-height: 1;">&times;</button>
+            </div>
+        </div>
+
+        <form id="courseBuilderForm" onsubmit="handleFormSubmit(event)">
+            {% csrf_token %}
+
+            <!-- STEP 1: Topic Selection -->
+            <div class="builder-card" id="cardTopic">
+                <div class="card-step-badge">Step 1</div>
+                <h2 class="card-heading">Select or Create Topic</h2>
+                <p class="card-description">Group this lesson under an existing subject category or start a brand new topic.</p>
+
+                <div class="topic-type-toggle">
+                    <button type="button" class="topic-type-btn {% if topics %}active{% endif %}" id="btnSelectExisting" onclick="setTopicMode('existing')">
+                        Select Existing Topic ({% if topics %}{{ topics|length }}{% else %}0{% endif %})
+                    </button>
+                    <button type="button" class="topic-type-btn {% if not topics %}active{% endif %}" id="btnCreateNew" onclick="setTopicMode('new')">
+                        + Create New Topic
+                    </button>
+                </div>
+
+                <!-- Existing Topic Dropdown -->
+                <div class="form-group" id="groupExistingTopic" style="{% if not topics %}display: none;{% endif %}">
+                    <label class="form-label" for="selectTopicId">Existing Topic</label>
+                    <select id="selectTopicId" class="form-select">
+                        <option value="" disabled selected>-- Choose a Topic --</option>
+                        {% for topic in topics %}
+                            <option value="{{ topic.id }}">{{ topic.order }}. {{ topic.title }} ({{ topic.units.count }} units)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- New Topic Input -->
+                <div class="form-group" id="groupNewTopic" style="{% if topics %}display: none;{% endif %}">
+                    <label class="form-label" for="inputNewTopicTitle">New Topic Title</label>
+                    <input type="text" id="inputNewTopicTitle" class="form-input" placeholder="e.g. Community Health & Hygiene">
+                    <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 4px;">A new category will be created and added to the Learning Hub directory.</small>
+                </div>
+            </div>
+
+            <!-- STEP 2: Learning Unit -->
+            <div class="builder-card" id="cardUnit">
+                <div class="card-step-badge">Step 2</div>
+                <h2 class="card-heading">Learning Unit Information</h2>
+                <p class="card-description">Provide a descriptive title and rich instructional content for students to study.</p>
+
+                <div class="form-group">
+                    <label class="form-label" for="inputUnitTitle">Unit Title <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="inputUnitTitle" class="form-input" placeholder="e.g. Unit 1: Introduction & Safety Guidelines" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Unit Content & Study Notes <span style="color: var(--danger);">*</span></label>
+                    <div id="editorContainer"></div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Knowledge Quiz -->
+            <div class="builder-card" id="cardQuiz">
+                <div class="card-step-badge">Step 3</div>
+                <h2 class="card-heading">Assessment Quiz</h2>
+                <p class="card-description">Create questions with multiple choices to test student comprehension. Each question awards 2 points upon passing (70%+).</p>
+
+                <div class="form-group">
+                    <label class="form-label" for="inputQuizTitle">Quiz Title <span style="color: var(--danger);">*</span></label>
+                    <input type="text" id="inputQuizTitle" class="form-input" placeholder="e.g. Safety Protocol Mastery Quiz" required>
+                </div>
+
+                <div style="margin-top: 28px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="margin: 0; font-size: 1.15rem; color: var(--primary-blue); font-weight: 700;">Quiz Questions</h3>
+                        <span id="questionCountLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">0 Questions added</span>
+                    </div>
+
+                    <div id="questionsContainer">
+                        <!-- Dynamically Injected Questions -->
+                    </div>
+
+                    <button type="button" class="btn-add-question" onclick="addQuestion()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Add New Question
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sticky Bottom Action Bar -->
+            <div class="builder-action-bar">
+                <div class="points-summary">
+                    Calculated Reward: <strong id="calculatedPoints">0 Points</strong>
+                    <span style="font-size: 0.8rem; display: block; color: #94a3b8;">(2 points per question)</span>
+                </div>
+                <div class="action-buttons">
+                    <a href="{% url 'learning-hub' %}" class="btn-cancel">Cancel</a>
+                    <button type="submit" id="btnPublish" class="btn-publish">
+                        <span class="spinner" id="publishSpinner"></span>
+                        <span id="publishBtnText">Publish Course</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="success-overlay" id="successModal">
+        <div class="success-modal">
+            <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
+            <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--primary-blue); margin: 0 0 8px 0;">Course Published!</h2>
+            <p style="color: var(--text-muted); font-size: 1rem; margin: 0 0 24px 0; line-height: 1.5;">
+                Your course material and quiz have been successfully created and are now live for all volunteers on the Learning Hub.
+            </p>
+            <a href="{% url 'learning-hub' %}" style="display: block; width: 100%; box-sizing: border-box; padding: 14px; background: var(--primary-orange); color: white; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(255, 107, 26, 0.35);">
+                Return to Learning Hub
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let topicMode = "{% if topics %}existing{% else %}new{% endif %}";
+        let questionCounter = 0;
+        let quill = null;
+
+        // Initialize Quill
+        document.addEventListener('DOMContentLoaded', () => {
+            quill = new Quill('#editorContainer', {
+                theme: 'snow',
+                placeholder: 'Write or paste comprehensive learning material, safety guidelines, links, or bullet points here...',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['blockquote', 'code-block'],
+                        ['link'],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // Add 1 initial question by default
+            addQuestion();
+        });
+
+        // --- Topic Toggle ---
+        function setTopicMode(mode) {
+            topicMode = mode;
+            const btnExisting = document.getElementById('btnSelectExisting');
+            const btnNew = document.getElementById('btnCreateNew');
+            const grpExisting = document.getElementById('groupExistingTopic');
+            const grpNew = document.getElementById('groupNewTopic');
+
+            if (mode === 'existing') {
+                btnExisting.classList.add('active');
+                btnNew.classList.remove('active');
+                grpExisting.style.display = 'block';
+                grpNew.style.display = 'none';
+            } else {
+                btnNew.classList.add('active');
+                btnExisting.classList.remove('active');
+                grpNew.style.display = 'block';
+                grpExisting.style.display = 'none';
+            }
+        }
+
+        // --- Question Builder ---
+        function addQuestion() {
+            questionCounter++;
+            const qId = questionCounter;
+
+            const qHtml = `
+                <div class="question-card" id="qCard_${qId}" data-qid="${qId}">
+                    <div class="question-card-header">
+                        <div class="question-number-tag">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <span class="q-title-label">Question</span>
+                        </div>
+                        <button type="button" class="btn-remove-q" onclick="removeQuestion(${qId})">Remove Question</button>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <input type="text" class="form-input q-text-input" placeholder="Type the question text here..." required>
+                    </div>
+
+                    <div class="choices-wrapper">
+                        <div class="choices-label">
+                            <span>Answer Choices</span>
+                            <span style="font-size: 0.8rem; color: var(--primary-orange); font-weight: 600;">● Select the correct radio option</span>
+                        </div>
+                        <div class="choices-container" id="choicesContainer_${qId}">
+                            <!-- Choices injected here -->
+                        </div>
+                        <button type="button" class="btn-add-choice" onclick="addChoice(${qId})">+ Add Another Choice</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('questionsContainer').insertAdjacentHTML('beforeend', qHtml);
+
+            // Add 2 default choices
+            addChoice(qId, 'Choice A', true);
+            addChoice(qId, 'Choice B', false);
+
+            updateQuestionNumbers();
+        }
+
+        function removeQuestion(qId) {
+            const card = document.getElementById(`qCard_${qId}`);
+            if (card) {
+                card.remove();
+                updateQuestionNumbers();
+            }
+        }
+
+        function addChoice(qId, placeholderText = '', isChecked = false) {
+            const container = document.getElementById(`choicesContainer_${qId}`);
+            if (!container) return;
+
+            const choiceId = 'choice_' + Math.random().toString(36).substr(2, 9);
+            const cHtml = `
+                <div class="choice-row" id="${choiceId}">
+                    <label class="choice-radio-label" title="Mark as correct answer">
+                        <input type="radio" class="choice-radio" name="correct_radio_${qId}" ${isChecked ? 'checked' : ''} required>
+                    </label>
+                    <input type="text" class="choice-input" placeholder="${placeholderText || 'Choice text...'}" required>
+                    <button type="button" class="btn-remove-choice" onclick="removeChoice('${choiceId}', ${qId})" title="Remove choice">&times;</button>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', cHtml);
+        }
+
+        function removeChoice(choiceId, qId) {
+            const container = document.getElementById(`choicesContainer_${qId}`);
+            const rows = container.querySelectorAll('.choice-row');
+            if (rows.length <= 2) {
+                showError("Each question must have at least 2 choices.");
+                return;
+            }
+            const el = document.getElementById(choiceId);
+            if (el) el.remove();
+        }
+
+        function updateQuestionNumbers() {
+            const cards = document.querySelectorAll('.question-card');
+            cards.forEach((card, index) => {
+                const label = card.querySelector('.q-title-label');
+                if (label) label.innerText = `Question ${index + 1}`;
+            });
+
+            const count = cards.length;
+            document.getElementById('questionCountLabel').innerText = `${count} Question${count === 1 ? '' : 's'} added`;
+            document.getElementById('calculatedPoints').innerText = `${count * 2} Points`;
+        }
+
+        // --- Alert Helpers ---
+        function showError(message) {
+            const banner = document.getElementById('errorBanner');
+            const msgEl = document.getElementById('errorMessageText');
+            msgEl.innerText = message;
+            banner.style.display = 'block';
+            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideErrorBanner() {
+            document.getElementById('errorBanner').style.display = 'none';
+        }
+
+        // --- Submission Handler ---
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            hideErrorBanner();
+
+            // 1. Topic validation
+            let topicId = null;
+            let topicTitle = null;
+
+            if (topicMode === 'existing') {
+                const sel = document.getElementById('selectTopicId');
+                if (!sel.value) {
+                    showError("Please choose an existing topic or switch to 'Create New Topic'.");
+                    document.getElementById('cardTopic').scrollIntoView({ behavior: 'smooth' });
+                    return;
+                }
+                topicId = sel.value;
+            } else {
+                const inp = document.getElementById('inputNewTopicTitle');
+                if (!inp.value.trim()) {
+                    showError("Please enter a title for the new topic.");
+                    inp.focus();
+                    return;
+                }
+                topicTitle = inp.value.trim();
+            }
+
+            // 2. Unit validation
+            const unitTitle = document.getElementById('inputUnitTitle').value.trim();
+            if (!unitTitle) {
+                showError("Please enter a unit title.");
+                document.getElementById('inputUnitTitle').focus();
+                return;
+            }
+
+            const contentHtml = quill ? quill.root.innerHTML.trim() : '';
+            if (!contentHtml || contentHtml === '<p><br></p>') {
+                showError("Please write some study notes or content for the learning unit.");
+                quill.focus();
+                return;
+            }
+
+            // 3. Quiz validation
+            const quizTitle = document.getElementById('inputQuizTitle').value.trim();
+            if (!quizTitle) {
+                showError("Please enter a quiz title.");
+                document.getElementById('inputQuizTitle').focus();
+                return;
+            }
+
+            // 4. Questions validation
+            const questionCards = document.querySelectorAll('.question-card');
+            if (questionCards.length === 0) {
+                showError("Please add at least one quiz question.");
+                return;
+            }
+
+            const questionsData = [];
+            for (let i = 0; i < questionCards.length; i++) {
+                const card = questionCards[i];
+                const qText = card.querySelector('.q-text-input').value.trim();
+                const qNum = i + 1;
+
+                if (!qText) {
+                    showError(`Question ${qNum} is missing question text.`);
+                    card.querySelector('.q-text-input').focus();
+                    return;
+                }
+
+                const choiceRows = card.querySelectorAll('.choice-row');
+                if (choiceRows.length < 2) {
+                    showError(`Question ${qNum} must have at least 2 choices.`);
+                    return;
+                }
+
+                const choices = [];
+                let hasCorrect = false;
+
+                choiceRows.forEach(row => {
+                    const cText = row.querySelector('.choice-input').value.trim();
+                    const isChecked = row.querySelector('.choice-radio').checked;
+                    if (isChecked) hasCorrect = true;
+                    if (cText) {
+                        choices.push({ text: cText, is_correct: isChecked });
+                    }
+                });
+
+                if (choices.length < 2) {
+                    showError(`Question ${qNum} has empty choices. Please fill in choice text.`);
+                    return;
+                }
+
+                if (!hasCorrect) {
+                    showError(`Please select the correct radio option for Question ${qNum}.`);
+                    return;
+                }
+
+                questionsData.push({
+                    text: qText,
+                    choices: choices
+                });
+            }
+
+            // 5. Submit Payload
+            const payload = {
+                topic_id: topicId,
+                topic_title: topicTitle,
+                unit_title: unitTitle,
+                content_text: contentHtml,
+                quiz_title: quizTitle,
+                questions: questionsData
+            };
+
+            const btn = document.getElementById('btnPublish');
+            const spinner = document.getElementById('publishSpinner');
+            const btnText = document.getElementById('publishBtnText');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            btnText.innerText = 'Publishing Course...';
+
+            try {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const response = await fetch('/api/lms/admin/upload-nested/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Show success modal
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    const err = data.error || data.detail || 'Failed to upload course. Please try again.';
+                    showError(err);
+                }
+            } catch (networkErr) {
+                console.error(networkErr);
+                showError("A network error occurred while publishing. Please check your connection and try again.");
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.innerText = 'Publish Course';
+            }
+        }
+    </script>
+</body>
+</html>

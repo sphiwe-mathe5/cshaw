@@ -132,6 +132,13 @@ class QuizListView(APIView):
         serializer = QuizSerializer(quizzes, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+from django.conf import settings
+import json
+from django.shortcuts import redirect
+from users.services import BackgroundEmailService
+from django.template.loader import render_to_string
+from django.contrib.auth import get_user_model
+
 class AdminContentUploadView(APIView):
     """
     POST /api/lms/admin/upload-nested/
@@ -141,25 +148,54 @@ class AdminContentUploadView(APIView):
 
     def post(self, request):
         topic_id = request.data.get('topic_id')
-        topic_title = request.data.get('topic_title')
-        unit_title = request.data.get('unit_title')
-        content_text = request.data.get('content_text', '')
-        quiz_title = request.data.get('quiz_title')
+        topic_title = (request.data.get('topic_title') or '').strip()
+        unit_title = (request.data.get('unit_title') or '').strip()
+        content_text = (request.data.get('content_text') or '').strip()
+        quiz_title = (request.data.get('quiz_title') or '').strip()
         questions_data = request.data.get('questions', [])
 
-        if not unit_title or not quiz_title:
-            return Response({"error": "unit_title and quiz_title are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not unit_title:
+            return Response({"error": "Unit Title is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not content_text or content_text == '<p><br></p>':
+            return Response({"error": "Unit Content cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+        if not quiz_title:
+            return Response({"error": "Quiz Title is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse questions if string
+        if isinstance(questions_data, str):
+            try:
+                questions_data = json.loads(questions_data)
+            except json.JSONDecodeError:
+                return Response({"error": "Invalid format for questions data JSON string."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not isinstance(questions_data, list) or len(questions_data) == 0:
+            return Response({"error": "At least one quiz question with choices is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate questions & choices structure
+        for idx, q_item in enumerate(questions_data, start=1):
+            q_text = (q_item.get('text') or '').strip()
+            if not q_text:
+                return Response({"error": f"Question {idx} is missing question text."}, status=status.HTTP_400_BAD_REQUEST)
+            choices = q_item.get('choices', [])
+            if not isinstance(choices, list) or len(choices) < 2:
+                return Response({"error": f"Question {idx} ('{q_text[:30]}...') must have at least 2 choices."}, status=status.HTTP_400_BAD_REQUEST)
+            has_correct = any(bool(c.get('is_correct')) for c in choices)
+            if not has_correct:
+                return Response({"error": f"Question {idx} ('{q_text[:30]}...') must have one correct choice selected."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
                 # 1. Resolve Topic
                 if topic_id:
-                    topic = Topic.objects.get(id=topic_id)
+                    try:
+                        topic = Topic.objects.get(id=topic_id)
+                    except Topic.DoesNotExist:
+                        return Response({"error": "Selected topic does not exist."}, status=status.HTTP_400_BAD_REQUEST)
                 elif topic_title:
                     order = Topic.objects.count() + 1
                     topic, _ = Topic.objects.get_or_create(title=topic_title, defaults={'order': order})
                 else:
-                    return Response({"error": "topic_id or topic_title must be provided."}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "Please select an existing topic or enter a new topic title."}, status=status.HTTP_400_BAD_REQUEST)
 
                 # 2. Create Learning Unit
                 unit_order = LearningUnit.objects.filter(topic=topic).count() + 1
@@ -169,14 +205,6 @@ class AdminContentUploadView(APIView):
                     content_text=content_text,
                     order=unit_order
                 )
-
-                # Parse questions early to calculate points
-                import json
-                if isinstance(questions_data, str):
-                    try:
-                        questions_data = json.loads(questions_data)
-                    except json.JSONDecodeError:
-                        return Response({"error": "Invalid format for questions data JSON string."}, status=status.HTTP_400_BAD_REQUEST)
 
                 # Calculate points: 2 points per question
                 calculated_points = len(questions_data) * 2
@@ -189,16 +217,15 @@ class AdminContentUploadView(APIView):
                 )
 
                 # 4. Create Questions & Choices
-
                 for q_item in questions_data:
-                    q_text = q_item.get('text')
+                    q_text = q_item.get('text', '').strip()
                     if not q_text:
                         continue
                     question = Question.objects.create(quiz=quiz, text=q_text)
 
                     choices = q_item.get('choices', [])
                     for c_item in choices:
-                        c_text = c_item.get('text')
+                        c_text = (c_item.get('text') or '').strip()
                         c_correct = c_item.get('is_correct', False)
                         if c_text:
                             Choice.objects.create(
@@ -207,38 +234,35 @@ class AdminContentUploadView(APIView):
                                 is_correct=bool(c_correct)
                             )
 
-            # ----- SEND EMAIL NOTIFICATION -----
-            from django.core.mail import EmailMultiAlternatives
-            from django.template.loader import render_to_string
-            from django.conf import settings
-            from django.contrib.auth import get_user_model
-            
-            User = get_user_model()
-            students = User.objects.filter(role=User.Roles.STUDENT, receive_notifications=True)
-            student_emails = list(students.values_list('email', flat=True))
+            # ----- SEND BACKGROUND EMAIL NOTIFICATION -----
+            try:
+                User = get_user_model()
+                students = User.objects.filter(role=User.Roles.STUDENT, receive_notifications=True)
+                student_emails = list(students.values_list('email', flat=True))
 
-            if student_emails:
-                context = {
-                    'topic_title': topic.title,
-                    'unit_title': learning_unit.title,
-                    'link': request.build_absolute_uri('/learning-hub/')
-                }
-                html_message = render_to_string('lms/emails/new_course.html', context)
-                text_message = f"System Notification: New learning material has been added to {topic.title} - {learning_unit.title}."
-                
-                email = EmailMultiAlternatives(
-                    subject=f"System Notification: New Material in {topic.title}",
-                    body=text_message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[settings.DEFAULT_FROM_EMAIL],
-                    bcc=student_emails,
-                    headers={'X-Priority': '1', 'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply'}
-                )
-                email.attach_alternative(html_message, "text/html")
-                email.send(fail_silently=True)
+                if student_emails:
+                    hub_link = request.build_absolute_uri('/learning-hub/') if request else "https://cshaw.co.za/learning-hub/"
+                    context = {
+                        'topic_title': topic.title,
+                        'unit_title': learning_unit.title,
+                        'quiz_title': quiz.title,
+                        'points': quiz.points_awarded,
+                        'link': hub_link
+                    }
+                    html_message = render_to_string('lms/emails/new_course.html', context)
+                    subject = f"New Course Available: {topic.title} 📚"
+
+                    BackgroundEmailService._send_async(
+                        subject=subject,
+                        to_emails=[settings.DEFAULT_FROM_EMAIL],
+                        bcc_emails=student_emails,
+                        html_content=html_message
+                    )
+            except Exception as email_err:
+                print(f"⚠️ LMS Email Notification Error: {email_err}")
 
             return Response({
-                "message": "Content uploaded successfully!",
+                "message": "Course content published successfully!",
                 "topic_id": topic.id,
                 "unit_id": learning_unit.id,
                 "quiz_id": quiz.id
@@ -249,3 +273,19 @@ class AdminContentUploadView(APIView):
 
 class LMSFrontendView(LoginRequiredMixin, TemplateView):
     template_name = 'lms/index.html'
+
+class CourseCreateView(LoginRequiredMixin, TemplateView):
+    template_name = 'lms/create_course.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if request.user.role != 'COORDINATOR':
+            return redirect('/learning-hub/')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['topics'] = Topic.objects.all().order_by('order', 'id')
+        return context
+

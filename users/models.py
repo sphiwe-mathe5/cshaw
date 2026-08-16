@@ -34,6 +34,18 @@ class User(AbstractUser):
         DFC = 'DFC', 'DFC Campus'
         APK = 'APK', 'APK Campus'
         SWC = 'SWC', 'SWC Campus'
+        
+    class TShirtSizes(models.TextChoices):
+        S = 'S', 'S'
+        M = 'M', 'M'
+        L = 'L', 'L'
+        XL = 'XL', 'XL'
+        XXL = 'XXL', 'XXL'
+        XXXL = '3XL', '3XL'
+
+    class GenderChoices(models.TextChoices):
+        MALE = 'Male', 'Male'
+        FEMALE = 'Female', 'Female'
 
     username = None
     email = models.EmailField(_('email address'), unique=True)
@@ -44,6 +56,9 @@ class User(AbstractUser):
         default=0.00,
         help_text="Admins can use this to manually add or subtract hours from the student's total."
     )
+    
+    tshirt_size = models.CharField(max_length=5, choices=TShirtSizes.choices, null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=GenderChoices.choices, null=True, blank=True)
     points = models.PositiveIntegerField(default=0, help_text="Gamified learning points earned from LMS quizzes")
 
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.STUDENT)

@@ -55,13 +55,11 @@ CORS_ALLOW_CREDENTIALS = True
 #    'http://127.0.0.1:8000',
 #    'https://cshaw.co.za',
 #    'https://www.cshaw.co.za',
-#    'https://cshaw-production.up.railway.app',
 #]
 
 CORS_ALLOWED_ORIGINS = [
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
-    'https://cshaw-production.up.railway.app',
 ]
 
 
@@ -74,14 +72,14 @@ AUTHENTICATION_BACKENDS = [
 
 # Django-Axes Rules
 AXES_FAILURE_LIMIT = 5
-AXES_COOLOFF_TIME = 15  # Minutes
+AXES_COOLOFF_TIME = 15
 AXES_LOCKOUT_PARAMETERS = ["username"]
-AXES_LOCKOUT_TEMPLATE = None # Return 403 response instead of HTML if None (we will handle it)
+AXES_LOCKOUT_TEMPLATE = None
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-# Add cache configuration
+#cache configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -105,12 +103,11 @@ CSRF_USE_SESSIONS = False
 CSRF_TRUSTED_ORIGINS = [  
     'https://cshaw.co.za',
     'https://www.cshaw.co.za',
-    'https://cshaw-production.up.railway.app',
 ]
 
-SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_COOKIE_AGE = 86400  
 SESSION_SAVE_EVERY_REQUEST = True
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760 
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
@@ -118,23 +115,23 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated', # 👈 Default to locked down!
+        'rest_framework.permissions.IsAuthenticated', 
     ],
     'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer', # 👈 Only return raw JSON, no web interface
+        'rest_framework.renderers.JSONRenderer', # 
     ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',  # Unregistered users can only make 100 requests a day
-        'user': '1000/day', # Logged in users can make 1000 a day
+        'anon': '100/day',  
+        'user': '1000/day', 
         'auth_burst': '5/minute'
     }
 }
 
-# Keep the pretty web interface ONLY when you are on localhost
+#pretty web interface ONLY when you are on localhost
 if DEBUG:
     REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append('rest_framework.renderers.BrowsableAPIRenderer')
 
@@ -204,6 +201,7 @@ DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
 GS_PROJECT_ID = config('GS_PROJECT_ID')
 GS_BUCKET_NAME = config('GS_BUCKET_NAME')
 MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/' 
+
 
 GS_CREDENTIALS = service_account.Credentials.from_service_account_info({
     "type": config("GOOGLE_CLOUD_TYPE", default="service_account"),

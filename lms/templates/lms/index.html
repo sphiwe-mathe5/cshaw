@@ -214,9 +214,9 @@
                         Signed in as <strong>{{ user.first_name|default:user.email }}</strong>
                     </div>
                     {% if request.user.role == 'COORDINATOR' %}
-                    <a href="#" onclick="openAdminModal(); return false;">
+                    <a href="{% url 'lms-create-course' %}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                        Manage Courses
+                        + Create Course
                     </a>
                     {% endif %}
                     <a href="{% url 'index' %}">
@@ -236,9 +236,17 @@
     </nav>
 
     <main class="lms-main">
-        <div style="margin-bottom: 30px; display: flex; align-items: baseline; gap: 15px; flex-wrap: wrap;">
-            <h2 style="margin: 0; font-size: 1.8rem; color: var(--primary-blue); font-weight: 800;">Learning Hub</h2>
-            <p style="margin: 0; color: var(--text-muted); font-size: 0.95rem;">Complete modules, earn points, unlock achievements.</p>
+        <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.8rem; color: var(--primary-blue); font-weight: 800;">Learning Hub</h2>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.95rem;">Complete modules, earn points, unlock achievements.</p>
+            </div>
+            {% if request.user.role == 'COORDINATOR' %}
+            <a href="{% url 'lms-create-course' %}" style="display: inline-flex; align-items: center; gap: 8px; background: var(--primary-orange); color: white; padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; text-decoration: none; box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3); transition: transform 0.2s;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Create Course
+            </a>
+            {% endif %}
         </div>
 
         <div id="lmsContentArea">
@@ -282,62 +290,6 @@
             <button onclick="closeResultModal()" style="width: 100%; padding: 14px; background: var(--primary-orange); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 12px rgba(255,107,26,0.3);">Continue Learning</button>
         </div>
     </div>
-
-    <!-- Admin Course Builder Modal -->
-    {% if request.user.role == 'COORDINATOR' %}
-    <div id="adminUploadModal" class="modal-overlay">
-        <div class="modal lms-admin-modal" style="background:white; padding:35px; border-radius:16px; width:90%; max-width:800px; box-shadow:0 10px 40px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto;">
-            <div class="quiz-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px;">
-                <h2 style="margin: 0; color: #111827; font-size: 1.5rem;">🏗️ Course Builder</h2>
-                <button onclick="closeAdminModal()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #6b7280; line-height: 1;">&times;</button>
-            </div>
-            
-            <form id="adminUploadForm" enctype="multipart/form-data">
-                <div class="admin-form-group">
-                    <label>Topic Title</label>
-                    <input type="text" name="topic_title" placeholder="e.g. Health & Safety 101" required>
-                    <small style="color: #6b7280; font-size: 0.8rem; display: block; margin-top: 4px;">Will create a new topic or add to an existing one if the name matches.</small>
-                </div>
-                
-                <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 20px 0;">
-                
-                <div class="admin-form-group">
-                    <label>Unit Title</label>
-                    <input type="text" name="unit_title" placeholder="e.g. Introduction to First Aid" required>
-                </div>
-                
-                <div class="admin-form-group">
-                    <label>Unit Content</label>
-                    <input type="hidden" name="content_text" id="hidden_content_text" required>
-                    <div id="editor-container" style="height: 200px; background: white; border-radius: 0 0 8px 8px;"></div>
-                </div>
-
-                <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 20px 0;">
-                
-                <div class="admin-form-group">
-                    <label>Quiz Title</label>
-                    <input type="text" name="quiz_title" placeholder="e.g. First Aid Basics Quiz" required>
-                </div>
-                
-                <div class="admin-questions-section" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <label style="margin: 0; font-size: 1.1rem; color: #111827; font-weight: 600;">Quiz Questions</label>
-                        <button type="button" onclick="addAdminQuestion()" style="background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary-orange);">+ Add Question</button>
-                    </div>
-                    
-                    <div id="adminQuestionsContainer">
-                        <!-- Questions injected by JS -->
-                    </div>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:15px; border-top: 2px solid #f0f2f5; padding-top: 20px; margin-top: 20px;">
-                    <button type="button" onclick="closeAdminModal()" style="padding:12px 24px; border:1px solid #ddd; background:#f8f9fa; color:#111827; border-radius:8px; cursor:pointer; font-weight: 600; transition: 0.2s;">Cancel</button>
-                    <button type="submit" id="adminSubmitBtn" style="padding:12px 24px; background:var(--primary-orange); color:white; border:none; border-radius:8px; cursor:pointer; font-weight: 700; transition: 0.2s; box-shadow: 0 4px 10px rgba(255, 107, 26, 0.3);">Publish Course</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    {% endif %}
 
     <script src="{% static 'js/lms.js' %}"></script>
 </body>

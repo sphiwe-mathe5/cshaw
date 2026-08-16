@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from lms.views import LMSFrontendView
+from lms.views import LMSFrontendView, CourseCreateView
 
 urlpatterns = [
     path('admin-cshaw-as/', admin.site.urls),
@@ -10,6 +10,7 @@ urlpatterns = [
     path('', include('core.urls')),
     path('api/lms/', include('lms.urls')),
     path('learning-hub/', LMSFrontendView.as_view(), name='learning-hub'),
+    path('learning-hub/create-course/', CourseCreateView.as_view(), name='lms-create-course'),
 ]
 
 if settings.DEBUG:

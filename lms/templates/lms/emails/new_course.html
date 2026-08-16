@@ -1,93 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>New Course Material</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #F3F4F6;
-            margin: 0;
-            padding: 0;
-            color: #1F2937;
-        }
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .header {
-            background-color: #FF8C42;
-            padding: 30px;
-            text-align: center;
-        }
-        .header h1 {
-            color: #FFFFFF;
-            margin: 0;
-            font-size: 24px;
-        }
-        .content {
-            padding: 40px 30px;
-            text-align: center;
-        }
-        .content p {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #4B5563;
-        }
-        .course-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #1F2937;
-            margin: 20px 0;
-            padding: 15px;
-            background-color: #F9FAFB;
-            border-radius: 8px;
-            border: 1px solid #E5E7EB;
-        }
-        .cta-button {
-            display: inline-block;
-            margin-top: 25px;
-            padding: 14px 28px;
-            background-color: #FF8C42;
-            color: #FFFFFF !important;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 8px;
-        }
-        .footer {
-            background-color: #F9FAFB;
-            padding: 20px;
-            text-align: center;
-            font-size: 14px;
-            color: #6B7280;
-            border-top: 1px solid #E5E7EB;
-        }
-    </style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>New Course Material Available</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>System Notification</h1>
-        </div>
-        <div class="content">
-            <p>Dear Student,</p>
-            <p>A new learning module is now available for you to complete on the C-SHAW Volunteer Hub.</p>
-            
-            <div class="course-title">
-                {{ topic_title }}<br>
-                <span style="font-size: 16px; font-weight: normal; color: #6B7280;">{{ unit_title }}</span>
-            </div>
-            
-            <a href="{{ link }}" class="cta-button">View Material</a>
-        </div>
-        <div class="footer">
-            <p>Keep up the great work!</p>
-            <p>&copy; The C-SHAW Volunteer Hub Team</p>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #f4f4f4;">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-collapse: collapse;">
+                    
+                    <!-- Top Brand Bar -->
+                    <tr>
+                        <td align="center" style="background-color: #1a1a2e; padding: 15px;">
+                            <span style="color: #ffffff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: sans-serif;">
+                                C-SHAW Volunteering Hub
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" style="padding: 40px 30px 20px 30px; border-bottom: 4px solid #E35205;">
+                            <h1 style="color: #E35205; font-size: 28px; font-weight: 800; margin: 0; line-height: 1.2; font-family: sans-serif;">
+                                New Learning Module! 📚
+                            </h1>
+                            <h2 style="color: #333333; font-size: 20px; font-weight: 600; margin: 15px 0 0 0; font-family: sans-serif;">
+                                {{ topic_title }}
+                            </h2>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 30px; font-family: sans-serif;">
+                            
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-top: 0;">
+                                Hi Volunteer,
+                            </p>
+                            <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                                New learning material has just been published on the <strong>C-SHAW Learning Hub</strong>! Expand your volunteering knowledge, complete the module, and ace the quiz to earn gamification points.
+                            </p>
+
+                            <!-- Course Details Highlight Box -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #FFF4EC; border-radius: 6px; margin: 25px 0;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                            <tr>
+                                                <td width="30" valign="top" style="padding-bottom: 15px; font-size: 20px;">📖</td>
+                                                <td style="padding-bottom: 15px; font-size: 15px; color: #333; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Topic</span>
+                                                    {{ topic_title }}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td width="30" valign="top" style="padding-bottom: 15px; font-size: 20px;">🎯</td>
+                                                <td style="padding-bottom: 15px; font-size: 15px; color: #333; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Unit Title</span>
+                                                    {{ unit_title }}
+                                                </td>
+                                            </tr>
+                                            {% if quiz_title %}
+                                            <tr>
+                                                <td width="30" valign="top" style="padding-bottom: 15px; font-size: 20px;">📝</td>
+                                                <td style="padding-bottom: 15px; font-size: 15px; color: #333; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Assessment Quiz</span>
+                                                    {{ quiz_title }}
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                            {% if points %}
+                                            <tr>
+                                                <td width="30" valign="top" style="font-size: 20px;">🏆</td>
+                                                <td style="font-size: 15px; color: #E35205; font-weight: bold; font-family: sans-serif;">
+                                                    <span style="color: #888; font-weight: normal; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Passing Reward</span>
+                                                    {{ points }} Points (70%+ to pass)
+                                                </td>
+                                            </tr>
+                                            {% endif %}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center" style="padding: 10px 0 20px 0;">
+                                        <a href="{{ link }}" style="background-color: #E35205; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 6px; display: inline-block; font-family: sans-serif; box-shadow: 0 4px 6px rgba(227, 82, 5, 0.25);">
+                                            👉 Start Learning Now
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="color: #999999; font-size: 13px; text-align: center; margin-top: 20px; font-family: sans-serif;">
+                                Log in to the hub anytime to track your progress and achievements.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="background-color: #f8f8f8; padding: 20px; border-top: 1px solid #eeeeee; font-family: sans-serif;">
+                            <p style="color: #888888; font-size: 12px; line-height: 1.4; margin: 0;">
+                                &copy; {% now "Y" %} Centre For Students Health and Wellness<br>
+                                You received this email because you are a registered student volunteer.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

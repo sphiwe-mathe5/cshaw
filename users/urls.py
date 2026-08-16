@@ -17,6 +17,7 @@ from .views import (
     StudentUpdateView,
     VerifyOTPView,
     UpdateVolunteerStatusView,
+    UpdateDemographicsView,
     
     login_page,
     student_register_page,
@@ -29,6 +30,7 @@ from core import views
 urlpatterns = [
 
     path('api/users/update-volunteer-status/', UpdateVolunteerStatusView.as_view(), name='api-update-volunteer-status'),
+    path('api/users/update-demographics/', UpdateDemographicsView.as_view(), name='update_demographics'),
     path('api/users/register/student/', StudentRegistrationView.as_view(), name='api-register-student'),
     path('api/users/register/coordinator/', CoordinatorRegistrationView.as_view(), name='api-register-coordinator'),
     path('api/users/login/', LoginView.as_view(), name='api-login'),

@@ -438,6 +438,7 @@ def coordinator_register_page(request):
         'RECAPTCHA_SITE_KEY': config('RECAPTCHA_SITE_KEY')
     }
     return render(request, 'users/coordinator_register.html', context)
+
 class UpdateVolunteerStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -457,3 +458,24 @@ class UpdateVolunteerStatusView(APIView):
         user.volunteer_status = status_value
         user.save()
         return Response({"message": "Status updated successfully."})
+        
+class UpdateDemographicsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        
+        if user.role != User.Roles.STUDENT:
+            return Response({"error": "Only students can set demographics."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        tshirt_size = request.data.get('tshirt_size')
+        gender = request.data.get('gender')
+        
+        if tshirt_size and gender:
+            user.tshirt_size = tshirt_size
+            user.gender = gender
+            user.save(update_fields=['tshirt_size', 'gender'])
+            return Response({"success": True, "message": "Demographics updated successfully."}, status=status.HTTP_200_OK)
+            
+        return Response({"success": False, "error": "Both T-Shirt Size and Gender are required."}, status=status.HTTP_400_BAD_REQUEST)
+

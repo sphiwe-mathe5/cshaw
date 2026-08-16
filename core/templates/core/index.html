@@ -693,6 +693,85 @@
 </script>
 {% endif %}
 
+{% if user.is_authenticated and user.role == 'STUDENT' and not user.tshirt_size or user.is_authenticated and user.role == 'STUDENT' and not user.gender %}
+<div id="demographicsModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(8px);">
+   <div style="background: white; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+       <h2 style="margin-top: 0; color: #333; text-align: center;">One More Thing! 👕</h2>
+       <p style="color: #666; font-size: 1.05rem; margin-bottom: 25px; line-height: 1.5; text-align: center;">Please provide your T-shirt size and gender so we can update your profile for event logistics.</p>
+       
+       <form id="demographicsForm" onsubmit="submitDemographics(event)">
+           <div style="margin-bottom: 20px;">
+               <label for="tshirt_size" style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">T-Shirt Size</label>
+               <select id="tshirt_size" name="tshirt_size" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                   <option value="" disabled selected>Select size...</option>
+                   <option value="S">Small (S)</option>
+                   <option value="M">Medium (M)</option>
+                   <option value="L">Large (L)</option>
+                   <option value="XL">Extra Large (XL)</option>
+                   <option value="XXL">2XL (XXL)</option>
+                   <option value="3XL">3XL</option>
+               </select>
+           </div>
+           
+           <div style="margin-bottom: 25px;">
+               <label for="gender" style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">Gender</label>
+               <select id="gender" name="gender" required style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                   <option value="" disabled selected>Select gender...</option>
+                   <option value="Male">Male</option>
+                   <option value="Female">Female</option>
+               </select>
+               <p style="font-size: 0.8rem; color: #888; margin-top: 8px; line-height: 1.4;">Note: Our community is fully inclusive. We collect this data purely for demographic reporting and physical event logistics (like ensuring proper T-shirt fits and accommodations). Your identity is respected, and this data remains strictly confidential..</p>
+           </div>
+           
+           <button type="submit" style="background: #E35205; color: white; padding: 15px; border: none; border-radius: 12px; cursor: pointer; text-align: center; width: 100%; font-size: 1.1rem; font-weight: 600; transition: background 0.2s;">
+               Save Details
+           </button>
+       </form>
+   </div>
+</div>
+
+<script>
+    function submitDemographics(event) {
+        event.preventDefault();
+        
+        const tshirt_size = document.getElementById('tshirt_size').value;
+        const gender = document.getElementById('gender').value;
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Saving...';
+        
+        fetch('/api/users/update-demographics/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ tshirt_size: tshirt_size, gender: gender })
+        })
+        .then(response => {
+            if (response.ok) {
+                const modal = document.getElementById('demographicsModal');
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => modal.remove(), 500);
+            } else {
+                alert('An error occurred while saving. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Save Details';
+            }
+        })
+        .catch(err => {
+            console.error('Demographics save error:', err);
+            alert('An error occurred. Please check your connection.');
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Save Details';
+        });
+    }
+</script>
+{% endif %}
+
 </body>
 
 </html>
