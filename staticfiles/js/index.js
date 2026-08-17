@@ -2114,11 +2114,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Manage roles, view details, and assign annual awards.</p>
             </div>
 
-            <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <!-- Demographics Overview Cards -->
+            <div id="demographicsStatsContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <!-- Injected via JS -->
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
                 <input type="text" id="studentSearchInput" placeholder="Search by name or student no..." 
-                    style="flex: 2; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 200px;">
+                    style="flex: 2; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 180px;">
                 
-                <select id="campusFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                <select id="campusFilter" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px;">
                     <option value="">All Campuses</option>
                     <option value="APB">APB</option>
                     <option value="DFC">DFC</option>
@@ -2126,13 +2131,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="SWC">SWC</option>
                 </select>
 
-                <select id="roleFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                <select id="genderFilter" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px;">
+                    <option value="">All Genders</option>
+                    <option value="Male">👨 Male</option>
+                    <option value="Female">👩 Female</option>
+                </select>
+
+                <select id="roleFilter" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px;">
                     <option value="">All Roles</option>
                     <option value="Executive">Executives Only</option>
                     <option value="Volunteer">Volunteers Only</option>
                 </select>
 
-                <select id="sortFilter" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-width: 120px;">
+                <select id="sortFilter" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px;">
                     <option value="name">Sort by Name</option>
                     <option value="hours_desc">Most Hours (High-Low)</option>
                     <option value="hours_asc">Least Hours (Low-High)</option>
@@ -2164,16 +2175,76 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to load');
             allStudents = await response.json();
             
+            renderStats(allStudents);
             renderRows(allStudents);
 
-            const inputs = ['studentSearchInput', 'campusFilter', 'roleFilter', 'sortFilter'];
+            const inputs = ['studentSearchInput', 'campusFilter', 'genderFilter', 'roleFilter', 'sortFilter'];
             inputs.forEach(id => {
-                document.getElementById(id).addEventListener(id === 'studentSearchInput' ? 'input' : 'change', applyFilters);
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener(id === 'studentSearchInput' ? 'input' : 'change', applyFilters);
+                }
             });
+
+            function renderStats(students) {
+                const container = document.getElementById('demographicsStatsContainer');
+                if (!container) return;
+
+                let totalMale = 0, totalFemale = 0;
+                const campusMap = {
+                    'APB': { total: 0, male: 0, female: 0 },
+                    'DFC': { total: 0, male: 0, female: 0 },
+                    'APK': { total: 0, male: 0, female: 0 },
+                    'SWC': { total: 0, male: 0, female: 0 },
+                };
+
+                students.forEach(s => {
+                    const g = (s.gender || '').toLowerCase();
+                    if (g === 'male') totalMale++;
+                    else if (g === 'female') totalFemale++;
+
+                    const c = s.campus;
+                    if (campusMap[c]) {
+                        campusMap[c].total++;
+                        if (g === 'male') campusMap[c].male++;
+                        else if (g === 'female') campusMap[c].female++;
+                    }
+                });
+
+                let statsHtml = `
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                        <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">👥 All Students</div>
+                        <div style="display: flex; align-items: baseline; gap: 8px;">
+                            <span style="font-size: 1.45rem; font-weight: 800; color: #1e293b;">${students.length}</span>
+                            <span style="font-size: 0.8rem; font-weight: 600;">
+                                <span style="color: #2563eb;">👨 ${totalMale}</span> · <span style="color: #db2777;">👩 ${totalFemale}</span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+
+                ['APB', 'DFC', 'APK', 'SWC'].forEach(campus => {
+                    const d = campusMap[campus] || { total: 0, male: 0, female: 0 };
+                    statsHtml += `
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">📍 ${campus} Campus</div>
+                            <div style="display: flex; align-items: baseline; gap: 8px;">
+                                <span style="font-size: 1.45rem; font-weight: 800; color: #1e293b;">${d.total}</span>
+                                <span style="font-size: 0.8rem; font-weight: 600;">
+                                    <span style="color: #2563eb;">👨 ${d.male}</span> · <span style="color: #db2777;">👩 ${d.female}</span>
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = statsHtml;
+            }
 
             function applyFilters() {
                 const query = document.getElementById('studentSearchInput').value.toLowerCase();
                 const campus = document.getElementById('campusFilter').value;
+                const gender = document.getElementById('genderFilter').value;
                 const roleType = document.getElementById('roleFilter').value;
                 const sortBy = document.getElementById('sortFilter').value;
 
@@ -2182,10 +2253,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const studentNo = (student.student_number || '').toLowerCase();
                     const matchesSearch = fullName.includes(query) || studentNo.includes(query);
                     const matchesCampus = campus === "" || student.campus === campus;
+                    const matchesGender = gender === "" || (student.gender && student.gender.toLowerCase() === gender.toLowerCase());
                     let matchesRole = true;
                     if (roleType === 'Executive') matchesRole = !!student.executive_position;
                     if (roleType === 'Volunteer') matchesRole = !student.executive_position;
-                    return matchesSearch && matchesCampus && matchesRole;
+                    return matchesSearch && matchesCampus && matchesGender && matchesRole;
                 });
 
                 filtered.sort((a, b) => {
@@ -2236,7 +2308,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastCampus = student.campus;
                 }
 
-
                 const isSameCampus = !currentUserCampus || (student.campus === currentUserCampus);
                 const buttonStyle = "padding:6px 12px; border:1px solid #ddd; background:white; cursor:pointer; border-radius:4px;";
                 const buttonAttr = `onclick="openModal('${student.id}', '${student.first_name} ${student.last_name}', '${student.executive_position || ""}', ${JSON.stringify(student.awards || []).replace(/"/g, "&quot;")})"`;
@@ -2244,6 +2315,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roleBadge = student.executive_position 
                     ? `<span style="background:#FFF4EC; color:#FF8C42; padding:4px 8px; border-radius:4px; font-weight:600; font-size:0.8rem;">${student.executive_position}</span>` 
                     : `<span style="background:#f0f0f0; color:#666; padding:4px 8px; border-radius:4px; font-size:0.8rem;">Volunteer</span>`;
+
+                const genderBadge = student.gender
+                    ? `<span style="font-size: 0.72rem; background: ${student.gender.toLowerCase() === 'male' ? '#eff6ff' : '#fdf2f8'}; color: ${student.gender.toLowerCase() === 'male' ? '#1d4ed8' : '#be185d'}; padding: 2px 6px; border-radius: 6px; font-weight: 600; margin-left: 6px;">${student.gender.toLowerCase() === 'male' ? '👨 Male' : '👩 Female'}</span>`
+                    : '';
 
                 let awardsHtml = '<span style="color:#ccc; font-size:0.8rem;">-</span>';
                 if (student.awards && student.awards.length > 0) {
@@ -2257,7 +2332,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="padding:15px; border-bottom:1px solid #eee;">
-                        <div style="font-weight:600;">${student.first_name} ${student.last_name}</div>
+                        <div style="font-weight:600; display:flex; align-items:center; flex-wrap:wrap;">
+                            ${student.first_name} ${student.last_name}
+                            ${genderBadge}
+                        </div>
                         <div style="font-size:0.85rem; color:#888;">${student.email}</div>
                     </td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${maskedStudentNo || '-'}</td>

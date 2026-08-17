@@ -70,7 +70,11 @@ class StudentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'student_number', 'campus', 'executive_position', 'awards', 'total_hours', 'can_manage_attendance']
+        fields = [
+            'id', 'first_name', 'last_name', 'email', 'student_number', 
+            'campus', 'executive_position', 'awards', 'total_hours', 
+            'can_manage_attendance', 'gender', 'tshirt_size', 'volunteer_status'
+        ]
 
     def get_total_hours(self, obj):
         # 1. Get the sum of all attended events

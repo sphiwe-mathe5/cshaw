@@ -13,6 +13,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
+function getCsrfToken() {
+    const inputToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (inputToken && inputToken.value) {
+        return inputToken.value;
+    }
+    return getCookie('csrftoken') || getCookie('__Host-csrftoken') || '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     async function renderLMS() {
         const lmsContentArea = document.getElementById('lmsContentArea');
@@ -84,14 +92,43 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="lms-unit-content">
                                     ${unit.content_text}
                                 </div>
-                                ${unit.quiz ? `
+                                ${unit.quiz ? (() => {
+                                    const totalQ = unit.quiz.total_questions || Math.max(1, Math.round(unit.quiz.points_awarded / 2));
+                                    const correct = (unit.quiz.correct_count !== null && unit.quiz.correct_count !== undefined)
+                                        ? unit.quiz.correct_count 
+                                        : (unit.quiz.user_score !== null ? Math.round((unit.quiz.user_score / 100) * totalQ) : 0);
+                                    const incorrect = (unit.quiz.incorrect_count !== null && unit.quiz.incorrect_count !== undefined)
+                                        ? unit.quiz.incorrect_count 
+                                        : Math.max(0, totalQ - correct);
+
+                                    let statusBadge = '';
+                                    let pointsText = '';
+
+                                    if (unit.quiz.completed) {
+                                        const earned = (unit.quiz.user_points !== null && unit.quiz.user_points !== undefined && unit.quiz.user_points > 0)
+                                            ? unit.quiz.user_points 
+                                            : (correct * 2);
+
+                                        if (unit.quiz.user_passed) {
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✅ Passed (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
+                                        } else {
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">❌ Failed (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #b91c1c; font-weight: 700; background: #fff1f2; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} / ${unit.quiz.points_awarded} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
+                                        }
+                                    } else {
+                                        statusBadge = `<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>`;
+                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points Available (${totalQ} Questions · 2 pts each · Pass mark: 70%)</span>`;
+                                    }
+
+                                    return `
                                     <div class="quiz-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                         <div class="quiz-info">
                                             <h5 style="margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                                 📝 ${unit.quiz.title}
-                                                ${unit.quiz.completed ? '<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 600;">✅ Completed (' + unit.quiz.user_score + '%)</span>' : '<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>'}
+                                                ${statusBadge}
                                             </h5>
-                                            <span class="quiz-points">+${unit.quiz.points_awarded} Points</span>
+                                            ${pointsText}
                                         </div>
                                         ${unit.quiz.completed ? `
                                             <button class="btn-take-quiz" disabled style="background:#f1f5f9; color:#94a3b8; cursor:not-allowed;">Already Attempted</button>
@@ -99,7 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <button class="btn-take-quiz" onclick="openQuizModal(${unit.quiz.id})">Take Quiz</button>
                                         `}
                                     </div>
-                                ` : ''}
+                                    `;
+                                })() : ''}
                             </div>
                         `;
                     });
@@ -190,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+                        'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({ answers })
                 });
@@ -203,22 +241,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     const icon = document.getElementById('resultIcon');
                     const title = document.getElementById('resultTitle');
                     const score = document.getElementById('resultScore');
+                    const correctBadge = document.getElementById('resultCorrectBadge');
+                    const incorrectBadge = document.getElementById('resultIncorrectBadge');
                     const message = document.getElementById('resultMessage');
+                    const earnedPoints = document.getElementById('resultEarnedPoints');
+                    const pointsRate = document.getElementById('resultPointsRate');
                     const totalPoints = document.getElementById('resultTotalPoints');
 
-                    score.innerText = `Score: ${data.score}%`;
+                    const incorrectCount = data.incorrect_count !== undefined 
+                        ? data.incorrect_count 
+                        : Math.max(0, data.total_questions - data.correct_count);
+
+                    score.innerText = `Score: ${data.score}% (Pass mark: 70%)`;
+                    if (correctBadge) correctBadge.innerText = `✅ ${data.correct_count} Correct`;
+                    if (incorrectBadge) incorrectBadge.innerText = `❌ ${incorrectCount} Incorrect`;
                     totalPoints.innerText = data.total_user_points;
 
                     if (data.passed) {
                         icon.innerText = '🏆';
                         title.innerText = 'Quiz Passed!';
                         title.style.color = '#16a34a';
-                        message.innerText = `Great job! You earned ${data.points_earned} points for mastering this material.`;
+                        message.innerText = `Outstanding! You answered ${data.correct_count} of ${data.total_questions} questions correctly, met the 70% pass mark, and earned +${data.points_earned} points.`;
+                        earnedPoints.innerText = `+${data.points_earned} Pts`;
+                        earnedPoints.style.color = '#16a34a';
+                        pointsRate.innerText = `${data.total_questions} questions · 2 pts each`;
                     } else {
                         icon.innerText = '💪';
-                        title.innerText = 'Keep Learning!';
-                        title.style.color = '#eab308';
-                        message.innerText = `You didn't pass this time (70% required). Don't give up, you'll get the next one!`;
+                        title.innerText = 'Good Effort!';
+                        title.style.color = '#dc2626';
+                        message.innerText = `You earned +${data.points_earned} points (${data.correct_count} of ${data.total_questions} questions correct). The pass mark is 70%. Don't give up — keep studying the course materials and aim higher on your next quizzes!`;
+                        earnedPoints.innerText = `+${data.points_earned} Pts`;
+                        earnedPoints.style.color = '#dc2626';
+                        pointsRate.innerText = `${data.correct_count} correct · 2 pts each`;
                     }
 
                     resultModal.style.display = 'flex';
@@ -263,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/api/lms/units/${unitId}/`, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': getCsrfToken()
                 }
             });
             if (res.ok) {
@@ -277,150 +331,4 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("An error occurred.");
         }
     };
-
-    let adminQuestionCount = 0;
-
-    window.openAdminModal = function() {
-        document.getElementById('adminUploadModal').style.display = 'flex';
-        // Ensure at least 1 question is present
-        if (adminQuestionCount === 0) {
-            addAdminQuestion();
-        }
-    };
-
-    window.closeAdminModal = function() {
-        document.getElementById('adminUploadModal').style.display = 'none';
-        const form = document.getElementById('adminUploadForm');
-        if (form) {
-            form.reset();
-            document.getElementById('adminQuestionsContainer').innerHTML = '';
-            adminQuestionCount = 0;
-            if (quill) {
-                quill.setContents([]);
-            }
-        }
-    };
-
-    window.addAdminQuestion = function() {
-        adminQuestionCount++;
-        const qId = adminQuestionCount;
-        
-        const qHtml = `
-            <div class="admin-question-block" id="adminQ_${qId}">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <label>Question ${qId}</label>
-                    <button type="button" onclick="this.closest('.admin-question-block').remove()" style="background:none; border:none; color:#e74c3c; cursor:pointer;">Remove</button>
-                </div>
-                <input type="text" class="admin-q-text" data-qid="${qId}" placeholder="Enter question text here..." required>
-                
-                <div class="admin-choices-container" id="adminChoices_${qId}" style="margin-top: 15px;">
-                    <label style="font-size: 0.85rem;">Choices (Select the correct one)</label>
-                    <!-- Default 2 choices -->
-                </div>
-                <button type="button" onclick="addAdminChoice(${qId})" style="margin-top: 10px; background:none; border:none; color:var(--primary-orange); cursor:pointer; font-size: 0.85rem; font-weight: bold;">+ Add Choice</button>
-            </div>
-        `;
-        
-        document.getElementById('adminQuestionsContainer').insertAdjacentHTML('beforeend', qHtml);
-        
-        // Add 2 initial choices
-        addAdminChoice(qId);
-        addAdminChoice(qId);
-        // Select the first one as correct by default
-        const firstRadio = document.querySelector(`#adminChoices_${qId} input[type="radio"]`);
-        if (firstRadio) firstRadio.checked = true;
-    };
-
-    window.addAdminChoice = function(qId) {
-        const container = document.getElementById(`adminChoices_${qId}`);
-        const cHtml = `
-            <div class="admin-choice-block">
-                <input type="radio" name="correct_q${qId}" required>
-                <input type="text" class="admin-c-text" placeholder="Choice text..." required>
-                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size: 1.2rem; line-height: 1;">&times;</button>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', cHtml);
-    };
-
-    const adminForm = document.getElementById('adminUploadForm');
-    if (adminForm) {
-        adminForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Build the JSON structure for questions
-            const questions = [];
-            const qBlocks = document.querySelectorAll('.admin-question-block');
-            
-            qBlocks.forEach(block => {
-                const qInput = block.querySelector('.admin-q-text');
-                const qText = qInput.value.trim();
-                if (!qText) return;
-                
-                const choices = [];
-                const cBlocks = block.querySelectorAll('.admin-choice-block');
-                
-                cBlocks.forEach(cBlock => {
-                    const cText = cBlock.querySelector('.admin-c-text').value.trim();
-                    const isCorrect = cBlock.querySelector('input[type="radio"]').checked;
-                    if (cText) {
-                        choices.push({ text: cText, is_correct: isCorrect });
-                    }
-                });
-                
-                if (choices.length > 0) {
-                    questions.push({ text: qText, choices: choices });
-                }
-            });
-            
-            if (questions.length === 0) {
-                alert("Please add at least one question with valid choices.");
-                return;
-            }
-
-            if (quill) {
-                const contentHtml = quill.root.innerHTML;
-                if (contentHtml === '<p><br></p>') {
-                    alert("Please write some content for the unit.");
-                    return;
-                }
-                document.getElementById('hidden_content_text').value = contentHtml;
-            }
-
-            const formData = new FormData(adminForm);
-            // Append questions as JSON string
-            formData.append('questions', JSON.stringify(questions));
-            
-            const btn = document.getElementById('adminSubmitBtn');
-            const originalText = btn.innerText;
-            btn.innerText = 'Publishing...';
-            btn.disabled = true;
-            
-            try {
-                const res = await fetch('/api/lms/admin/upload-nested/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: formData // sending as multipart to handle file
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    alert("Course successfully published!");
-                    closeAdminModal();
-                    renderLMS(); // refresh content
-                } else {
-                    alert(data.error || "Failed to publish course.");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("An error occurred while publishing.");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        });
-    }
 });

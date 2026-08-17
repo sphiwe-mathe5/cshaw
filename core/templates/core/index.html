@@ -576,7 +576,7 @@
     const isUserLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
     const CURRENT_USER_ROLE = "{{ user.role|default:'' }}";
     </script>
-    <script src="{% static 'js/index.js' %}"></script>
+    <script src="{% static 'js/index.js' %}?v={% now 'U' %}"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>

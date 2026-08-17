@@ -92,39 +92,35 @@ class QuizViewSet(viewsets.ModelViewSet):
 
         score_percent = round((correct_count / total_questions) * 100.0, 1)
         passed = score_percent >= 70.0  # 70% passing threshold
-        points_earned = quiz.points_awarded if passed else 0
+        points_earned = correct_count * 2  # 2 points awarded per correct question
 
-        # Save student progress
+        # Save student progress & award points
         with transaction.atomic():
-            # Check if this student already passed this quiz
-            already_passed = StudentProgress.objects.filter(user=user, quiz=quiz, score__gte=70.0).exists()
-
             progress, created = StudentProgress.objects.get_or_create(
                 user=user,
                 quiz=quiz,
                 defaults={'score': score_percent, 'points_earned': points_earned}
             )
 
-            # Update score and points if score is higher or first time passing
-            if not created:
-                if score_percent > progress.score:
-                    progress.score = score_percent
-                    # If they hadn't passed before but passed now, award points
-                    if passed and not already_passed:
-                        progress.points_earned = quiz.points_awarded
-                    progress.save()
-
-            # Award points to the user's profile if passed and not awarded yet
-            points_added = 0
-            if passed and not already_passed:
-                user.points += quiz.points_awarded
-                user.save()
-                points_added = quiz.points_awarded
+            if created:
+                user.points += points_earned
+                user.save(update_fields=['points'])
+                points_added = points_earned
+            else:
+                # If retried and scored higher points, award the difference
+                points_added = max(0, points_earned - progress.points_earned)
+                if points_added > 0:
+                    user.points += points_added
+                    user.save(update_fields=['points'])
+                progress.score = score_percent
+                progress.points_earned = max(progress.points_earned, points_earned)
+                progress.save()
 
         return Response({
             "score": score_percent,
             "passed": passed,
             "correct_count": correct_count,
+            "incorrect_count": max(0, total_questions - correct_count),
             "total_questions": total_questions,
             "points_earned": points_earned,
             "points_added": points_added,

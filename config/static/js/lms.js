@@ -94,20 +94,31 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 ${unit.quiz ? (() => {
                                     const totalQ = unit.quiz.total_questions || Math.max(1, Math.round(unit.quiz.points_awarded / 2));
+                                    const correct = (unit.quiz.correct_count !== null && unit.quiz.correct_count !== undefined)
+                                        ? unit.quiz.correct_count 
+                                        : (unit.quiz.user_score !== null ? Math.round((unit.quiz.user_score / 100) * totalQ) : 0);
+                                    const incorrect = (unit.quiz.incorrect_count !== null && unit.quiz.incorrect_count !== undefined)
+                                        ? unit.quiz.incorrect_count 
+                                        : Math.max(0, totalQ - correct);
+
                                     let statusBadge = '';
                                     let pointsText = '';
 
                                     if (unit.quiz.completed) {
+                                        const earned = (unit.quiz.user_points !== null && unit.quiz.user_points !== undefined && unit.quiz.user_points > 0)
+                                            ? unit.quiz.user_points 
+                                            : (correct * 2);
+
                                         if (unit.quiz.user_passed) {
                                             statusBadge = `<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✅ Passed (${unit.quiz.user_score}%)</span>`;
-                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.user_points} Points Earned (${totalQ} Qs · 2 pts each)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
                                         } else {
-                                            statusBadge = `<span style="font-size: 0.75rem; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">❌ Attempted (${unit.quiz.user_score}%)</span>`;
-                                            pointsText = `<span class="quiz-points" style="color: #64748b; font-weight: 600; background: #f1f5f9; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">0 / ${unit.quiz.points_awarded} Points (${totalQ} Qs · 70%+ required)</span>`;
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">❌ Failed (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #b91c1c; font-weight: 700; background: #fff1f2; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} / ${unit.quiz.points_awarded} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
                                         }
                                     } else {
                                         statusBadge = `<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>`;
-                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points (${totalQ} Questions · 2 pts each)</span>`;
+                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points Available (${totalQ} Questions · 2 pts each · Pass mark: 70%)</span>`;
                                     }
 
                                     return `
@@ -230,30 +241,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     const icon = document.getElementById('resultIcon');
                     const title = document.getElementById('resultTitle');
                     const score = document.getElementById('resultScore');
+                    const correctBadge = document.getElementById('resultCorrectBadge');
+                    const incorrectBadge = document.getElementById('resultIncorrectBadge');
                     const message = document.getElementById('resultMessage');
                     const earnedPoints = document.getElementById('resultEarnedPoints');
                     const pointsRate = document.getElementById('resultPointsRate');
                     const totalPoints = document.getElementById('resultTotalPoints');
 
-                    score.innerText = `Score: ${data.score}% (${data.correct_count} of ${data.total_questions} Correct)`;
+                    const incorrectCount = data.incorrect_count !== undefined 
+                        ? data.incorrect_count 
+                        : Math.max(0, data.total_questions - data.correct_count);
+
+                    score.innerText = `Score: ${data.score}% (Pass mark: 70%)`;
+                    if (correctBadge) correctBadge.innerText = `✅ ${data.correct_count} Correct`;
+                    if (incorrectBadge) incorrectBadge.innerText = `❌ ${incorrectCount} Incorrect`;
                     totalPoints.innerText = data.total_user_points;
 
                     if (data.passed) {
                         icon.innerText = '🏆';
                         title.innerText = 'Quiz Passed!';
                         title.style.color = '#16a34a';
-                        message.innerText = `Outstanding! You answered ${data.correct_count} out of ${data.total_questions} questions correctly and earned +${data.points_earned} points.`;
+                        message.innerText = `Outstanding! You answered ${data.correct_count} of ${data.total_questions} questions correctly, met the 70% pass mark, and earned +${data.points_earned} points.`;
                         earnedPoints.innerText = `+${data.points_earned} Pts`;
                         earnedPoints.style.color = '#16a34a';
                         pointsRate.innerText = `${data.total_questions} questions · 2 pts each`;
                     } else {
                         icon.innerText = '💪';
-                        title.innerText = 'Keep Learning!';
-                        title.style.color = '#eab308';
-                        message.innerText = `You scored ${data.score}% (${data.correct_count}/${data.total_questions} correct). 70% is required to pass and earn points.`;
-                        earnedPoints.innerText = `+0 Pts`;
-                        earnedPoints.style.color = '#64748b';
-                        pointsRate.innerText = `Score < 70% (Need 70%+)`;
+                        title.innerText = 'Good Effort!';
+                        title.style.color = '#dc2626';
+                        message.innerText = `You earned +${data.points_earned} points (${data.correct_count} of ${data.total_questions} questions correct). The pass mark is 70%. Don't give up — keep studying the course materials and aim higher on your next quizzes!`;
+                        earnedPoints.innerText = `+${data.points_earned} Pts`;
+                        earnedPoints.style.color = '#dc2626';
+                        pointsRate.innerText = `${data.correct_count} correct · 2 pts each`;
                     }
 
                     resultModal.style.display = 'flex';

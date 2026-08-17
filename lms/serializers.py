@@ -20,10 +20,16 @@ class QuizSerializer(serializers.ModelSerializer):
     user_points = serializers.SerializerMethodField()
     user_passed = serializers.SerializerMethodField()
     total_questions = serializers.SerializerMethodField()
+    correct_count = serializers.SerializerMethodField()
+    incorrect_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Quiz
-        fields = ['id', 'learning_unit', 'title', 'points_awarded', 'questions', 'completed', 'user_score', 'user_points', 'user_passed', 'total_questions']
+        fields = [
+            'id', 'learning_unit', 'title', 'points_awarded', 'questions', 
+            'completed', 'user_score', 'user_points', 'user_passed', 
+            'total_questions', 'correct_count', 'incorrect_count'
+        ]
 
     def get_completed(self, obj):
         request = self.context.get('request')
@@ -57,6 +63,25 @@ class QuizSerializer(serializers.ModelSerializer):
 
     def get_total_questions(self, obj):
         return obj.questions.count()
+
+    def get_correct_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            progress = StudentProgress.objects.filter(user=request.user, quiz=obj).first()
+            if progress:
+                total = obj.questions.count()
+                return round((progress.score / 100.0) * total)
+        return None
+
+    def get_incorrect_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            progress = StudentProgress.objects.filter(user=request.user, quiz=obj).first()
+            if progress:
+                total = obj.questions.count()
+                correct = round((progress.score / 100.0) * total)
+                return max(0, total - correct)
+        return None
 
 class LearningUnitSerializer(serializers.ModelSerializer):
     quiz = QuizSerializer(read_only=True)

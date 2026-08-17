@@ -257,8 +257,11 @@
     <!-- Quiz Modal -->
     <div id="quizModal" class="modal-overlay">
         <div class="modal lms-quiz-modal">
-            <div class="quiz-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px;">
-                <h2 id="quizTitle" style="margin: 0; color: #111827; font-size: 1.5rem;">Quiz Title</h2>
+            <div class="quiz-header" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px;">
+                <div>
+                    <h2 id="quizTitle" style="margin: 0; color: #111827; font-size: 1.5rem;">Quiz Title</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">🎯 Required Pass Mark: <strong style="color: var(--primary-orange);">70%</strong> · 2 points per question</p>
+                </div>
                 <button onclick="closeQuizModal()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #6b7280; line-height: 1;">&times;</button>
             </div>
             
@@ -282,7 +285,11 @@
         <div class="modal lms-quiz-modal" style="text-align: center; max-width: 480px; padding: 32px;">
             <div id="resultIcon" style="font-size: 3.5rem; margin-bottom: 10px;">🏆</div>
             <h2 id="resultTitle" style="margin: 0 0 10px 0; color: #111827; font-size: 1.6rem; font-weight: 800;">Quiz Completed</h2>
-            <p id="resultScore" style="font-size: 1.15rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 6px;">Score: 100% (2 of 2 Correct)</p>
+            <p id="resultScore" style="font-size: 1.15rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 6px;">Score: 100%</p>
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                <span id="resultCorrectBadge" style="font-size: 0.8rem; background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 20px; font-weight: 700;">✅ 0 Correct</span>
+                <span id="resultIncorrectBadge" style="font-size: 0.8rem; background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 20px; font-weight: 700;">❌ 0 Incorrect</span>
+            </div>
             <p id="resultMessage" style="color: #4b5563; margin-bottom: 22px; line-height: 1.5; font-size: 0.95rem;"></p>
             
             <!-- Points Breakdown Cards -->
