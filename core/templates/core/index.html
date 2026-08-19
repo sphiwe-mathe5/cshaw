@@ -87,6 +87,18 @@
                 
 
                 {% if user.role == 'STUDENT' %}
+                <li class="nav-item" id="nav-item-hiking-ticket">
+                    <a href="#" class="nav-link" id="link-hiking-ticket">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <line x1="2" y1="10" x2="22" y2="10"></line>
+                            <circle cx="8" cy="15" r="2"></circle>
+                            <line x1="14" y1="15" x2="18" y2="15"></line>
+                        </svg>
+                        <span>Hiking Ticket <span style="background: #16a34a; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: 6px; font-weight: 800;">HIKE</span></span>
+                    </a>
+                </li>
+
                 <li class="nav-item" id="nav-item-stats">
                     <a href="#" class="nav-link" id="link-stats">
                         <svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
@@ -556,6 +568,144 @@
         
         .confirm-btn-yes:hover {
             background: #1a252f;
+        }
+
+        /* Hiking Ticket Responsive Layout */
+        .hiking-ticket-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .ticket-header-flex {
+            background: linear-gradient(135deg, #E35205 0%, #ff782d 100%);
+            padding: 24px 28px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .ticket-body-grid {
+            padding: 28px;
+            display: grid;
+            grid-template-columns: 1fr 240px;
+            gap: 28px;
+            align-items: center;
+        }
+
+        .ticket-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .ticket-qr-container {
+            background: #fff7ed;
+            border: 2px dashed #fdba74;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .ticket-qr-img {
+            width: 150px;
+            height: 150px;
+            max-width: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background: white;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .ticket-footer-flex {
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            padding: 16px 28px;
+            font-size: 0.85rem;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ticket-actions-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .ticket-body-grid {
+                grid-template-columns: 1fr;
+                padding: 20px 16px;
+                gap: 24px;
+            }
+
+            .ticket-header-flex {
+                padding: 20px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .ticket-header-flex .ticket-id-box {
+                align-self: flex-start;
+                text-align: left;
+            }
+
+            .ticket-details-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .ticket-qr-container {
+                max-width: 280px;
+                margin: 0 auto;
+                padding: 16px;
+            }
+
+            .ticket-qr-img {
+                width: 160px;
+                height: 160px;
+            }
+
+            .ticket-footer-flex {
+                padding: 16px;
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+                gap: 14px;
+            }
+
+            .ticket-actions-group {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .ticket-actions-group button {
+                width: 100%;
+                justify-content: center;
+                padding: 10px 16px !important;
+            }
         }
     </style>
 

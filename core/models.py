@@ -139,6 +139,17 @@ def secure_qr_path(instance, filename):
     ext = filename.split('.')[-1].lower()
     return f"qrcodes/{uuid.uuid4()}.{ext}"
 
+class ExcursionLeaderboardSnapshot(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='excursion_snapshots')
+    locked_hours = models.FloatField(default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-locked_hours', 'created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - Locked Hours: {self.locked_hours}"
+
 class ExcursionTicket(models.Model):
     STATUS_CHOICES = [
         ('active', 'Active'),
@@ -148,6 +159,7 @@ class ExcursionTicket(models.Model):
     ticket_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     fallback_pin = models.CharField(max_length=6, unique=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    locked_hours = models.FloatField(default=0.0, help_text="Hours locked at initial ticket generation")
     qr_code = models.ImageField(storage=GoogleCloudMediaFileStorage(), upload_to=secure_qr_path, blank=True, null=True)
     is_scanned = models.BooleanField(default=False)
     scanned_at = models.DateTimeField(null=True, blank=True)
@@ -155,3 +167,4 @@ class ExcursionTicket(models.Model):
 
     def __str__(self):
         return f"Ticket {self.fallback_pin} for {self.user.email} - {self.status}"
+

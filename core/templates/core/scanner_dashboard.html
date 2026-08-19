@@ -46,7 +46,12 @@
         <div class="card">
             <div class="header">
                 <h2>Ticket Launchpad</h2>
-                <div class="seats-counter">Seats Filled: {{ seats_filled }} / {{ max_seats }}</div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    {% if has_locked_snapshot %}
+                        <span style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 12px; font-weight: 700; font-size: 13px;">🔒 Leaderboard Locked</span>
+                    {% endif %}
+                    <div class="seats-counter">Seats Filled: {{ seats_filled }} / {{ max_seats }}</div>
+                </div>
             </div>
             
             <div style="text-align: right; margin-bottom: 20px;">
@@ -60,7 +65,7 @@
                         <tr>
                             <th>Student</th>
                             <th>Email</th>
-                            <th>Hours</th>
+                            <th>Locked Hours</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -70,7 +75,7 @@
                         <tr>
                             <td>{{ ticket.user.first_name }} {{ ticket.user.last_name }}</td>
                             <td>{{ ticket.user.email }}</td>
-                            <td>{{ ticket.user.total_hours|floatformat:"1" }}</td>
+                            <td><strong>{{ ticket.locked_hours|floatformat:"1" }}</strong> hrs</td>
                             <td>
                                 {% if ticket.is_scanned %}
                                     <span style="color: green; font-weight: bold;">Scanned</span>
@@ -151,6 +156,28 @@
             } catch (err) {
                 alert("Error generating tickets.");
                 btn.innerText = "Generate & Fill Empty Seats";
+                btn.disabled = false;
+            }
+        }
+        
+        async function resetAllTickets() {
+            if(!confirm("Are you sure you want to RESET all excursion tickets? This will delete all generated tickets so you can test ticket generation from scratch.")) return;
+            
+            const btn = document.getElementById('resetBtn');
+            btn.innerText = "Resetting...";
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/excursions/reset/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
+                });
+                const data = await res.json();
+                alert(data.message);
+                location.reload();
+            } catch (err) {
+                alert("Error resetting tickets.");
+                btn.innerText = "🔄 Reset All Tickets (Testing)";
                 btn.disabled = false;
             }
         }

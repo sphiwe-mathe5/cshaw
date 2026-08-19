@@ -95,6 +95,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const linkHikingTicket = document.getElementById('link-hiking-ticket');
+    if (linkHikingTicket) {
+        linkHikingTicket.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('nav-item-hiking-ticket').classList.add('active');
+            
+            renderHikingTicket();
+            
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+    }
+
     const linkCareer = document.getElementById('link-career');
     if (linkCareer) {
         linkCareer.addEventListener('click', (e) => {
@@ -5185,6 +5203,248 @@ window.copyToClipboard = function(btnElement) {
     }
 
 
+
+    // ==========================================
+    // --- HIKING TICKET VIEW (STUDENT PORTAL) ---
+    // ==========================================
+    async function renderHikingTicket() {
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        const navItem = document.getElementById('nav-item-hiking-ticket');
+        if (navItem) navItem.classList.add('active');
+
+        mainContent.innerHTML = `
+            <div style="text-align: center; padding: 60px;">
+                <div style="color: #64748b; font-size: 1.1rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin" style="margin-bottom: 12px;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                    <br>Retrieving your hiking ticket...
+                </div>
+            </div>
+        `;
+
+        try {
+            const res = await fetch('/api/excursions/my-ticket/');
+            if (!res.ok) throw new Error('Failed to load ticket status');
+            const data = await res.json();
+
+            if (!data.has_ticket) {
+                mainContent.innerHTML = `
+                    <div class="header-section" style="margin-bottom: 25px;">
+                        <h1>🥾 Empowerment Hike 2026</h1>
+                        <p>Annual C-SHAW Volunteer Excursion & Leadership Trail</p>
+                    </div>
+
+                    <div style="max-width: 650px; margin: 0 auto; background: white; border-radius: 16px; padding: 40px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center; border-top: 5px solid #E35205;">
+                        <div style="font-size: 3.5rem; margin-bottom: 15px;">⛰️</div>
+                        <h2 style="color: #1e293b; font-size: 1.5rem; margin: 0 0 10px 0;">No Active Ticket Yet</h2>
+                        <p style="color: #64748b; font-size: 1rem; line-height: 1.6; margin-bottom: 25px;">
+                            ${data.message || 'Tickets for the upcoming Empowerment Hike are awarded exclusively to the hardest-working volunteers based on total verified hours.'}
+                        </p>
+
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: left; margin-bottom: 25px;">
+                            <h4 style="margin: 0 0 12px 0; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                <span>📅</span> Event Schedule & Details
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.9rem; color: #475569;">
+                                <div><strong>Date:</strong> 28 August 2026</div>
+                                <div><strong>Time:</strong> 08:00 – 16:00</div>
+                                <div><strong>Event:</strong> EMPOWERMENT HIKE</div>
+                                <div><strong>Meeting Point:</strong> UJ APK Gate 2</div>
+                            </div>
+                        </div>
+
+                        <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
+                            💡 Keep participating in volunteer activities to raise your leaderboard standing — a minute can make a difference!
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const ticket = data.ticket;
+            const statusBadge = ticket.is_scanned 
+                ? `<span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">✅ Scanned & Checked-In (${ticket.scanned_at || 'Verified'})</span>`
+                : `<span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">🎟️ Active · Ready for Boarding</span>`;
+
+            mainContent.innerHTML = `
+                <div class="header-section" style="margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h1>🥾 My Hiking Ticket</h1>
+                            <p>Official Boarding Pass for the C-SHAW Empowerment Hike</p>
+                        </div>
+                        <div>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px;">
+                    
+                    <!-- DIGITAL BOARDING PASS CARD -->
+                    <div class="hiking-ticket-card">
+                        
+                        <!-- Ticket Header -->
+                        <div class="ticket-header-flex">
+                            <div>
+                                <span style="background: rgba(255,255,255,0.25); font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; padding: 4px 10px; border-radius: 12px; text-transform: uppercase;">Official Pass</span>
+                                <h2 style="margin: 8px 0 2px 0; font-size: 1.6rem; font-weight: 900; color: white; letter-spacing: -0.5px;">${ticket.event_title}</h2>
+                                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">C-SHAW Annual Volunteer Leadership Trail</p>
+                            </div>
+                            <div class="ticket-id-box" style="text-align: right;">
+                                <div style="font-size: 0.75rem; opacity: 0.85; text-transform: uppercase; font-weight: 700;">Ticket ID</div>
+                                <div style="font-family: monospace; font-size: 1rem; font-weight: 700; background: rgba(0,0,0,0.15); padding: 4px 10px; border-radius: 6px; margin-top: 4px; display: inline-block;">#${ticket.fallback_pin}</div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Body: Info & QR Grid -->
+                        <div class="ticket-body-grid">
+                            
+                            <!-- Left: Event & Attendee Details -->
+                            <div style="display: flex; flex-direction: column; gap: 18px;">
+                                
+                                <div class="ticket-details-grid">
+                                    <div>
+                                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Attendee</div>
+                                        <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b;">${ticket.attendee_name}</div>
+                                        <div style="font-size: 0.8rem; color: #64748b;">${ticket.campus} Campus</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Volunteer Contribution</div>
+                                        <div style="font-size: 1.05rem; font-weight: 800; color: #E35205;">${ticket.total_hours.toFixed(1)} Verified Hours</div>
+                                        <div style="font-size: 0.8rem; color: #16a34a; font-weight: 600;">Leaderboard Qualifier</div>
+                                    </div>
+                                </div>
+
+                                <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 5px 0;">
+
+                                <div class="ticket-details-grid">
+                                    <div>
+                                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Date</div>
+                                        <div style="font-size: 1rem; font-weight: 700; color: #1e293b;">📅 ${ticket.event_date}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Time</div>
+                                        <div style="font-size: 1rem; font-weight: 700; color: #1e293b;">⏰ ${ticket.event_time}</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Departure & Meeting Point</div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: #334155;">📍 ${ticket.location}</div>
+                                </div>
+                            </div>
+
+                            <!-- Right: QR Code & Pin Box -->
+                            <div class="ticket-qr-container">
+                                ${ticket.qr_url ? `
+                                    <img src="${ticket.qr_url}" alt="Ticket QR Code" class="ticket-qr-img">
+                                ` : `
+                                    <div style="width: 140px; height: 140px; background: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #94a3b8; font-size: 0.8rem;">
+                                        QR Generating...
+                                    </div>
+                                `}
+                                <div style="margin-top: 12px; font-size: 0.75rem; color: #9a3412; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Fallback Entry PIN</div>
+                                <div style="font-family: monospace; font-size: 1.4rem; font-weight: 900; letter-spacing: 3px; color: #E35205; background: white; padding: 4px 12px; border-radius: 6px; margin-top: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">${ticket.fallback_pin}</div>
+                            </div>
+
+                        </div>
+
+                        <!-- Ticket Footer Note & Actions -->
+                        <div class="ticket-footer-flex">
+                            <span>⚠️ Present this QR Code or 6-digit PIN to coordinators when boarding.</span>
+                            <div class="ticket-actions-group">
+                                <button onclick="window.print()" style="padding: 7px 14px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                    🖨️ Print Ticket
+                                </button>
+                                <button onclick="cancelMyTicketRSVP('${ticket.id}')" style="padding: 7px 14px; background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
+                                    ❌ Cancel My RSVP
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- PREPARATION TIPS -->
+                    <div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+                        <h3 style="margin: 0 0 14px 0; font-size: 1.1rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                            <span>🎒</span> Excursion Preparation Checklist
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; font-size: 0.88rem; color: #475569;">
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <span style="color: #16a34a; font-weight: 800;">✓</span>
+                                <div><strong>Comfortable Footwear:</strong> Running or hiking shoes recommended.</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <span style="color: #16a34a; font-weight: 800;">✓</span>
+                                <div><strong>Hydration:</strong> Bring at least 1-2 liters of drinking water.</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <span style="color: #16a34a; font-weight: 800;">✓</span>
+                                <div><strong>Sun Protection:</strong> Sunscreen, cap/hat, and sunglasses.</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <span style="color: #16a34a; font-weight: 800;">✓</span>
+                                <div><strong>Punctuality:</strong> Arrive by 07:30 for boarding and attendance check-in.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+        } catch (err) {
+            console.error("Error loading hiking ticket:", err);
+            mainContent.innerHTML = `
+                <div class="header-section">
+                    <h1>🥾 Hiking Ticket</h1>
+                </div>
+                <div style="background: white; border-radius: 12px; padding: 30px; text-align: center; color: red;">
+                    Failed to load hiking ticket information. Please try again.
+                </div>
+            `;
+        }
+    }
+
+    // Cancel RSVP from student side
+    window.cancelMyTicketRSVP = async function(ticketId) {
+        if (!confirm("Are you sure you want to cancel your RSVP for the Empowerment Hike? Your seat will be released and offered to the next volunteer on the leaderboard.")) {
+            return;
+        }
+
+        try {
+            // Get CSRF Token
+            let csrfToken = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                        csrfToken = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                        break;
+                    }
+                }
+            }
+
+            const res = await fetch('/api/excursions/revoke/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ ticket_id: ticketId })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message || "Your RSVP has been cancelled.");
+                renderHikingTicket();
+            } else {
+                alert(data.error || "Failed to cancel ticket.");
+            }
+        } catch (err) {
+            console.error("Error cancelling RSVP:", err);
+            alert("An error occurred while cancelling your RSVP. Please try again.");
+        }
+    };
 
     renderActivities();
 });

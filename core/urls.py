@@ -42,9 +42,11 @@ urlpatterns = [
     
     # Excursion Endpoints
     path('excursions/scanner/', excursion_views.scanner_dashboard_view, name='scanner-dashboard'),
+    path('api/excursions/my-ticket/', excursion_views.MyHikingTicketAPIView.as_view(), name='my-hiking-ticket'),
     path('api/excursions/generate/', excursion_views.GenerateTicketsAPIView.as_view(), name='generate-tickets'),
     path('api/excursions/revoke/', excursion_views.RevokeTicketAPIView.as_view(), name='revoke-ticket'),
     path('api/excursions/validate/', excursion_views.ValidateTicketAPIView.as_view(), name='validate-ticket'),
+    path('api/excursions/reset/', excursion_views.ResetTicketsAPIView.as_view(), name='reset-tickets'),
     
     path('api/allocate-manual-hours/', views.ManualHoursAllocationAPIView.as_view(), name='api-allocate-manual-hours'),
 
