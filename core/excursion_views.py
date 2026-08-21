@@ -39,10 +39,21 @@ def generate_and_email_tickets(tickets_data):
         # Get public URL
         qr_url = ticket.qr_code.url if ticket.qr_code else ""
         
+        attendee_name = f"{user.first_name} {user.last_name}".strip() or user.email
+        campus_name = getattr(user, 'campus', '') or 'UJ Campus'
+        hours_val = ticket.locked_hours if ticket.locked_hours > 0 else getattr(user, 'total_hours', 0.0)
+        
         context = {
             'first_name': user.first_name,
+            'attendee_name': attendee_name,
+            'campus': campus_name,
+            'hours': f"{hours_val:.1f}",
             'pin': ticket.fallback_pin,
-            'qr_url': qr_url
+            'qr_url': qr_url,
+            'event_title': 'EMPOWERMENT HIKE',
+            'event_date': '28 August 2026',
+            'event_time': '08:00 – 16:00',
+            'location': 'UJ APK Gate 2',
         }
         
         # Render HTML content

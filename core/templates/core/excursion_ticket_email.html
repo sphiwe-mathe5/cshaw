@@ -1,42 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Excursion Boarding Pass</title>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-top: 5px solid #E35205; }
-        .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
-        h1 { color: #E35205; font-size: 28px; margin: 0; }
-        .qr-box { text-align: center; margin: 30px 0; padding: 20px; background: #fff5e6; border-radius: 12px; border: 2px dashed #f5c298; }
-        .qr-box img { max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px;}
-        .pin { font-size: 36px; font-weight: 900; letter-spacing: 6px; color: #E35205; margin-top: 10px; background: white; padding: 10px; border-radius: 8px; display: inline-block;}
-        .footer { text-align: center; font-size: 12px; color: #999; margin-top: 40px; }
-        .highlight { font-size: 18px; font-weight: 600; color: #2c3e50; text-align: center; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 24px 12px;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .intro-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        .intro-title {
+            color: #E35205;
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+        }
+        .intro-text {
+            color: #475569;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Boarding Pass Card */
+        .ticket-card {
+            background-color: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        .ticket-header {
+            background: linear-gradient(135deg, #E35205 0%, #ff782d 100%);
+            padding: 24px;
+            color: #ffffff;
+        }
+        .badge-pill {
+            background: rgba(255, 255, 255, 0.25);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .event-title {
+            font-size: 26px;
+            font-weight: 900;
+            margin: 10px 0 4px 0;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+        .event-sub {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.92;
+            color: #ffffff;
+        }
+        .ticket-id-tag {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 700;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 8px;
+            color: #ffffff;
+        }
+
+        /* Ticket Body */
+        .ticket-body {
+            padding: 24px;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .details-table td {
+            padding: 8px 6px;
+            vertical-align: top;
+            width: 50%;
+        }
+        .label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .val-bold {
+            font-size: 16px;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        .val-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .val-highlight {
+            font-size: 16px;
+            font-weight: 800;
+            color: #E35205;
+        }
+        .val-qualifier {
+            font-size: 12px;
+            color: #16a34a;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px dashed #cbd5e1;
+            margin: 16px 0;
+        }
+
+        /* QR & PIN Box */
+        .qr-section {
+            background-color: #fff7ed;
+            border: 2px dashed #fdba74;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0 20px 0;
+        }
+        .qr-img {
+            max-width: 180px;
+            height: auto;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            display: inline-block;
+        }
+        .pin-label {
+            font-size: 11px;
+            color: #9a3412;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 14px;
+        }
+        .pin-number {
+            font-family: monospace;
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 5px;
+            color: #E35205;
+            background: #ffffff;
+            padding: 6px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 6px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Checklist Card */
+        .checklist-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        .checklist-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 0 12px 0;
+        }
+        .check-item {
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .check-item strong {
+            color: #1e293b;
+        }
+
+        /* RSVP Cancellation Notice Box */
+        .cancel-notice {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .cancel-notice-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #991b1b;
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cancel-notice-text {
+            font-size: 12px;
+            color: #7f1d1d;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            padding: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚌 You're Going on an Excursion! 🎟️</h1>
-        </div>
-        <p style="font-size: 16px;">Hi <strong>{{ first_name }}</strong>,</p>
-        <p style="font-size: 16px;">Congratulations! Thanks to your amazing dedication and hard work, you've made it into the top volunteers group and have secured your seat for the upcoming C-SHAW excursion!</p>
+    <div class="wrapper">
         
-        <p class="highlight">Please save this email. Present this QR code or use the fallback PIN when boarding the bus.</p>
+        <!-- Welcome Note -->
+        <div class="intro-card">
+            <h1 class="intro-title">🎉 You're Going on the Hike!</h1>
+            <p class="intro-text">
+                Hi <strong>{{ first_name }}</strong>, congratulations! Thanks to your outstanding commitment and verified volunteer hours, you have secured an official seat for the <strong>C-SHAW EMPOWERMENT HIKE</strong>.
+            </p>
+        </div>
 
-        <div class="qr-box">
-            {% if qr_url %}
-            <img src="{{ qr_url }}" alt="Ticket QR Code">
-            <br>
-            {% endif %}
-            <p style="margin: 5px 0 0 0; color: #E35205; font-weight: bold;">YOUR BOARDING PIN:</p>
-            <div class="pin">{{ pin }}</div>
+        <!-- Official Digital Boarding Pass -->
+        <div class="ticket-card">
+            
+            <!-- Header -->
+            <div class="ticket-header">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td align="left">
+                            <span class="badge-pill">Official Boarding Pass</span>
+                            <div class="event-title">{{ event_title }}</div>
+                            <div class="event-sub">C-SHAW Annual Volunteer Leadership Trail</div>
+                        </td>
+                        <td align="right" valign="top">
+                            <div class="ticket-id-tag">PIN: #{{ pin }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Body Info -->
+            <div class="ticket-body">
+                
+                <table class="details-table">
+                    <tr>
+                        <td>
+                            <div class="label">Attendee</div>
+                            <div class="val-bold">{{ attendee_name }}</div>
+                            <div class="val-sub">{{ campus }} Campus</div>
+                        </td>
+                        <td>
+                            <div class="label">Volunteer Contribution</div>
+                            <div class="val-highlight">{{ hours }} Verified Hours</div>
+                            <div class="val-qualifier">✓ Leaderboard Qualifier</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <hr class="divider">
+
+                <table class="details-table">
+                    <tr>
+                        <td>
+                            <div class="label">Date</div>
+                            <div class="val-bold">📅 {{ event_date }}</div>
+                        </td>
+                        <td>
+                            <div class="label">Time</div>
+                            <div class="val-bold">⏰ {{ event_time }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="padding-top: 12px;">
+                            <div class="label">Departure & Meeting Point</div>
+                            <div class="val-bold" style="color: #334155;">📍 {{ location }}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- QR Code & Pin Section -->
+                <div class="qr-section">
+                    {% if qr_url %}
+                    <div>
+                        <img src="{{ qr_url }}" alt="Ticket QR Code" class="qr-img">
+                    </div>
+                    {% endif %}
+                    <div class="pin-label">Fallback Entry PIN</div>
+                    <div class="pin-number">{{ pin }}</div>
+                    <div style="font-size: 11px; color: #9a3412; margin-top: 8px;">
+                        Present this QR Code or 6-digit PIN when boarding at the departure point.
+                    </div>
+                </div>
+
+            </div>
         </div>
-        
-        <p style="font-size: 16px; text-align: center;">Get ready for an awesome day. Thank you for your incredible dedication to C-SHAW! 🌟</p>
-        
+
+        <!-- Packing & Excursion Preparation Tips -->
+        <div class="checklist-card">
+            <div class="checklist-title">🎒 Excursion Preparation Checklist</div>
+            <div class="check-item"><span style="color: #16a34a; font-weight: 800;">✓</span> <strong>Comfortable Footwear:</strong> Running or hiking shoes recommended.</div>
+            <div class="check-item"><span style="color: #16a34a; font-weight: 800;">✓</span> <strong>Hydration:</strong> Bring at least 1-2 liters of drinking water.</div>
+            <div class="check-item"><span style="color: #16a34a; font-weight: 800;">✓</span> <strong>Sun Protection:</strong> Sunscreen, cap/hat, and sunglasses.</div>
+            <div class="check-item"><span style="color: #16a34a; font-weight: 800;">✓</span> <strong>Punctuality:</strong> Arrive by 07:30 for boarding and attendance check-in.</div>
+        </div>
+
+        <!-- RSVP Cancellation Notice -->
+        <div class="cancel-notice">
+            <div class="cancel-notice-title">⚠️ Need to Cancel Your RSVP?</div>
+            <p class="cancel-notice-text">
+                If you are unable to attend the hike, please let us know as soon as possible so your seat can be awarded to the next volunteer on the leaderboard.<br>
+                You can <strong>cancel your RSVP directly on the student portal</strong> under the <em>"Hiking Ticket"</em> tab by clicking <strong>"Cancel My RSVP"</strong>, or you can contact any of the C-SHAW Executive Coordinators.
+            </p>
+        </div>
+
+        <!-- Footer -->
         <div class="footer">
-            <p>This is an automated message. Please do not reply.</p>
+            <p>You can also view, manage, or print this ticket anytime from your C-SHAW web app portal under <strong>Hiking Ticket</strong>.</p>
+            <p>© 2026 C-SHAW · Community Service & Health Academic Wellness</p>
         </div>
+
     </div>
 </body>
 </html>
