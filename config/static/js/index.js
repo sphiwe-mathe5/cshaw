@@ -5356,9 +5356,6 @@ window.copyToClipboard = function(btnElement) {
                                 <button onclick="window.print()" style="padding: 7px 14px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                                     🖨️ Print Ticket
                                 </button>
-                                <button onclick="cancelMyTicketRSVP('${ticket.id}')" style="padding: 7px 14px; background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
-                                    ❌ Cancel My RSVP
-                                </button>
                             </div>
                         </div>
 

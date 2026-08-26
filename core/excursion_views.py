@@ -195,9 +195,17 @@ class ValidateTicketAPIView(APIView):
         ticket.scanned_at = timezone.now()
         ticket.save()
         
+        active_tickets = ExcursionTicket.objects.filter(status='active')
+        scanned_count = active_tickets.filter(is_scanned=True).count()
+        seats_filled = active_tickets.count()
+        
         return Response({
-            'message': f'Valid Ticket - Welcome {ticket.user.first_name}!',
-            'status': 'success'
+            'message': f'Valid Ticket - Welcome {ticket.user.first_name} {ticket.user.last_name}!',
+            'status': 'success',
+            'scanned_count': scanned_count,
+            'seats_filled': seats_filled,
+            'ticket_id': ticket.id,
+            'scanned_at': ticket.scanned_at.strftime('%H:%M:%S')
         }, status=status.HTTP_200_OK)
 
 class MyHikingTicketAPIView(APIView):
@@ -265,12 +273,402 @@ def scanner_dashboard_view(request):
         if request.user.role == 'COORDINATOR' or getattr(request.user, 'is_executive', False):
             active_tickets = ExcursionTicket.objects.filter(status='active').select_related('user').order_by('created_at')
             has_locked_snapshot = ExcursionLeaderboardSnapshot.objects.exists()
+            seats_filled = active_tickets.count()
+            scanned_count = active_tickets.filter(is_scanned=True).count()
+            pending_count = seats_filled - scanned_count
             context = {
                 'active_tickets': active_tickets,
-                'seats_filled': active_tickets.count(),
+                'seats_filled': seats_filled,
+                'scanned_count': scanned_count,
+                'pending_count': pending_count,
                 'max_seats': 68,
                 'has_locked_snapshot': has_locked_snapshot
             }
             return render(request, 'core/scanner_dashboard.html', context)
     return HttpResponseForbidden("You do not have permission to view this page.")
+
+def export_excursion_manifest_pdf(request):
+    if not request.user.is_authenticated or request.user.role != 'COORDINATOR':
+        return HttpResponseForbidden("Only coordinators can download the official excursion manifest.")
+        
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"CSHAW_Empowerment_Hike_Manifest_{timezone.now().strftime('%Y%m%d')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom Palette
+    PRIMARY_ORANGE = colors.HexColor('#E35205')
+    DARK_NAVY = colors.HexColor('#0f172a')
+    SLATE_GREY = colors.HexColor('#475569')
+    LIGHT_BG = colors.HexColor('#f8fafc')
+    BORDER_COLOR = colors.HexColor('#e2e8f0')
+    GREEN_SUCCESS = colors.HexColor('#16a34a')
+    RED_REVOKED = colors.HexColor('#dc2626')
+    BLUE_REALLOCATED = colors.HexColor('#2563eb')
+    
+    # Custom Typography Styles
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=20,
+        leading=24,
+        textColor=PRIMARY_ORANGE
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'DocSub',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        leading=13,
+        textColor=SLATE_GREY
+    )
+    
+    meta_style = ParagraphStyle(
+        'MetaStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=DARK_NAVY
+    )
+    
+    section_heading = ParagraphStyle(
+        'SectionHeading',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=13,
+        leading=16,
+        textColor=DARK_NAVY,
+        spaceBefore=14,
+        spaceAfter=6
+    )
+
+    subsection_heading = ParagraphStyle(
+        'SubSectionHeading',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=10.5,
+        leading=13,
+        textColor=PRIMARY_ORANGE,
+        spaceBefore=8,
+        spaceAfter=4
+    )
+    
+    cell_style = ParagraphStyle(
+        'CellRegular',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10,
+        textColor=DARK_NAVY
+    )
+
+    cell_bold = ParagraphStyle(
+        'CellBold',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=10,
+        textColor=DARK_NAVY
+    )
+
+    cell_header = ParagraphStyle(
+        'CellHeader',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.white
+    )
+    
+    badge_active = ParagraphStyle(
+        'BadgeActive',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=GREEN_SUCCESS
+    )
+
+    badge_reallocated = ParagraphStyle(
+        'BadgeReallocated',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=BLUE_REALLOCATED
+    )
+
+    badge_revoked = ParagraphStyle(
+        'BadgeRevoked',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=RED_REVOKED
+    )
+
+    story = []
+    
+    # 1. Header Banner
+    header_table_data = [
+        [
+            Paragraph("<b>C-SHAW EMPOWERMENT HIKE 2026</b><br/><font size=9 color='#475569'>Official Excursion Roster & Boarding Manifest</font>", title_style),
+            Paragraph(f"<b>Issued:</b> {timezone.now().strftime('%d %B %Y')}<br/><b>Event Date:</b> 28 Aug 2026<br/><b>Departure:</b> UJ APK Gate 2", meta_style)
+        ]
+    ]
+    header_table = Table(header_table_data, colWidths=[340, 180])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_ORANGE, spaceBefore=2, spaceAfter=10))
+    
+    # 2. Gather Data
+    all_tickets = ExcursionTicket.objects.select_related('user').order_by('created_at')
+    active_tickets = [t for t in all_tickets if t.status == 'active']
+    revoked_tickets = [t for t in all_tickets if t.status == 'revoked']
+    
+    # Determine initial allocation vs reallocated tickets:
+    # The first 68 tickets created in chronological order were the initial cohort.
+    # Any active ticket with an ID beyond the first 68 (or created after a revocation) is "Newly Allocated / Replaced".
+    initial_ticket_ids = set([t.id for t in all_tickets[:68]])
+    
+    total_active = len(active_tickets)
+    total_revoked = len(revoked_tickets)
+    total_scanned = len([t for t in active_tickets if t.is_scanned])
+    
+    # Calculate Overall Gender Split
+    total_females = sum(1 for t in active_tickets if getattr(t.user, 'gender', '') == 'Female')
+    total_males = sum(1 for t in active_tickets if getattr(t.user, 'gender', '') == 'Male')
+    total_other_gender = total_active - total_females - total_males
+    
+    # Summary Metrics Table
+    summary_data = [
+        [
+            Paragraph("<b>Target Capacity</b><br/><font size=12 color='#0f172a'><b>68 Seats</b></font>", cell_style),
+            Paragraph(f"<b>Active Confirmed</b><br/><font size=12 color='#16a34a'><b>{total_active}</b></font>", cell_style),
+            Paragraph(f"<b>Total Gender Split</b><br/><font size=11 color='#0f172a'>👩 <b>{total_females}</b> F &nbsp;|&nbsp; 👨 <b>{total_males}</b> M</font>", cell_style),
+            Paragraph(f"<b>Cancelled RSVPs</b><br/><font size=12 color='#dc2626'><b>{total_revoked}</b></font>", cell_style),
+            Paragraph(f"<b>Checked-In (Scanned)</b><br/><font size=12 color='#2563eb'><b>{total_scanned}</b></font>", cell_style),
+        ]
+    ]
+    summary_table = Table(summary_data, colWidths=[100, 105, 125, 95, 95])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), LIGHT_BG),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 10))
+
+    # --- CAMPUS DEMOGRAPHIC BREAKDOWN TABLE ---
+    campuses_order = ['APB', 'DFC', 'APK', 'SWC', 'Other']
+    campus_names = {
+        'APB': 'APB Campus (Auckland Park Bunting)',
+        'DFC': 'DFC Campus (Doornfontein)',
+        'APK': 'APK Campus (Auckland Park Kingsway)',
+        'SWC': 'SWC Campus (Soweto)',
+        'Other': 'Other / Unassigned'
+    }
+    
+    # Organize active tickets
+    grouped_active = {}
+    for c in campuses_order:
+        grouped_active[c] = {'Male': [], 'Female': [], 'Other': []}
+        
+    for t in active_tickets:
+        c = t.user.campus or 'Other'
+        if c not in grouped_active:
+            c = 'Other'
+        g = t.user.gender or 'Other'
+        if g not in ['Male', 'Female']:
+            g = 'Other'
+        grouped_active[c][g].append(t)
+        
+    # Campus Summary Table
+    campus_summary_rows = [
+        [
+            Paragraph("<b>Campus Location</b>", cell_header),
+            Paragraph("<b>Female Volunteers</b>", cell_header),
+            Paragraph("<b>Male Volunteers</b>", cell_header),
+            Paragraph("<b>Total Attendees</b>", cell_header),
+            Paragraph("<b>% of Roster</b>", cell_header),
+        ]
+    ]
+    
+    for c in campuses_order:
+        c_dict = grouped_active[c]
+        c_f = len(c_dict['Female'])
+        c_m = len(c_dict['Male'])
+        c_tot = c_f + c_m + len(c_dict['Other'])
+        if c_tot > 0:
+            pct = (c_tot / total_active * 100) if total_active > 0 else 0
+            campus_summary_rows.append([
+                Paragraph(f"<b>{c} Campus</b>", cell_bold),
+                Paragraph(f"<b>{c_f}</b> Females", cell_style),
+                Paragraph(f"<b>{c_m}</b> Males", cell_style),
+                Paragraph(f"<b>{c_tot}</b> Students", cell_bold),
+                Paragraph(f"{pct:.1f}%", cell_style),
+            ])
+            
+    c_summary_table = Table(campus_summary_rows, colWidths=[140, 95, 95, 95, 95])
+    c_summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), DARK_NAVY),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+    ]))
+    story.append(c_summary_table)
+    story.append(Spacer(1, 12))
+
+    # --- CAMPUS & GENDER GROUPING (ACTIVE ROSTER) ---
+    story.append(Paragraph("<b>PART 1: ACTIVE ATTENDEES (GROUPED BY CAMPUS & GENDER)</b>", section_heading))
+    story.append(Paragraph("The following list represents all 68 confirmed students holding active boarding passes, categorized by Campus and Gender.", subtitle_style))
+    story.append(Spacer(1, 6))
+    
+    overall_seq = 1
+    for c in campuses_order:
+        campus_dict = grouped_active[c]
+        c_f = len(campus_dict['Female'])
+        c_m = len(campus_dict['Male'])
+        campus_total = c_f + c_m + len(campus_dict['Other'])
+        if campus_total == 0:
+            continue
+            
+        story.append(Paragraph(f"<b>📍 {campus_names[c]} &nbsp;—&nbsp; Total: {campus_total} Attendees ({c_f} Females, {c_m} Males)</b>", subsection_heading))
+        
+        table_rows = [
+            [
+                Paragraph("<b>#</b>", cell_header),
+                Paragraph("<b>Student Name</b>", cell_header),
+                Paragraph("<b>Email</b>", cell_header),
+                Paragraph("<b>Gender</b>", cell_header),
+                Paragraph("<b>PIN</b>", cell_header),
+                Paragraph("<b>Locked Hours</b>", cell_header),
+                Paragraph("<b>Allocation Status</b>", cell_header)
+            ]
+        ]
+        
+        # Add Female first then Male then Other
+        for gender_key in ['Female', 'Male', 'Other']:
+            tickets_list = campus_dict[gender_key]
+            for t in tickets_list:
+                user = t.user
+                is_reallocated = t.id not in initial_ticket_ids
+                status_label = Paragraph("<b>Newly Allocated (Replaced)</b>", badge_reallocated) if is_reallocated else Paragraph("<b>Initial Cohort</b>", badge_active)
+                
+                hours_disp = f"{t.locked_hours:.1f} hrs" if t.locked_hours > 0 else f"{getattr(user, 'total_hours', 0.0):.1f} hrs"
+                
+                table_rows.append([
+                    Paragraph(str(overall_seq), cell_bold),
+                    Paragraph(f"<b>{user.first_name} {user.last_name}</b>", cell_style),
+                    Paragraph(user.email, cell_style),
+                    Paragraph(user.gender or '—', cell_style),
+                    Paragraph(f"#{t.fallback_pin}", cell_bold),
+                    Paragraph(hours_disp, cell_style),
+                    status_label
+                ])
+                overall_seq += 1
+                
+        t_table = Table(table_rows, colWidths=[24, 115, 145, 48, 52, 60, 76])
+        t_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), DARK_NAVY),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
+            ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(t_table)
+        story.append(Spacer(1, 10))
+
+    # --- PART 2: CANCELLED / REVOKED TICKETS AUDIT LOG ---
+    if revoked_tickets:
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("<b>PART 2: CANCELLED RSVPs & REVOKED TICKETS</b>", section_heading))
+        story.append(Paragraph("The following students were originally allocated seats on the leaderboard but cancelled their RSVP or had their tickets revoked. Their seats have been reallocated to the next qualifying volunteers.", subtitle_style))
+        story.append(Spacer(1, 6))
+        
+        revoked_rows = [
+            [
+                Paragraph("<b>#</b>", cell_header),
+                Paragraph("<b>Student Name</b>", cell_header),
+                Paragraph("<b>Email</b>", cell_header),
+                Paragraph("<b>Campus</b>", cell_header),
+                Paragraph("<b>Gender</b>", cell_header),
+                Paragraph("<b>Locked Hours</b>", cell_header),
+                Paragraph("<b>Status</b>", cell_header)
+            ]
+        ]
+        
+        for idx, rt in enumerate(revoked_tickets, 1):
+            r_user = rt.user
+            r_hours = f"{rt.locked_hours:.1f} hrs" if rt.locked_hours > 0 else f"{getattr(r_user, 'total_hours', 0.0):.1f} hrs"
+            revoked_rows.append([
+                Paragraph(str(idx), cell_bold),
+                Paragraph(f"<b>{r_user.first_name} {r_user.last_name}</b>", cell_style),
+                Paragraph(r_user.email, cell_style),
+                Paragraph(r_user.campus or '—', cell_style),
+                Paragraph(r_user.gender or '—', cell_style),
+                Paragraph(r_hours, cell_style),
+                Paragraph("<b>Cancelled / Revoked</b>", badge_revoked)
+            ])
+            
+        revoked_table = Table(revoked_rows, colWidths=[24, 115, 155, 60, 50, 60, 56])
+        revoked_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#991b1b')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fef2f2')]),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#fecaca')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(revoked_table)
+        story.append(Spacer(1, 14))
+
+    # --- PART 3: SIGN-OFF & COORDINATOR VERIFICATION ---
+    story.append(Spacer(1, 10))
+    signoff_data = [
+        [
+            Paragraph("<b>Coordinator Name:</b> ___________________________", meta_style),
+            Paragraph("<b>Signature:</b> ___________________________", meta_style),
+            Paragraph(f"<b>Date:</b> {timezone.now().strftime('%d/%m/%Y')}", meta_style)
+        ]
+    ]
+    signoff_table = Table(signoff_data, colWidths=[180, 180, 160])
+    signoff_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(signoff_table)
+    
+    doc.build(story)
+    return response
+
 
