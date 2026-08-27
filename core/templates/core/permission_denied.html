@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang=en>
+<head>
+    <meta charset=UTF-8>
+    <meta name=viewport content=width=device-width, initial-scale=1.0>
+    <title>Access Denied - C-SHAW Hub</title>
+    {% load static %}
+    <link rel=preconnect href=https://fonts.googleapis.com>
+    <link rel=preconnect href=https://fonts.gstatic.com crossorigin>
+    <link href=https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap rel=stylesheet>
+    <link rel=icon href={% static 'images/favicon.png' %} type=image/svg+xml>
+    <style>
+        :root {
+            --primary: #E35205;
+            --primary-hover: #c44400;
+            --dark-navy: #0f172a;
+            --slate: #64748b;
+            --light-bg: #f8fafc;
+            --border: #e2e8f0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-navy);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .denied-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 48px 36px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+        .icon-circle {
+            width: 72px;
+            height: 72px;
+            background: #fef2f2;
+            color: #dc2626;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px auto;
+            border: 1px solid #fee2e2;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--dark-navy);
+            margin-bottom: 12px;
+        }
+        p {
+            font-size: 15px;
+            color: var(--slate);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .user-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 28px;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+        .btn-secondary {
+            background-color: white;
+            color: #334155;
+            border: 1.5px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+    <div class=denied-card>
+        <div class=icon-circle>
+            <svg width=36 height=36 viewBox=0 0 24 24 fill=none stroke=currentColor stroke-width=2.2 stroke-linecap=round stroke-linejoin=round>
+                <circle cx=12 cy=12 r=10></circle>
+                <line x1=4.93 y1=4.93 x2=19.07 y2=19.07></line>
+            </svg>
+        </div>
+        
+        <h1>Permission Denied</h1>
+        <p>{{ message|default:You do not have permission to view or manage the Excursion Ticket Scanner. This portal is strictly restricted to C-SHAW Coordinators and Executives. }}</p>
+        
+        {% if user.is_authenticated %}
+        <div>
+            <span class=user-pill>
+                Logged in as: <strong>{{ user.email }}</strong> ({{ user.get_role_display|default:user.role }})
+            </span>
+        </div>
+        {% endif %}
+
+        <div class=btn-group>
+            <a href=/ class=btn btn-primary>Return to Student Portal</a>
+            {% if user.is_authenticated %}
+            <a href=/api/users/logout/ class=btn btn-secondary onclick=event.preventDefault(); document.getElementById('logoutForm').submit();>
+                Log In with Different Account
+            </a>
+            <form id=logoutForm action=/api/users/logout/ method=POST style=display: none;>
+                {% csrf_token %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

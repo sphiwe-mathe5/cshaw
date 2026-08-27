@@ -37,6 +37,77 @@
         
         .seats-counter { font-size: 24px; font-weight: 800; color: #E35205; background: #fff5e6; padding: 10px 20px; border-radius: 20px; }
 
+        /* Top Nav Bar */
+        .top-navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 14px 24px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            text-decoration: none;
+        }
+        .nav-user-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-tag {
+            font-size: 13px;
+            color: #475569;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-nav-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-nav-link:hover {
+            color: #E35205;
+            background: #fff7ed;
+        }
+        .btn-logout {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-logout:hover {
+            background: #fecaca;
+            color: #7f1d1d;
+        }
+
         /* Stats Grid */
         .stats-grid {
             display: grid;
@@ -88,6 +159,32 @@
 </head>
 <body>
     <div class="container">
+
+        <!-- TOP NAVBAR -->
+        <div class="top-navbar">
+            <a href="/" class="nav-brand">
+                <span style="color: #E35205; font-size: 18px;">●</span>
+                <span>C-SHAW <span style="color: #64748b; font-weight: 500;">Scanner Portal</span></span>
+            </a>
+
+            <div class="nav-user-actions">
+                <span class="user-tag">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <strong>{{ user.first_name|default:user.email }}</strong>
+                    <span style="color: #94a3b8;">({{ user.get_role_display|default:user.role }})</span>
+                </span>
+                
+                <a href="/" class="btn-nav-link">Main Portal</a>
+
+                <form action="/api/users/logout/" method="POST" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-logout">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Logout
+                    </button>
+                </form>
+            </div>
+        </div>
         
         <!-- LIVE EVENT STATS BAR -->
         <div class="stats-grid">

@@ -268,24 +268,38 @@ class ResetTicketsAPIView(APIView):
             'deleted_snapshots': snapshot_count
         }, status=status.HTTP_200_OK)
 
+from django.shortcuts import render, redirect
+
 def scanner_dashboard_view(request):
-    if request.user.is_authenticated:
-        if request.user.role == 'COORDINATOR' or getattr(request.user, 'is_executive', False):
-            active_tickets = ExcursionTicket.objects.filter(status='active').select_related('user').order_by('created_at')
-            has_locked_snapshot = ExcursionLeaderboardSnapshot.objects.exists()
-            seats_filled = active_tickets.count()
-            scanned_count = active_tickets.filter(is_scanned=True).count()
-            pending_count = seats_filled - scanned_count
-            context = {
-                'active_tickets': active_tickets,
-                'seats_filled': seats_filled,
-                'scanned_count': scanned_count,
-                'pending_count': pending_count,
-                'max_seats': 68,
-                'has_locked_snapshot': has_locked_snapshot
-            }
-            return render(request, 'core/scanner_dashboard.html', context)
-    return HttpResponseForbidden("You do not have permission to view this page.")
+    # 1. If not authenticated, redirect to login with 'next' parameter so they return after login
+    if not request.user.is_authenticated:
+        return redirect(f'/login/?next={request.path}')
+    
+    # 2. Check if user is a Coordinator or Executive (or superuser)
+    is_coordinator = (request.user.role == 'COORDINATOR' or request.user.is_superuser)
+    is_executive = getattr(request.user, 'is_executive', False)
+    
+    if not (is_coordinator or is_executive):
+        context = {
+            'user': request.user,
+            'message': 'Access to the Excursion Boarding Scanner is restricted to Coordinators and Executives only.'
+        }
+        return render(request, 'core/permission_denied.html', context, status=403)
+        
+    active_tickets = ExcursionTicket.objects.filter(status='active').select_related('user').order_by('created_at')
+    has_locked_snapshot = ExcursionLeaderboardSnapshot.objects.exists()
+    seats_filled = active_tickets.count()
+    scanned_count = active_tickets.filter(is_scanned=True).count()
+    pending_count = seats_filled - scanned_count
+    context = {
+        'active_tickets': active_tickets,
+        'seats_filled': seats_filled,
+        'scanned_count': scanned_count,
+        'pending_count': pending_count,
+        'max_seats': 68,
+        'has_locked_snapshot': has_locked_snapshot
+    }
+    return render(request, 'core/scanner_dashboard.html', context)
 
 def export_excursion_manifest_pdf(request):
     if not request.user.is_authenticated or request.user.role != 'COORDINATOR':
