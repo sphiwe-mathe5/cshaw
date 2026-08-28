@@ -122,7 +122,32 @@ ul { list-style: none; }
     font-weight: 600;
     font-size: 0.95rem;
 }
-.btn-nav-login { font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
+.btn-nav-login {
+    background-color: var(--primary-orange);
+    color: white;
+    font-weight: 700;
+    padding: 9px 20px;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(227, 82, 5, 0.25);
+}
+.btn-nav-login:hover {
+    background-color: #c44400;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(227, 82, 5, 0.4);
+    color: white;
+}
+.btn-nav-login svg {
+    transition: transform 0.2s ease;
+}
+.btn-nav-login:hover svg {
+    transform: translateX(2px);
+}
 .btn-nav-join {
     background-color: var(--primary-orange);
     color: white;

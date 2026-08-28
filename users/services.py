@@ -38,7 +38,7 @@ class BackgroundEmailService:
                         # Pause for a fraction of a second to respect API rate limits
                         time.sleep(0.2) 
                     
-                    print(f"✅ Successfully sent: '{subject}' to {len(bcc_emails)} recipients in batches.")
+                    print(f"[EMAIL SUCCESS] Successfully sent: '{subject}' to {len(bcc_emails)} recipients in batches.")
 
                 # 2. IF WE HAVE NO BCC EMAILS (Single Welcome Emails, RSVP Confirmations)
                 else:
@@ -50,10 +50,10 @@ class BackgroundEmailService:
                     )
                     msg.attach_alternative(html_content, "text/html")
                     msg.send(fail_silently=False)
-                    print(f"✅ Successfully sent: '{subject}' to {to_emails}")
+                    print(f"[EMAIL SUCCESS] Successfully sent: '{subject}' to {to_emails}")
 
             except Exception as e:
-                print(f"❌ Background Email Error: {e}")
+                print(f"[EMAIL ERROR] Background Email Error: {e}")
 
         # Standard thread (No daemon=True!)
         thread = threading.Thread(target=send)

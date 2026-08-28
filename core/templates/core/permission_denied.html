@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang=en>
 <head>
     <meta charset=UTF-8>
@@ -116,32 +116,32 @@
     </style>
 </head>
 <body>
-    <div class=denied-card>
-        <div class=icon-circle>
-            <svg width=36 height=36 viewBox=0 0 24 24 fill=none stroke=currentColor stroke-width=2.2 stroke-linecap=round stroke-linejoin=round>
-                <circle cx=12 cy=12 r=10></circle>
-                <line x1=4.93 y1=4.93 x2=19.07 y2=19.07></line>
+    <div class="denied-card">
+        <div class="icon-circle">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
             </svg>
         </div>
         
         <h1>Permission Denied</h1>
-        <p>{{ message|default:You do not have permission to view or manage the Excursion Ticket Scanner. This portal is strictly restricted to C-SHAW Coordinators and Executives. }}</p>
+        <p>{{ message|default:"Access to the Excursion Boarding Scanner is restricted strictly to C-SHAW Coordinators only." }}</p>
         
         {% if user.is_authenticated %}
         <div>
-            <span class=user-pill>
+            <span class="user-pill">
                 Logged in as: <strong>{{ user.email }}</strong> ({{ user.get_role_display|default:user.role }})
             </span>
         </div>
         {% endif %}
 
-        <div class=btn-group>
-            <a href=/ class=btn btn-primary>Return to Student Portal</a>
+        <div class="btn-group">
+            <a href="/" class="btn btn-primary">Return to Student Portal</a>
             {% if user.is_authenticated %}
-            <a href=/api/users/logout/ class=btn btn-secondary onclick=event.preventDefault(); document.getElementById('logoutForm').submit();>
+            <a href="/api/users/logout/" class="btn btn-secondary" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
                 Log In with Different Account
             </a>
-            <form id=logoutForm action=/api/users/logout/ method=POST style=display: none;>
+            <form id="logoutForm" action="/api/users/logout/" method="POST" style="display: none;">
                 {% csrf_token %}
             </form>
             {% endif %}

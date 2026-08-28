@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/excursions/validate/', excursion_views.ValidateTicketAPIView.as_view(), name='validate-ticket'),
     path('api/excursions/reset/', excursion_views.ResetTicketsAPIView.as_view(), name='reset-tickets'),
     path('api/excursions/export-manifest-pdf/', excursion_views.export_excursion_manifest_pdf, name='export-manifest-pdf'),
+    path('api/excursions/allocate-hours/', excursion_views.AllocateExcursionHoursAPIView.as_view(), name='allocate-excursion-hours'),
     
     path('api/allocate-manual-hours/', views.ManualHoursAllocationAPIView.as_view(), name='api-allocate-manual-hours'),
 

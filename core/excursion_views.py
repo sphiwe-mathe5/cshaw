@@ -170,8 +170,8 @@ class ValidateTicketAPIView(APIView):
         if not request.user.is_authenticated:
             return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
             
-        if request.user.role != 'COORDINATOR' and not getattr(request.user, 'is_executive', False):
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role != 'COORDINATOR' and not request.user.is_superuser:
+            return Response({'error': 'Unauthorized. Only coordinators can scan tickets.'}, status=status.HTTP_403_FORBIDDEN)
                 
         ticket_uuid = request.data.get('ticket_uuid')
         fallback_pin = request.data.get('fallback_pin')
@@ -268,6 +268,97 @@ class ResetTicketsAPIView(APIView):
             'deleted_snapshots': snapshot_count
         }, status=status.HTTP_200_OK)
 
+class AllocateExcursionHoursAPIView(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated or request.user.role != 'COORDINATOR':
+            return Response({'error': 'Only coordinators can allocate excursion hours.'}, status=status.HTTP_403_FORBIDDEN)
+
+        event_name = request.data.get('event_name', 'EMPOWERMENT HIKE 2026')
+        hours_input = request.data.get('hours', 8.0)
+
+        try:
+            hours = float(hours_input)
+            if hours <= 0:
+                return Response({'error': 'Hours must be a positive number.'}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid hours format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Fetch all active excursion tickets whose status is verified / scanned
+        scanned_tickets = ExcursionTicket.objects.filter(
+            status='active',
+            is_scanned=True
+        ).select_related('user')
+
+        if not scanned_tickets.exists():
+            return Response({
+                'error': 'No scanned tickets found! Only students with scanned/checked-in tickets qualify for hours.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import VolunteerActivity, ActivitySignup
+        from users.models import User
+        from users.services import BackgroundEmailService
+
+        # 2. Create proxy activity for the excursion (hidden from feed via standard exclude)
+        activity = VolunteerActivity.objects.create(
+            title=event_name,
+            date_time=timezone.now(),
+            duration_hours=hours,
+            created_by=request.user,
+            description="Manual hours allocation event",
+            details=f"Official volunteer hours allocated for attending the {event_name}."
+        )
+
+        allocated_students = []
+        already_allocated_count = 0
+
+        for ticket in scanned_tickets:
+            student = ticket.user
+
+            # Check if this student already got an ActivitySignup for this activity
+            signup_exists = ActivitySignup.objects.filter(user=student, activity=activity).exists()
+            if signup_exists:
+                already_allocated_count += 1
+                continue
+
+            # Create the official verified ActivitySignup record
+            ActivitySignup.objects.create(
+                user=student,
+                activity=activity,
+                attended=True,
+                sign_in_time=ticket.scanned_at or timezone.now(),
+                sign_out_time=timezone.now(),
+                hours_earned=hours,
+                session_history=[{
+                    "type": "Excursion Event Completed",
+                    "hours": hours,
+                    "ticket_uuid": str(ticket.ticket_uuid),
+                    "pin": ticket.fallback_pin,
+                    "allocated_at": timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                }]
+            )
+
+            # Send Email via BackgroundEmailService
+            html_content = render_to_string('core/emails/manual_hours.html', {
+                'first_name': student.first_name,
+                'hours': hours,
+                'event_name': event_name
+            })
+            BackgroundEmailService._send_async(
+                subject="🎉 Congratulations! Your Excursion Hours Have Been Allocated!",
+                to_emails=[student.email],
+                html_content=html_content
+            )
+
+            allocated_students.append(f"{student.first_name} {student.last_name}".strip() or student.email)
+
+        return Response({
+            'message': f"Successfully allocated {hours} hours to {len(allocated_students)} checked-in students for '{event_name}'!",
+            'allocated_count': len(allocated_students),
+            'hours': hours,
+            'event_name': event_name,
+            'students': allocated_students
+        }, status=status.HTTP_200_OK)
+
 from django.shortcuts import render, redirect
 
 def scanner_dashboard_view(request):
@@ -275,14 +366,13 @@ def scanner_dashboard_view(request):
     if not request.user.is_authenticated:
         return redirect(f'/login/?next={request.path}')
     
-    # 2. Check if user is a Coordinator or Executive (or superuser)
+    # 2. Check if user is a Coordinator (or superuser)
     is_coordinator = (request.user.role == 'COORDINATOR' or request.user.is_superuser)
-    is_executive = getattr(request.user, 'is_executive', False)
     
-    if not (is_coordinator or is_executive):
+    if not is_coordinator:
         context = {
             'user': request.user,
-            'message': 'Access to the Excursion Boarding Scanner is restricted to Coordinators and Executives only.'
+            'message': 'Access to the Excursion Boarding Scanner is restricted strictly to C-SHAW Coordinators only.'
         }
         return render(request, 'core/permission_denied.html', context, status=403)
         
