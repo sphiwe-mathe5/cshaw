@@ -390,7 +390,7 @@
                     const select = $('#studentSelect');
                     data.forEach(student => {
                         const campusInfo = student.campus ? `(${student.campus})` : '';
-                        const text = `${student.first_name} ${student.last_name} ${campusInfo} - ${student.student_number || student.email}`;
+                        const text = `${student.first_name} ${student.last_name} ${campusInfo} - ${student.email}`;
                         const option = new Option(text, student.id, false, false);
                         select.append(option);
                     });

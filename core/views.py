@@ -583,14 +583,14 @@ def export_rsvps_csv(request, pk):
     response['Content-Disposition'] = f'attachment; filename="rsvps_{activity.id}.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['First Name', 'Last Name', 'Student Number', 'Campus', 'Status', 'Total Hours'])
+    writer.writerow(['First Name', 'Last Name', 'Email', 'Campus', 'Status', 'Total Hours'])
     
     for s in signups:
         status_text = 'Attended' if s.attended else 'RSVPed'
         writer.writerow([
             s.user.first_name, 
             s.user.last_name, 
-            s.user.student_number or '', 
+            s.user.email or '', 
             s.user.campus or '',
             status_text,
             s.hours_earned
@@ -867,7 +867,7 @@ def event_report_view(request, pk):
 
 @api_view(['GET'])
 @permission_classes([IsAuthorizedExecutiveOrCoordinator])
-def quarterly_report_view(request):
+def quarterly_report_api_view(request):
     year = int(request.query_params.get('year', timezone.now().year))
     
     # Use the new detailed function
@@ -1256,7 +1256,7 @@ class AdminFeedbackDashboard(UserPassesTestMixin, TemplateView):
         context['feedbacks'] = Feedback.objects.all().order_by('-created_at')
         return context
     
-def quarterly_report_view(request):
+def quarterly_report_page(request):
     now = timezone.now()
 
     # ==========================================

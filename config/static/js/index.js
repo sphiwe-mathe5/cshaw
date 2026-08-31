@@ -1934,8 +1934,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <input type="text" class="form-input input-disabled" value="${user.role_label}" disabled>
                                 </div>
                                 <div class="form-group">
-                                    <label>Student / Staff Number</label>
-                                    <input type="text" class="form-input input-disabled" value="${user.student_number || 'N/A'}" disabled>
+                                    <label>Email Address</label>
+                                    <input type="email" class="form-input input-disabled" value="${user.email}" disabled>
                                 </div>
                             </div>
 
@@ -1951,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
 
                             <div class="form-grid">
-                                <div class="form-group">
+                                <div class="form-group" style="grid-column: 1 / -1;">
                                     <label>Campus</label>
                                     <select class="form-input input-disabled" name="campus" disabled>
                                         <option value="APB" ${isSelected('APB')}>APB Campus</option>
@@ -1959,11 +1959,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <option value="APK" ${isSelected('APK')}>APK Campus</option>
                                         <option value="SWC" ${isSelected('SWC')}>SWC Campus</option>
                                     </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Email Address</label>
-                                    <input type="email" class="form-input input-disabled" value="${user.email}" disabled>
-                                    <small class="form-help-text">Contact support to change email.</small>
                                 </div>
                             </div>
 
@@ -2271,7 +2266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                <input type="text" id="studentSearchInput" placeholder="Search by name or student no..." 
+                <input type="text" id="studentSearchInput" placeholder="Search by name or email..." 
                     style="flex: 2; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 180px;">
                 
                 <select id="campusFilter" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px;">
@@ -2305,8 +2300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <table style="width:100%; border-collapse:collapse; min-width:900px;"> 
                     <thead>
                         <tr style="background:#f9f9f9; text-align:left;">
-                            <th style="padding:15px; border-bottom:1px solid #eee;">Name</th>
-                            <th style="padding:15px; border-bottom:1px solid #eee;">Student No</th>
+                            <th style="padding:15px; border-bottom:1px solid #eee;">Name & Email</th>
                             <th style="padding:15px; border-bottom:1px solid #eee;">Role</th>
                             <th style="padding:15px; border-bottom:1px solid #eee;">Total Hours</th>
                             <th style="padding:15px; border-bottom:1px solid #eee;">Honors & Awards</th> 
@@ -2314,7 +2308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>
                     </thead>
                     <tbody id="dynamicStudentBody">
-                        <tr><td colspan="6" style="padding:20px; text-align:center;">Loading students...</td></tr>
+                        <tr><td colspan="5" style="padding:20px; text-align:center;">Loading students...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2401,8 +2395,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let filtered = allStudents.filter(student => {
                     const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-                    const studentNo = (student.student_number || '').toLowerCase();
-                    const matchesSearch = fullName.includes(query) || studentNo.includes(query);
+                    const email = (student.email || '').toLowerCase();
+                    const matchesSearch = fullName.includes(query) || email.includes(query);
                     const matchesCampus = campus === "" || student.campus === campus;
                     const matchesGender = gender === "" || (student.gender && student.gender.toLowerCase() === gender.toLowerCase());
                     let matchesRole = true;
@@ -2424,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error(err);
             const tbody = document.getElementById('dynamicStudentBody');
-            if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Error loading students.</td></tr>';
+            if(tbody) tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center;">Error loading students.</td></tr>';
         }
 
         function renderRows(studentsToRender) {
@@ -2432,26 +2426,17 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = ''; 
 
             if (studentsToRender.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color:#999;">No matching students found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center; color:#999;">No matching students found.</td></tr>';
                 return;
             }
 
             let lastCampus = null;
 
             studentsToRender.forEach(student => {
-                
-                // 👇 --- PRIVACY MASK LOGIC ADDED HERE --- 👇
-                const rawNo = student.student_number || '';
-                // Shows first 2 digits, ****, then last 2 digits
-                const maskedStudentNo = rawNo.length > 4 
-                    ? rawNo.substring(0, 2) + '****' + rawNo.slice(-2) 
-                    : rawNo; 
-                // 👆 --------------------------------------- 👆
-
                 if (student.campus !== lastCampus) {
                     const divider = document.createElement('tr');
                     divider.innerHTML = `
-                        <td colspan="6" style="background:#f1f4f8; padding:8px 15px; font-weight:bold; color:#444; border-top:1px solid #ddd; border-bottom:1px solid #ddd;">
+                        <td colspan="5" style="background:#f1f4f8; padding:8px 15px; font-weight:bold; color:#444; border-top:1px solid #ddd; border-bottom:1px solid #ddd;">
                             📍 ${student.campus || 'Unknown Campus'}
                         </td>
                     `;
@@ -2489,7 +2474,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div style="font-size:0.85rem; color:#888;">${student.email}</div>
                     </td>
-                    <td style="padding:15px; border-bottom:1px solid #eee;">${maskedStudentNo || '-'}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${roleBadge}</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;"><strong>${student.total_hours.toFixed(1)}</strong> hrs</td>
                     <td style="padding:15px; border-bottom:1px solid #eee;">${awardsHtml}</td>

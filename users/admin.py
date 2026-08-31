@@ -15,7 +15,6 @@ class CustomUserAdmin(admin.ModelAdmin):
         'last_name', 
         'role', 
         'campus', 
-        'student_number', 
         'volunteer_status',
         'gender',
         'tshirt_size',
@@ -23,7 +22,7 @@ class CustomUserAdmin(admin.ModelAdmin):
     )
 
     # 2. ADD A SEARCH BAR (Search by these fields)
-    search_fields = ('email', 'first_name', 'last_name', 'student_number')
+    search_fields = ('email', 'first_name', 'last_name')
 
     # 3. ADD SIDEBAR FILTERS (Filter by these categories)
     list_filter = ('role', 'campus', 'can_manage_attendance', 'volunteer_status', 'is_active')
@@ -31,7 +30,7 @@ class CustomUserAdmin(admin.ModelAdmin):
     # 4. ORGANIZE THE DETAIL VIEW INTO SECTIONS
     fieldsets = (
         ('Personal Info', {
-            'fields': ('email', 'first_name', 'last_name', 'student_number')
+            'fields': ('email', 'first_name', 'last_name')
         }),
         ('Demographics & Logistics', {
             'fields': ('gender', 'tshirt_size', 'volunteer_status')

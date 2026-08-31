@@ -12,11 +12,11 @@ class UserLoginSerializer(serializers.Serializer):
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    recruiter_student_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    recruiter_email = serializers.EmailField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'student_number', 'password', 'campus', 'recruiter_student_number', 'can_manage_attendance']
+        fields = ['first_name', 'last_name', 'email', 'password', 'campus', 'recruiter_email', 'can_manage_attendance']
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, attrs):
@@ -24,36 +24,36 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         if not attrs.get('campus'):
             raise serializers.ValidationError({"campus": "Students must select a campus."})
 
-        # 2. NEW: Validate Recruiter Existence
-        recruiter_number = attrs.get('recruiter_student_number')
+        # 2. Validate Recruiter Existence by Email
+        recruiter_email = attrs.get('recruiter_email')
         
-        if recruiter_number:
+        if recruiter_email:
             # Check if the recruiter actually exists in the database
-            if not User.objects.filter(student_number=recruiter_number).exists():
+            if not User.objects.filter(email__iexact=recruiter_email).exists():
                 raise serializers.ValidationError({
-                    "recruiter_student_number": "Recruiter not found. Please check the student number or leave it blank."
+                    "recruiter_email": "Recruiter not found. Please check the email or leave it blank."
                 })
             
-            # Prevent user from entering their own number (edge case)
-            if recruiter_number == attrs.get('student_number'):
+            # Prevent user from entering their own email
+            if recruiter_email.lower() == (attrs.get('email') or '').lower():
                  raise serializers.ValidationError({
-                    "recruiter_student_number": "You cannot recruit yourself."
+                    "recruiter_email": "You cannot recruit yourself."
                 })
 
         return attrs
 
     def create(self, validated_data):
-        recruiter_number = validated_data.pop('recruiter_student_number', None)
+        recruiter_email = validated_data.pop('recruiter_email', None)
         
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
         
-        # 3. Handle Recruitment (Simplified)
-        # We don't need try/except here because validate() already guaranteed the user exists
-        if recruiter_number:
-            recruiter = User.objects.get(student_number=recruiter_number)
-            user.recruited_by = recruiter
+        # 3. Handle Recruitment
+        if recruiter_email:
+            recruiter = User.objects.filter(email__iexact=recruiter_email).first()
+            if recruiter:
+                user.recruited_by = recruiter
         
         user.save()
         return user
@@ -71,7 +71,7 @@ class StudentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'first_name', 'last_name', 'email', 'student_number', 
+            'id', 'first_name', 'last_name', 'email', 
             'campus', 'executive_position', 'awards', 'total_hours', 
             'can_manage_attendance', 'gender', 'tshirt_size', 'volunteer_status'
         ]
@@ -93,27 +93,15 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'email', 'student_number', 'campus', 'executive_position', 'awards']
+        fields = ['id', 'first_name', 'email', 'campus', 'executive_position', 'awards']
 
 class CoordinatorRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    # Secret code to prevent random people from signing up as coordinators
-    # In a real app, you might do this via Admin panel invitation, 
-    # but for now, let's use a simple code check.
     admin_code = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'campus', 'password', 'admin_code']
-
-    def validate(self, attrs):
-        # 1. Check if this Staff Number/Admin Code is already taken
-        # We check against 'student_number' because that's where we store unique IDs
-        code = attrs.get('admin_code')
-        if User.objects.filter(student_number=code).exists():
-            raise serializers.ValidationError({"admin_code": "This Staff Number is already registered."})
-        
-        return attrs
 
     def create(self, validated_data):
         # Remove admin code before creating user
@@ -130,11 +118,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'first_name', 'last_name', 'email', 
-            'student_number', 'campus', 'role', 'role_label',
+            'campus', 'role', 'role_label',
             'receive_notifications', 'is_2fa_enabled'
         ]
         # These fields cannot be changed by the user
-        read_only_fields = ['email', 'role', 'role_label', 'student_number', 'is_2fa_enabled']
+        read_only_fields = ['email', 'role', 'role_label', 'is_2fa_enabled']
 
 class UserManageSerializer(serializers.ModelSerializer):
     # We use PrimaryKeyRelatedField for WRITING (sending IDs like [1, 2])

@@ -65,8 +65,6 @@ class User(AbstractUser):
     campus = models.CharField(max_length=10, choices=Campuses.choices, null=True, blank=True)
     volunteer_status = models.CharField(max_length=20, choices=VolunteerStatus.choices, null=True, blank=True)
 
-    student_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
-    
     executive_position = models.CharField(max_length=100, null=True, blank=True, help_text="E.g., Chairperson, Secretary. Leave empty if regular volunteer.")
     receive_notifications = models.BooleanField(default=True, help_text="Receive email updates about events")
     
