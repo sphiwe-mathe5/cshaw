@@ -7,8 +7,11 @@
     <title>Volunteer Hub | Dashboard</title>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'css/lms.css' %}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <meta name="current-user-email" content="{{ request.user.email }}">
+    <meta name="user-authenticated" content="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+    <meta name="user-role" content="{{ user.role|default:'' }}">
 </head>
 <body>
 
@@ -94,18 +97,6 @@
                 
 
                 {% if user.role == 'STUDENT' %}
-                <li class="nav-item" id="nav-item-hiking-ticket">
-                    <a href="#" class="nav-link" id="link-hiking-ticket">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                            <line x1="2" y1="10" x2="22" y2="10"></line>
-                            <circle cx="8" cy="15" r="2"></circle>
-                            <line x1="14" y1="15" x2="18" y2="15"></line>
-                        </svg>
-                        <span>Hiking Ticket <span style="background: #16a34a; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: 6px; font-weight: 800;">HIKE</span></span>
-                    </a>
-                </li>
-
                 <li class="nav-item" id="nav-item-stats">
                     <a href="#" class="nav-link" id="link-stats">
                         <svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>

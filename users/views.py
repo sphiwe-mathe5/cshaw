@@ -1,8 +1,11 @@
+import logging
+import random
+from datetime import timedelta
+import requests
+from decouple import config
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from decouple import config
 from rest_framework import status, generics, permissions, views
-import requests
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetView
 from django.contrib.auth.forms import PasswordResetForm
 from django.template.loader import render_to_string
@@ -10,6 +13,13 @@ from django.urls import reverse_lazy
 from rest_framework.views import APIView
 from django.shortcuts import redirect, render
 from rest_framework.response import Response
+from django.db import transaction
+from django.utils import timezone
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+from django.conf import settings
+
+from core.audit import log_audit_event
 from .serializers import (
     StudentRegistrationSerializer, 
     CoordinatorRegistrationSerializer, 
@@ -20,17 +30,11 @@ from .serializers import (
     AwardSerializer,
     UserManageSerializer
 )
-from django.db import transaction
 from .services import BackgroundEmailService, send_welcome_email
 from .models import User, Award
 from .permissions import IsCoordinator
-from django.utils import timezone
-from datetime import timedelta
-import random
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.conf import settings
+
+logger = logging.getLogger('users')
 
 
 def verify_recaptcha(recaptcha_token):
@@ -50,9 +54,12 @@ def verify_recaptcha(recaptcha_token):
         
         # Check success AND score (0.0 = Bot, 1.0 = Human)
         # A score of < 0.5 is usually considered suspicious
-        return result.get('success') and result.get('score', 0) >= 0.5
+        success = result.get('success') and result.get('score', 0) >= 0.5
+        if not success:
+            logger.warning("reCAPTCHA validation failed (success=%s, score=%s)", result.get('success'), result.get('score'))
+        return success
     except Exception as e:
-        print(f"reCAPTCHA Error: {e}")
+        logger.error("reCAPTCHA API request error: %s", e, exc_info=True)
         return False
 
 def send_postmark_otp(recipient_email, otp_code, first_name="Volunteer"):
@@ -82,8 +89,9 @@ def send_postmark_otp(recipient_email, otp_code, first_name="Volunteer"):
     
     try:
         msg.send()
+        logger.info("Sent 2FA OTP code email to %s", recipient_email)
     except Exception as e:
-        print(f"Failed to send OTP via Anymail: {e}")
+        logger.error("Failed to send OTP via Anymail to %s: %s", recipient_email, e, exc_info=True)
         
         
 class StudentRegistrationView(generics.CreateAPIView):
@@ -111,11 +119,12 @@ class StudentRegistrationView(generics.CreateAPIView):
             # Check success AND score (0.0 = Bot, 1.0 = Human)
             # A score of < 0.5 is usually considered suspicious
             if not result.get('success') or result.get('score', 0) < 0.5:
+                logger.warning("Student registration blocked by reCAPTCHA (score: %s)", result.get('score'))
                 return Response({'error': 'Unusual activity detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
             # Log the error internally, but give a generic error to user
-            print(f"Recaptcha Error: {e}") 
+            logger.error("reCAPTCHA verification error during student registration: %s", e, exc_info=True)
             return Response({'error': 'Captcha verification failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # --- 2. PROCEED WITH REGISTRATION ---
@@ -129,6 +138,7 @@ class StudentRegistrationView(generics.CreateAPIView):
         with transaction.atomic():
             user = serializer.save()
             
+        logger.info("New student registered: %s (ID: %s)", user.email, user.id)
         # The email is outside the transaction so it fires AFTER the user is safely saved
         send_welcome_email(user, "Student Volunteer")
 
@@ -151,10 +161,11 @@ class CoordinatorRegistrationView(generics.CreateAPIView):
             }).json()
 
             if not result.get('success') or result.get('score', 0) < 0.5:
+                logger.warning("Coordinator registration blocked by reCAPTCHA (score: %s)", result.get('score'))
                 return Response({'error': 'Unusual activity detected. Registration blocked.'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            print(f"reCAPTCHA Error: {e}")
+            logger.error("reCAPTCHA verification error during coordinator registration: %s", e, exc_info=True)
             return Response({'error': 'Captcha verification failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # --- 2. PROCEED WITH REGISTRATION ---
@@ -162,6 +173,7 @@ class CoordinatorRegistrationView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
+        logger.info("New coordinator registered: %s (ID: %s)", user.email, user.id)
         send_welcome_email(user, "Coordinator")
 
 class AwardListView(generics.ListAPIView):
@@ -191,8 +203,10 @@ class LoginView(views.APIView):
             }).json()
 
             if not result.get('success') or result.get('score', 0) < 0.5:
+                logger.warning("Login blocked by reCAPTCHA (score: %s)", result.get('score'))
                 return Response({'error': 'Unusual activity detected. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.error("reCAPTCHA API error on login: %s", e, exc_info=True)
             return Response({'error': 'Captcha verification failed. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # --- 2. AUTHENTICATE ---
@@ -217,6 +231,7 @@ class LoginView(views.APIView):
                     
                     # Send the email via Postmark
                     send_postmark_otp(user.email, otp)
+                    logger.info("2FA OTP required for user %s", user.email)
 
                     return Response({
                         "requires_2fa": True, 
@@ -225,6 +240,7 @@ class LoginView(views.APIView):
 
                 # If 2FA is off, log them in normally
                 login(request, user)
+                logger.info("User login successful: %s (Role: %s)", user.email, user.role)
                 return Response({
                     "message": "Login successful",
                     "role": user.role,
@@ -232,6 +248,7 @@ class LoginView(views.APIView):
                     "is_executive": user.is_executive
                 }, status=status.HTTP_200_OK)
 
+            logger.warning("Failed login attempt for: %s", email)
             return Response({"error": "Invalid credentials. Please check your email and password."}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -300,6 +317,19 @@ class AssignExecutiveView(views.APIView):
                 student.can_manage_attendance = bool(can_manage)
 
             student.save()
+
+            log_audit_event(
+                action="EXECUTIVE_ROLE_ASSIGNED",
+                actor=request.user,
+                target_type="User",
+                target_id=student.id,
+                metadata={
+                    "student_email": student.email,
+                    "position": position,
+                    "can_manage_attendance": student.can_manage_attendance
+                }
+            )
+
             return Response({"message": f"Student assigned as {position}"})
             
         except User.DoesNotExist:
@@ -336,6 +366,7 @@ class ChangePasswordView(APIView):
             user = request.user
             user.set_password(serializer.validated_data['new_password'])
             user.save()
+            logger.info("Password successfully changed for user: %s", user.email)
             return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -401,7 +432,20 @@ class UserDeleteView(APIView):
 
     def delete(self, request):
         user = request.user
+        user_id = user.id
+        user_email = user.email
+        user_role = user.role
+
+        log_audit_event(
+            action="ACCOUNT_DELETED",
+            actor=request.user,
+            target_type="User",
+            target_id=user_id,
+            metadata={"email": user_email, "role": user_role}
+        )
+
         user.delete()
+        logger.info("User account deleted: %s (ID: %s)", user_email, user_id)
         return Response({"message": "Account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 class Toggle2FAView(views.APIView):

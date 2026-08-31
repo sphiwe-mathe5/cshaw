@@ -163,6 +163,76 @@ ul { list-style: none; }
     box-shadow: 0 4px 10px rgba(255, 140, 66, 0.3);
 }
 
+/* --- MINIMALIST TAB SWITCHER (Activities vs Course Modules) --- */
+.tab-switcher-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 32px auto;
+    width: 100%;
+}
+
+.tab-switcher-pill {
+    display: inline-flex;
+    background: transparent;
+    padding: 3px;
+    border-radius: 30px;
+    border: 1.5px solid #e2e8f0;
+    gap: 4px;
+}
+
+.tab-switcher-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tab-switcher-btn:hover {
+    color: #0f172a;
+}
+
+.tab-switcher-btn.active {
+    background: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+}
+
+.tab-switcher-btn svg {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.tab-switcher-btn.active svg {
+    stroke: #ffffff;
+}
+
+.tab-badge-count {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+.tab-switcher-btn.active .tab-badge-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
 /* --- ACADEMIC EMPTY STATE CONTAINER --- */
 .empty-state-container {
     display: flex;

@@ -168,3 +168,34 @@ class ExcursionTicket(models.Model):
     def __str__(self):
         return f"Ticket {self.fallback_pin} for {self.user.email} - {self.status}"
 
+
+class AuditLog(models.Model):
+    """
+    Lightweight audit log model for recording critical business state transitions,
+    attendance verifications, manual hour adjustments, role updates, and destructive operations.
+    """
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        help_text="User who initiated the action, or null if system-generated."
+    )
+    action = models.CharField(max_length=100, db_index=True, help_text="e.g. ATTENDANCE_VERIFIED, MANUAL_HOURS_ALLOCATED")
+    target_type = models.CharField(max_length=100, blank=True, default="", db_index=True, help_text="Entity type e.g. ActivitySignup, User, Topic")
+    target_id = models.CharField(max_length=100, blank=True, default="", help_text="ID or UUID of the affected entity")
+    metadata = models.JSONField(default=dict, blank=True, help_text="Sanitized contextual metadata without sensitive data")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['action', '-created_at']),
+            models.Index(fields=['target_type', 'target_id']),
+        ]
+
+    def __str__(self):
+        actor_email = self.actor.email if self.actor else "System"
+        return f"[{self.created_at.strftime('%Y-%m-%d %H:%M:%S')}] {actor_email} -> {self.action} ({self.target_type}:{self.target_id})"
+

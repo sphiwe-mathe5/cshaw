@@ -2,6 +2,7 @@ import uuid
 import random
 import threading
 import io
+import logging
 import qrcode
 from django.core.files.base import ContentFile
 from django.utils import timezone
@@ -13,9 +14,11 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.template.loader import render_to_string
 from .models import ExcursionTicket, ExcursionLeaderboardSnapshot
+from .audit import log_audit_event
 from users.services import BackgroundEmailService
 from django.http import HttpResponseForbidden
 
+logger = logging.getLogger('core.excursions')
 User = get_user_model()
 
 def generate_and_email_tickets(tickets_data):
@@ -159,6 +162,20 @@ class RevokeTicketAPIView(APIView):
                 
             ticket.status = 'revoked'
             ticket.save()
+
+            log_audit_event(
+                action="EXCURSION_TICKET_REVOKED",
+                actor=request.user,
+                target_type="ExcursionTicket",
+                target_id=ticket.id,
+                metadata={
+                    "student_email": ticket.user.email,
+                    "pin": ticket.fallback_pin,
+                    "revoked_by": request.user.email
+                }
+            )
+            logger.info("Excursion ticket %s revoked for %s by %s", ticket.id, ticket.user.email, request.user.email)
+
             return Response({
                 'message': 'Ticket RSVP cancelled successfully. The seat is now open for the next candidate on the leaderboard.'
             }, status=status.HTTP_200_OK)
@@ -183,17 +200,33 @@ class ValidateTicketAPIView(APIView):
             ticket = ExcursionTicket.objects.filter(fallback_pin=fallback_pin).first()
             
         if not ticket:
+            logger.warning("Ticket validation failed: ticket not found (PIN: %s, UUID: %s) scanned by %s", fallback_pin, ticket_uuid, request.user.email)
             return Response({'error': 'Ticket not found.', 'status': 'error'}, status=status.HTTP_404_NOT_FOUND)
             
         if ticket.status == 'revoked':
+            logger.warning("Ticket validation failed: ticket %s is revoked", ticket.id)
             return Response({'error': 'This ticket has been revoked.', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
             
         if ticket.is_scanned:
+            logger.warning("Ticket validation failed: ticket %s already scanned", ticket.id)
             return Response({'error': 'Already Used', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
             
         ticket.is_scanned = True
         ticket.scanned_at = timezone.now()
         ticket.save()
+
+        log_audit_event(
+            action="EXCURSION_TICKET_VERIFIED",
+            actor=request.user,
+            target_type="ExcursionTicket",
+            target_id=ticket.id,
+            metadata={
+                "student_email": ticket.user.email,
+                "pin": ticket.fallback_pin,
+                "scanned_at": ticket.scanned_at.isoformat()
+            }
+        )
+        logger.info("Excursion ticket %s verified and scanned for %s by %s", ticket.id, ticket.user.email, request.user.email)
         
         active_tickets = ExcursionTicket.objects.filter(status='active')
         scanned_count = active_tickets.filter(is_scanned=True).count()
@@ -262,6 +295,16 @@ class ResetTicketsAPIView(APIView):
         snapshot_count = ExcursionLeaderboardSnapshot.objects.count()
         ExcursionTicket.objects.all().delete()
         ExcursionLeaderboardSnapshot.objects.all().delete()
+
+        log_audit_event(
+            action="EXCURSION_TICKETS_RESET",
+            actor=request.user,
+            target_type="ExcursionTicket",
+            target_id="",
+            metadata={"deleted_tickets": ticket_count, "deleted_snapshots": snapshot_count}
+        )
+        logger.warning("Excursion tickets and snapshots RESET by %s (Deleted %d tickets, %d snapshots)", request.user.email, ticket_count, snapshot_count)
+
         return Response({
             'message': f'Successfully reset all tickets ({ticket_count} tickets) and unlocked leaderboard snapshot ({snapshot_count} students). You can now start fresh!',
             'deleted_tickets': ticket_count,
@@ -350,6 +393,19 @@ class AllocateExcursionHoursAPIView(APIView):
             )
 
             allocated_students.append(f"{student.first_name} {student.last_name}".strip() or student.email)
+
+        log_audit_event(
+            action="EXCURSION_HOURS_ALLOCATED",
+            actor=request.user,
+            target_type="VolunteerActivity",
+            target_id=activity.id,
+            metadata={
+                "event_name": event_name,
+                "hours": hours,
+                "allocated_count": len(allocated_students)
+            }
+        )
+        logger.info("Excursion hours allocated: %sh to %d students for '%s' by %s", hours, len(allocated_students), event_name, request.user.email)
 
         return Response({
             'message': f"Successfully allocated {hours} hours to {len(allocated_students)} checked-in students for '{event_name}'!",

@@ -1,10 +1,14 @@
+import logging
 from pyexpat.errors import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from rest_framework import generics, permissions
 from core.forms import FeedbackForm
-from .models import CareerToolkitAsset, VolunteerActivity, ActivitySignup, Feedback, Feedback
+from .models import CareerToolkitAsset, VolunteerActivity, ActivityRole, ActivitySignup, Feedback
+from .audit import log_audit_event
+
+logger = logging.getLogger('core')
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -200,19 +204,37 @@ class ActivityCreateView(generics.CreateAPIView):
                 saved_activities.append(activity)
                 created_events_data.append(serializer.data)
 
+                log_audit_event(
+                    action="EVENT_CREATED",
+                    actor=request.user,
+                    target_type="VolunteerActivity",
+                    target_id=activity.id,
+                    metadata={"title": activity.title, "campus": activity.campus, "is_series": True}
+                )
+
             # ✅ ADDED: Send ONE email for the entire series after the loop finishes
             if saved_activities:
                 # You will need to import this new function at the top of your views.py
                 send_series_event_email(saved_activities, original_title) 
 
+            logger.info("Multi-day event series created: %s (%d days) by %s", original_title, len(saved_activities), request.user.email)
             return Response(created_events_data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.error("Error creating event series: %s", e, exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         # Standard save hook
         activity = serializer.save(created_by=self.request.user)
+        log_audit_event(
+            action="EVENT_CREATED",
+            actor=self.request.user,
+            target_type="VolunteerActivity",
+            target_id=activity.id,
+            metadata={"title": activity.title, "campus": activity.campus, "is_series": False}
+        )
+        logger.info("Event created: %s (ID: %s) by %s", activity.title, activity.id, self.request.user.email)
         # Assuming you have this function imported or defined in utils.py
         send_new_event_email(activity)
     
@@ -234,6 +256,15 @@ class ActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Optional: Extra check to ensure only Coordinators can delete
         if self.request.user.role != 'COORDINATOR':
              raise PermissionDenied("Only Coordinators can delete events.")
+
+        log_audit_event(
+            action="EVENT_DELETED",
+            actor=self.request.user,
+            target_type="VolunteerActivity",
+            target_id=instance.id,
+            metadata={"title": instance.title, "campus": instance.campus}
+        )
+        logger.info("Event deleted: %s (ID: %s) by %s", instance.title, instance.id, self.request.user.email)
         instance.delete()
 
 
@@ -428,6 +459,22 @@ class AttendanceActionView(views.APIView):
             signup.attended = True
             signup.save()
 
+            log_audit_event(
+                action="ATTENDANCE_VERIFIED",
+                actor=request.user,
+                target_type="ActivitySignup",
+                target_id=signup.id,
+                metadata={
+                    "student_email": signup.user.email,
+                    "activity_title": signup.activity.title,
+                    "activity_id": signup.activity.id,
+                    "hours_earned": float(signup.hours_earned),
+                    "sign_in_time": signup.sign_in_time.isoformat() if signup.sign_in_time else None,
+                    "sign_out_time": signup.sign_out_time.isoformat() if signup.sign_out_time else None,
+                }
+            )
+            logger.info("Attendance verified for %s at '%s' (Earned: %sh, Verified by: %s)", signup.user.email, signup.activity.title, signup.hours_earned, request.user.email)
+
             return Response({
                 "message": "Signed Out",
                 "time": signup.sign_out_time,
@@ -510,6 +557,15 @@ def bulk_signout_view(request, pk):
         signup.attended = True
         signup.save()
         count += 1
+
+    log_audit_event(
+        action="BULK_ATTENDANCE_VERIFIED",
+        actor=request.user,
+        target_type="VolunteerActivity",
+        target_id=activity.id,
+        metadata={"activity_title": activity.title, "students_signed_out_count": count}
+    )
+    logger.info("Bulk sign-out completed for activity '%s' (%d students) by %s", activity.title, count, request.user.email)
 
     return Response({"message": f"Successfully signed out {count} students."})
 
@@ -890,7 +946,7 @@ def email_report_pdf(request, pk):
         
         return Response({"message": f"Report sent to {len(recipient_list)} recipients."})
     except Exception as e:
-        print(f"Email Error: {e}")
+        logger.error("Email Error sending report: %s", e, exc_info=True)
         return Response({"error": "Failed to send email."}, status=500)
     
 @api_view(['GET'])
@@ -937,9 +993,10 @@ def email_quarterly_pdf(request):
         email = EmailMessage(subject, message, settings.DEFAULT_FROM_EMAIL, recipient_list)
         email.attach(f"Annual_Report_{year}.pdf", pdf, 'application/pdf')
         email.send()
+        logger.info("Annual volunteer report for %s emailed to %d recipients by %s", year, len(recipient_list), request.user.email)
         return Response({"message": f"Yearly report sent to {len(recipient_list)} recipients."})
     except Exception as e:
-        print(f"Email Error: {e}")
+        logger.error("Email Error sending quarterly report: %s", e, exc_info=True)
         return Response({"error": "Failed to send email."}, status=500)
     
 class SendAnnouncementView(APIView):
@@ -983,11 +1040,24 @@ class SendAnnouncementView(APIView):
                 bcc_emails=recipient_list 
             )
 
+            log_audit_event(
+                action="ANNOUNCEMENT_BROADCAST",
+                actor=request.user,
+                target_type="Announcement",
+                target_id="",
+                metadata={
+                    "subject": subject,
+                    "target_campus": target_campus,
+                    "recipients_count": len(recipient_list)
+                }
+            )
+            logger.info("Announcement '%s' queued to %d recipients by %s", subject, len(recipient_list), request.user.email)
+
             # Instantly return success to the frontend while emails send in the background
             return Response({"message": f"Announcement queued to send to {len(recipient_list)} recipient(s)."})
 
         except Exception as e:
-            print(f"Announcement Queue Error: {e}")
+            logger.error("Announcement Queue Error: %s", e, exc_info=True)
             return Response({"error": "Failed to queue emails."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
@@ -1724,6 +1794,20 @@ class ManualHoursAllocationAPIView(APIView):
                 to_emails=[student.email],
                 html_content=html_content
             )
+
+        log_audit_event(
+            action="MANUAL_HOURS_ALLOCATED",
+            actor=request.user,
+            target_type="VolunteerActivity",
+            target_id=activity.id,
+            metadata={
+                "event_name": event_name,
+                "hours": hours,
+                "students_count": students.count(),
+                "student_ids": list(student_ids)
+            }
+        )
+        logger.info("Manual hours allocated: %sh to %d students for '%s' by %s", hours, students.count(), event_name, request.user.email)
 
         return Response({"message": f"Successfully allocated {hours} hours to {students.count()} students for '{event_name}'."})
 

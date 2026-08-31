@@ -1,4 +1,5 @@
 import re
+import logging
 from django.db.models import Sum, Count, Q
 from django.conf import settings
 from openai import OpenAI
@@ -6,6 +7,7 @@ from .models import VolunteerActivity, ActivitySignup
 from collections import defaultdict
 from django.db.models import Q
 
+logger = logging.getLogger('core.reports')
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 def get_facilitator_stats(activity):
@@ -244,5 +246,5 @@ def get_or_create_ai_insight(activity, stats, comparison):
         activity.save()
         return text
     except Exception as e:
-        print(f"OpenAI Error: {e}")
+        logger.error("OpenAI Error generating insight: %s", e, exc_info=True)
         return "Analysis unavailable."

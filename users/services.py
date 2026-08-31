@@ -1,10 +1,13 @@
 import threading
 import time
+import logging
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from .models import User
+
+logger = logging.getLogger('users.email')
 
 class BackgroundEmailService:
     @staticmethod
@@ -38,7 +41,7 @@ class BackgroundEmailService:
                         # Pause for a fraction of a second to respect API rate limits
                         time.sleep(0.2) 
                     
-                    print(f"[EMAIL SUCCESS] Successfully sent: '{subject}' to {len(bcc_emails)} recipients in batches.")
+                    logger.info("Successfully sent email '%s' to %d recipients in batches.", subject, len(bcc_emails))
 
                 # 2. IF WE HAVE NO BCC EMAILS (Single Welcome Emails, RSVP Confirmations)
                 else:
@@ -50,10 +53,10 @@ class BackgroundEmailService:
                     )
                     msg.attach_alternative(html_content, "text/html")
                     msg.send(fail_silently=False)
-                    print(f"[EMAIL SUCCESS] Successfully sent: '{subject}' to {to_emails}")
+                    logger.info("Successfully sent email '%s' to %s", subject, to_emails)
 
             except Exception as e:
-                print(f"[EMAIL ERROR] Background Email Error: {e}")
+                logger.error("Background email error sending '%s': %s", subject, e, exc_info=True)
 
         # Standard thread (No daemon=True!)
         thread = threading.Thread(target=send)
@@ -90,7 +93,7 @@ def send_new_event_email(activity):
         students = User.objects.filter(role=User.Roles.STUDENT, campus=activity.campus)
     
     if not students.exists():
-        print("⚠️ No matching students found for email notification.")
+        logger.warning("No matching students found for email notification regarding event: %s", activity.title)
         return 
         
     for student in students:

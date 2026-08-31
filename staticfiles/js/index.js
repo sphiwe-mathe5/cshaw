@@ -414,31 +414,88 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'flex';
     }
 
+    // Active Index Tab State: 'activities' or 'modules'
+    let currentMainTab = 'activities';
 
-    // Render Activities (List View)
+    // Render Activities & Course Modules (with Switcher Tab)
     async function renderActivities() {
-
-
-
         mainContent.innerHTML = `
-
             <div class="loader"></div>
         `;
 
         try {
-            const response = await fetch('/api/activities/');
-            if (!response.ok) throw new Error('Failed to load events');
-            let allActivities = await response.json();
+            // Parallel fetch of activities and LMS topics
+            const [activitiesRes, topicsRes] = await Promise.all([
+                fetch('/api/activities/').catch(() => null),
+                fetch('/api/lms/topics/').catch(() => null)
+            ]);
 
-            // 1. FILTER: Show events from Today onwards (Midnight Cutoff)
+            let allActivities = activitiesRes && activitiesRes.ok ? await activitiesRes.json() : [];
+            let allTopics = topicsRes && topicsRes.ok ? await topicsRes.json() : [];
+
+            // 1. Filter Activities (Midnight cutoff)
             const cutoff = new Date();
             cutoff.setHours(0, 0, 0, 0); 
             allActivities = allActivities.filter(activity => new Date(activity.date_time) >= cutoff);
 
+            // 2. Filter Topics (Only show topics with modules, and exclude fully completed topics)
+            const activeTopics = allTopics.filter(topic => {
+                if (!topic.units || topic.units.length === 0) return false;
+                
+                let quizCount = 0;
+                let completedQuizCount = 0;
+                topic.units.forEach(u => {
+                    if (u.quiz) {
+                        quizCount++;
+                        if (u.quiz.completed) completedQuizCount++;
+                    }
+                });
+                
+                // If the student has completed all quizzes in this topic, do NOT show it on the available modules tab
+                const isTopicCompleted = (quizCount > 0 && completedQuizCount === quizCount);
+                return !isTopicCompleted;
+            });
+
+            // 3. Tab Switcher Header Component HTML (Only shown for authenticated users)
+            const metaAuth = document.querySelector('meta[name="user-authenticated"]');
+            const metaEmail = document.querySelector('meta[name="current-user-email"]');
+            const showTabs = Boolean(
+                (typeof isUserLoggedIn !== 'undefined' && isUserLoggedIn) ||
+                (window.isUserLoggedIn) ||
+                (metaAuth && metaAuth.content === 'true') ||
+                (metaEmail && metaEmail.content && metaEmail.content.trim() !== '')
+            );
+            
+            const tabSwitcherHtml = showTabs ? `
+                <div class="tab-switcher-wrapper">
+                    <div class="tab-switcher-pill">
+                        <button type="button" id="tabSwitchActivities" class="tab-switcher-btn ${currentMainTab === 'activities' ? 'active' : ''}">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>Volunteer Activities</span>
+                            <span class="tab-badge-count">${allActivities.length}</span>
+                        </button>
+                        <button type="button" id="tabSwitchModules" class="tab-switcher-btn ${currentMainTab === 'modules' ? 'active' : ''}">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            <span>Course Modules</span>
+                            <span class="tab-badge-count">${activeTopics.length}</span>
+                        </button>
+                    </div>
+                </div>
+            ` : '';
+
+            // 4. Generate Activities Tab Content
+            let activitiesContentHtml = '';
             if (allActivities.length === 0) {
-                mainContent.innerHTML = `
+                activitiesContentHtml = `
                     <div class="cards-grid">
-                        
                         <div class="empty-state-container" style="grid-column: 1 / -1;">
                             <div class="study-scene">
                                 <div class="study-spark spark-left">✦</div>
@@ -453,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                             <h3 class="empty-state-title">Zero events right now.</h3>
-                            <p class="empty-state-text" style="margin-bottom: 24px;">Take this time to focus on your studies and ace your upcoming classes!</p>
+                            <p class="empty-state-text" style="margin-bottom: 24px;">Take this time to focus on your studies${showTabs ? ' or check out the Course Modules!' : '!'}</p>
                             <div class="empty-state-cta">
                                 <a href="/about/" class="btn-read-cshaw">
                                     <span>Read about the C-SHAW Program</span>
@@ -464,81 +521,134 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </a>
                             </div>
                         </div>
+                    </div>
+                `;
+            } else {
+                const groups = {};
+                allActivities.forEach(activity => {
+                    const isSeriesIdentifier = /\s\(Day\s\d+\)$/i.test(activity.title);
+                    let groupKey;
+                    if (isSeriesIdentifier) {
+                        groupKey = activity.title.replace(/\s\(Day\s\d+\)$/i, '').trim();
+                    } else {
+                        groupKey = `single_${activity.id}`;
+                    }
+                    if (!groups[groupKey]) {
+                        groups[groupKey] = [];
+                    }
+                    groups[groupKey].push(activity);
+                });
 
-                    </div>`;
-                return;
+                const displayList = Object.keys(groups).map(key => {
+                    const events = groups[key];
+                    events.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
+                    return {
+                        name: key,
+                        events: events,
+                        startDate: new Date(events[0].date_time)
+                    };
+                });
+
+                displayList.sort((a, b) => a.startDate - b.startDate);
+
+                let cardsHtml = '';
+                displayList.forEach(item => {
+                    if (item.events.length === 1) {
+                        cardsHtml += createSingleEventCard(item.events[0]);
+                    } else {
+                        cardsHtml += createSeriesFolderCard(item.name, item.events);
+                    }
+                });
+
+                activitiesContentHtml = `<div class="cards-grid">${cardsHtml}</div>`;
             }
 
-            // 2. GROUPING LOGIC
-            const groups = {};
-            
-            allActivities.forEach(activity => {
-                // REGEX: strictly checks if the title ends with "(Day X)"
-                // This assumes your multi-day creator always appends this string.
-                const isSeriesIdentifier = /\s\(Day\s\d+\)$/i.test(activity.title);
-                
-                let groupKey;
-
-                if (isSeriesIdentifier) {
-                    // CASE A: It is a Series
-                    // Clean the name (remove "Day 1") and use that as the key
-                    // This allows "Event (Day 1)" and "Event (Day 2)" to merge.
-                    groupKey = activity.title.replace(/\s\(Day\s\d+\)$/i, '').trim();
+            // 5. Generate Course Modules Tab Content (Only if logged in)
+            let modulesContentHtml = '';
+            if (showTabs) {
+                if (activeTopics.length === 0) {
+                    modulesContentHtml = `
+                        <div class="lms-topic-grid" style="grid-column: 1 / -1;">
+                            <div class="empty-state-container" style="text-align: center; padding: 50px 20px; color: #64748b; grid-column: 1 / -1;">
+                                <div class="study-scene">
+                                    <div class="study-spark spark-left">✦</div>
+                                    <div class="study-spark spark-right">✦</div>
+                                    <div class="study-spark spark-top">✦</div>
+                                    
+                                    <div class="floating-book">
+                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <h3 class="empty-state-title" style="margin-top: 15px; color: #1e293b;">You're All Caught Up!</h3>
+                                <p class="empty-state-text" style="margin-bottom: 24px;">You have completed all available courses or no new modules are posted right now.</p>
+                                <div class="empty-state-cta">
+                                    <a href="/learning-hub/" class="btn-read-cshaw" style="background: #111827; color: white;">
+                                        <span>Go to Learning Hub</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            <polyline points="12 5 19 12 12 19"></polyline>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    // CASE B: It is a Single Event
-                    // Use a UNIQUE key (like the ID) so it NEVER merges with anything else.
-                    // Even if two events are named "Garden Cleanup", they will stay separate.
-                    groupKey = `__SINGLE__${activity.id}`; 
+                    const bgColors = ['#fce7f3', '#e0f2fe', '#fef9c3', '#dcfce7', '#f3e8ff'];
+                    let moduleCardsHtml = '<div class="lms-topic-grid">';
+
+                    activeTopics.forEach((topic, index) => {
+                        const bgColor = bgColors[index % bgColors.length];
+                        const unitCount = topic.units ? topic.units.length : 0;
+                        let quizCount = 0;
+                        if (topic.units) {
+                            topic.units.forEach(u => {
+                                if (u.quiz) quizCount++;
+                            });
+                        }
+
+                        moduleCardsHtml += `
+                            <div class="lms-grid-card">
+                                <div class="lms-grid-card-top" style="background-color: ${bgColor};">
+                                    <span class="lms-tag">COURSE</span>
+                                    <h3 class="lms-card-title">${topic.title}</h3>
+                                    <p class="lms-card-desc">Master the fundamentals and earn points.</p>
+                                    
+                                    <div class="lms-card-stats">
+                                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> ${unitCount} Modules</span>
+                                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> ${quizCount} Quizzes</span>
+                                    </div>
+                                </div>
+                                <div class="lms-grid-card-bottom">
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: #555;">Start date: <strong>Today</strong></span>
+                                    <a href="/learning-hub/" class="lms-btn-continue" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">View</a>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    moduleCardsHtml += '</div>';
+                    modulesContentHtml = moduleCardsHtml;
                 }
-                
-                if (!groups[groupKey]) {
-                    groups[groupKey] = [];
-                }
-                groups[groupKey].push(activity);
-            });
+            }
 
-            // 3. SORTING LOGIC (The Fix)
-            // Convert groups into an array so we can sort them
-            const displayList = Object.keys(groups).map(name => {
-                const events = groups[name];
-                
-                // A. Sort events INSIDE the group (Day 1 before Day 2)
-                events.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
-                
-                return {
-                    name: name,
-                    events: events,
-                    // B. Determine the "Sort Date" for this group (Date of the first event)
-                    startDate: new Date(events[0].date_time)
-                };
-            });
-
-            // C. Sort the List by Start Date (Closest First)
-            displayList.sort((a, b) => a.startDate - b.startDate);
-
-            // 4. GENERATE HTML
-            let cardsHtml = '';
-            
-            displayList.forEach(item => {
-                if (item.events.length === 1) {
-                    // Single Event
-                    cardsHtml += createSingleEventCard(item.events[0]);
-                } else {
-                    // Series Folder
-                    cardsHtml += createSeriesFolderCard(item.name, item.events);
-                }
-            });
-
-            // 5. RENDER TO PAGE
+            // 6. RENDER MASTER HTML
             mainContent.innerHTML = `
-                <div class="header-section">
-                </div>
-                <div class="cards-grid">
-                    ${cardsHtml}
-                </div>
+                ${tabSwitcherHtml}
                 
+                <div id="sectionActivities" style="display: ${(!showTabs || currentMainTab === 'activities') ? 'block' : 'none'};">
+                    ${activitiesContentHtml}
+                </div>
+
+                ${showTabs ? `
+                <div id="sectionModules" style="display: ${currentMainTab === 'modules' ? 'block' : 'none'};">
+                    ${modulesContentHtml}
+                </div>` : ''}
+
                 <footer class="minimal-footer" style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 25px; text-align: center;">
-                    
                     <div style="margin-bottom: 15px;">
                         <a href="/about/" style="color: #666; text-decoration: none; margin: 0 10px; font-weight: 500;">About</a>
                         <span style="color: #ccc;">|</span>
@@ -546,14 +656,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="color: #ccc;">|</span>
                         <a href="/terms/" style="color: #666; text-decoration: none; margin: 0 10px; font-weight: 500;">Terms of Use</a>
                     </div>
-
                     <div class="footer-copyright" style="color: #999; font-size: 0.85rem;">
                         &copy; 2026 C-SHAW Hub. All rights reserved.
                     </div>
                 </footer>
             `;
 
-            // 6. RE-ATTACH LISTENERS
+            // 7. ATTACH TAB SWITCHER EVENT LISTENERS
+            const btnActivities = document.getElementById('tabSwitchActivities');
+            const btnModules = document.getElementById('tabSwitchModules');
+            const secActivities = document.getElementById('sectionActivities');
+            const secModules = document.getElementById('sectionModules');
+
+            if (btnActivities && btnModules && secActivities && secModules) {
+                btnActivities.addEventListener('click', () => {
+                    currentMainTab = 'activities';
+                    btnActivities.classList.add('active');
+                    btnModules.classList.remove('active');
+                    secActivities.style.display = 'block';
+                    secModules.style.display = 'none';
+                });
+
+                btnModules.addEventListener('click', () => {
+                    currentMainTab = 'modules';
+                    btnModules.classList.add('active');
+                    btnActivities.classList.remove('active');
+                    secActivities.style.display = 'none';
+                    secModules.style.display = 'block';
+                });
+            }
+
+            // 8. ATTACH ACTIVITY DETAILS LISTENERS
             allActivities.forEach(activity => {
                 const btn = document.getElementById(`view-btn-${activity.id}`);
                 if (btn) {

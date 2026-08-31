@@ -1,6 +1,5 @@
 from django.contrib import admin
-
-from core.models import VolunteerActivity, ActivityRole, ActivitySignup, Feedback
+from core.models import VolunteerActivity, ActivityRole, ActivitySignup, Feedback, AuditLog
 
 from django import forms
 from django.contrib.admin import widgets
@@ -64,5 +63,23 @@ class VolunteerActivityAdmin(admin.ModelAdmin):
             return obj.date_time + timedelta(hours=float(obj.duration_hours))
         return None
     get_end_time.short_description = 'End Time'
+
 admin.site.register(ActivitySignup)
 admin.site.register(Feedback)
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'action', 'actor', 'target_type', 'target_id')
+    list_filter = ('action', 'target_type', 'created_at')
+    search_fields = ('action', 'actor__email', 'target_type', 'target_id')
+    readonly_fields = ('actor', 'action', 'target_type', 'target_id', 'metadata', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+

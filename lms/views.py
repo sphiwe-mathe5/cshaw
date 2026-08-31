@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,27 +7,34 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.template.loader import render_to_string
 
+from core.audit import log_audit_event
 from users.permissions import IsCoordinator
+from users.services import BackgroundEmailService
 from .models import Topic, LearningUnit, Quiz, Question, Choice, StudentProgress
 from .serializers import (
     TopicSerializer, LearningUnitSerializer, QuizSerializer, 
     QuestionSerializer, ChoiceSerializer, StudentProgressSerializer
 )
 
+logger = logging.getLogger('lms')
+
 class LMSPermission(permissions.BasePermission):
     """
-    - Read operations (GET, HEAD, OPTIONS): Any authenticated user (Student, Coordinator, Admin).
+    - Read operations (GET, HEAD, OPTIONS): Anyone (including unauthenticated visitors on index page).
     - Quiz submission (POST to submit action): Any authenticated user.
     - Content modifications (POST, PUT, PATCH, DELETE): Only Coordinators, Staff, or Superusers.
     """
     def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-
-        # Read-only operations allowed for all authenticated users
+        # Read-only operations allowed for everyone
         if request.method in permissions.SAFE_METHODS:
             return True
+
+        if not (request.user and request.user.is_authenticated):
+            return False
 
         # Quiz submission allowed for all authenticated users
         if getattr(view, 'action', None) == 'submit':
@@ -48,6 +56,19 @@ class LearningUnitViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         unit = self.get_object()
         topic = unit.topic
+        topic_id = topic.id
+        topic_title = topic.title
+        unit_title = unit.title
+
+        log_audit_event(
+            action="LMS_COURSE_DELETED",
+            actor=request.user,
+            target_type="Topic",
+            target_id=topic_id,
+            metadata={"topic_title": topic_title, "unit_title": unit_title}
+        )
+        logger.info("LMS topic/course deleted: '%s' (ID: %s) by %s", topic_title, topic_id, request.user.email)
+
         # Deleting a unit deletes everything including the topic
         topic.delete() 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -244,6 +265,20 @@ class AdminContentUploadView(APIView):
                                 is_correct=bool(c_correct)
                             )
 
+            log_audit_event(
+                action="LMS_COURSE_PUBLISHED",
+                actor=request.user,
+                target_type="Topic",
+                target_id=topic.id,
+                metadata={
+                    "topic_title": topic.title,
+                    "unit_title": learning_unit.title,
+                    "quiz_title": quiz.title,
+                    "points": quiz.points_awarded
+                }
+            )
+            logger.info("LMS course published: '%s' -> '%s' (Points: %d) by %s", topic.title, learning_unit.title, quiz.points_awarded, request.user.email)
+
             # ----- SEND BACKGROUND EMAIL NOTIFICATION -----
             try:
                 User = get_user_model()
@@ -269,7 +304,7 @@ class AdminContentUploadView(APIView):
                         html_content=html_message
                     )
             except Exception as email_err:
-                print(f"⚠️ LMS Email Notification Error: {email_err}")
+                logger.error("LMS Email Notification Error: %s", email_err, exc_info=True)
 
             return Response({
                 "message": "Course content published successfully!",
@@ -279,6 +314,7 @@ class AdminContentUploadView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.error("Error creating course content: %s", e, exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LMSFrontendView(LoginRequiredMixin, TemplateView):
