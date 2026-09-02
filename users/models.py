@@ -65,7 +65,33 @@ class User(AbstractUser):
     campus = models.CharField(max_length=10, choices=Campuses.choices, null=True, blank=True)
     volunteer_status = models.CharField(max_length=20, choices=VolunteerStatus.choices, null=True, blank=True)
 
+    class IdentificationType(models.TextChoices):
+        SA_ID = 'SA_ID', 'South African ID'
+        PASSPORT = 'PASSPORT', 'Passport (International)'
+
     executive_position = models.CharField(max_length=100, null=True, blank=True, help_text="E.g., Chairperson, Secretary. Leave empty if regular volunteer.")
+    id_type = models.CharField(
+        max_length=20, 
+        choices=IdentificationType.choices, 
+        default=IdentificationType.SA_ID,
+        help_text="Identification document type (South African ID or International Passport)"
+    )
+    id_number = models.CharField(
+        max_length=30, 
+        null=True, 
+        blank=True, 
+        unique=True, 
+        help_text="South African National ID or International Passport number"
+    )
+    popia_consent = models.BooleanField(
+        default=False, 
+        help_text="Consent to personal data collection under the POPI Act"
+    )
+    popia_consent_at = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Timestamp when POPIA consent was granted"
+    )
     receive_notifications = models.BooleanField(default=True, help_text="Receive email updates about events")
     
     can_manage_attendance = models.BooleanField(

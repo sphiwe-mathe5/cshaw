@@ -71,9 +71,10 @@ class StudentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'first_name', 'last_name', 'email', 
+            'id', 'first_name', 'last_name', 'email', 'id_type', 'id_number',
             'campus', 'executive_position', 'awards', 'total_hours', 
-            'can_manage_attendance', 'gender', 'tshirt_size', 'volunteer_status'
+            'can_manage_attendance', 'gender', 'tshirt_size', 'volunteer_status',
+            'popia_consent'
         ]
 
     def get_total_hours(self, obj):
@@ -93,7 +94,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'email', 'campus', 'executive_position', 'awards']
+        fields = ['id', 'first_name', 'email', 'id_type', 'id_number', 'campus', 'executive_position', 'awards', 'popia_consent']
 
 class CoordinatorRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -117,12 +118,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name', 'last_name', 'email', 
+            'first_name', 'last_name', 'email', 'id_type', 'id_number',
             'campus', 'role', 'role_label',
-            'receive_notifications', 'is_2fa_enabled'
+            'receive_notifications', 'is_2fa_enabled', 'popia_consent'
         ]
         # These fields cannot be changed by the user
-        read_only_fields = ['email', 'role', 'role_label', 'is_2fa_enabled']
+        read_only_fields = ['email', 'role', 'role_label', 'is_2fa_enabled', 'popia_consent']
 
 class UserManageSerializer(serializers.ModelSerializer):
     # We use PrimaryKeyRelatedField for WRITING (sending IDs like [1, 2])

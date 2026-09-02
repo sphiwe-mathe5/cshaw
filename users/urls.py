@@ -18,6 +18,7 @@ from .views import (
     VerifyOTPView,
     UpdateVolunteerStatusView,
     UpdateDemographicsView,
+    UpdateIdNumberView,
     
     login_page,
     student_register_page,
@@ -31,6 +32,7 @@ urlpatterns = [
 
     path('api/users/update-volunteer-status/', UpdateVolunteerStatusView.as_view(), name='api-update-volunteer-status'),
     path('api/users/update-demographics/', UpdateDemographicsView.as_view(), name='update_demographics'),
+    path('api/users/update-id-number/', UpdateIdNumberView.as_view(), name='update_id_number'),
     path('api/users/register/student/', StudentRegistrationView.as_view(), name='api-register-student'),
     path('api/users/register/coordinator/', CoordinatorRegistrationView.as_view(), name='api-register-coordinator'),
     path('api/users/login/', LoginView.as_view(), name='api-login'),

@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 from datetime import timedelta
 import requests
 from decouple import config
@@ -522,4 +523,118 @@ class UpdateDemographicsView(views.APIView):
             return Response({"success": True, "message": "Demographics updated successfully."}, status=status.HTTP_200_OK)
             
         return Response({"success": False, "error": "Both T-Shirt Size and Gender are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def validate_south_african_id(id_str):
+    """
+    Validates a South African 13-digit National ID number.
+    Format: YYMMDD SSSS C A Z
+    - Exactly 13 numeric digits
+    - Valid encoded birth month (01-12) & day (01-31)
+    - Valid Luhn checksum algorithm
+    """
+    if not id_str:
+        return False, "ID number is required."
+
+    clean_id = re.sub(r'[\s\-]', '', str(id_str).strip())
+
+    if not re.match(r'^\d{13}$', clean_id):
+        return False, "ID number must be exactly 13 numeric digits."
+
+    # Validate encoded birth month and day
+    month = int(clean_id[2:4])
+    day = int(clean_id[4:6])
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return False, "Invalid date of birth encoded in ID number."
+
+    # Luhn Checksum validation
+    digits = [int(d) for d in clean_id]
+    total = 0
+    for i in range(12, -1, -1):
+        digit = digits[i]
+        if (12 - i) % 2 == 1:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        total += digit
+
+    if total % 10 != 0:
+        return False, "Invalid South African ID checksum. Please check for typos and re-enter."
+
+    return True, clean_id
+
+
+def validate_passport_number(passport_str):
+    """
+    Validates an International Passport number.
+    - 5 to 25 alphanumeric characters (letters, digits, optional hyphens)
+    """
+    if not passport_str:
+        return False, "Passport number is required."
+
+    clean_passport = re.sub(r'[\s]', '', str(passport_str).strip()).upper()
+
+    if not re.match(r'^[A-Z0-9\-]{5,25}$', clean_passport):
+        return False, "Passport number must be between 5 and 25 alphanumeric characters."
+
+    return True, clean_passport
+
+
+class UpdateIdNumberView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        raw_id = request.data.get('id_number')
+        id_type = request.data.get('id_type', User.IdentificationType.SA_ID)
+        popia_consent = request.data.get('popia_consent')
+
+        if not popia_consent:
+            return Response(
+                {"success": False, "error": "You must accept the POPIA consent agreement to proceed."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if id_type == User.IdentificationType.PASSPORT:
+            is_valid, result = validate_passport_number(raw_id)
+            doc_label = "Passport number"
+        else:
+            id_type = User.IdentificationType.SA_ID
+            is_valid, result = validate_south_african_id(raw_id)
+            doc_label = "ID number"
+
+        if not is_valid:
+            return Response({"success": False, "error": result}, status=status.HTTP_400_BAD_REQUEST)
+
+        clean_id = result
+
+        # Check for uniqueness across other users
+        if User.objects.filter(id_number=clean_id).exclude(pk=user.pk).exists():
+            return Response(
+                {"success": False, "error": f"This {doc_label.lower()} is already registered to another account."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.id_type = id_type
+        user.id_number = clean_id
+        user.popia_consent = True
+        user.popia_consent_at = timezone.now()
+        user.save(update_fields=['id_type', 'id_number', 'popia_consent', 'popia_consent_at'])
+
+        masked = clean_id[:6] + "*****" + clean_id[-2:] if len(clean_id) >= 10 else clean_id[:2] + "*****" + clean_id[-2:]
+        log_audit_event(
+            action="ID_NUMBER_UPDATED",
+            actor=user,
+            target_type="User",
+            target_id=str(user.id),
+            metadata={"id_type": id_type, "masked_id": masked}
+        )
+        logger.info("Student %s updated and POPIA consent recorded for %s", doc_label.lower(), user.email)
+
+        return Response({
+            "success": True,
+            "message": f"{doc_label} saved and POPIA consent recorded successfully."
+        }, status=status.HTTP_200_OK)
+
 

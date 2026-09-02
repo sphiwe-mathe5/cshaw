@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volunteer Hub | Dashboard</title>
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/svg+xml">
-    <link rel="stylesheet" href="{% static 'css/index.css' %}">
-    <link rel="stylesheet" href="{% static 'css/lms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/index.css' %}?v={% now 'U' %}">
+    <link rel="stylesheet" href="{% static 'css/lms.css' %}?v={% now 'U' %}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <meta name="current-user-email" content="{{ request.user.email }}">
     <meta name="user-authenticated" content="{% if user.is_authenticated %}true{% else %}false{% endif %}">
@@ -903,7 +903,13 @@
                 const modal = document.getElementById('demographicsModal');
                 modal.style.opacity = '0';
                 modal.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => modal.remove(), 500);
+                setTimeout(() => {
+                    modal.remove();
+                    // If student still needs to provide SA ID, reload to display ID modal
+                    {% if not user.id_number %}
+                    window.location.reload();
+                    {% endif %}
+                }, 500);
             } else {
                 alert('An error occurred while saving. Please try again.');
                 submitBtn.disabled = false;
@@ -915,6 +921,267 @@
             alert('An error occurred. Please check your connection.');
             submitBtn.disabled = false;
             submitBtn.innerText = 'Save Details';
+        });
+    }
+</script>
+{% endif %}
+
+{% if user.is_authenticated and user.role == 'STUDENT' and not user.id_number and user.tshirt_size and user.gender %}
+<div id="saIdModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(8px); padding: 15px; box-sizing: border-box;">
+   <div style="background: white; padding: 32px 28px; border-radius: 16px; max-width: 540px; width: 100%; text-align: left; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; font-family: 'Inter', system-ui, -apple-system, sans-serif;">
+       
+       <div style="text-align: center; margin-bottom: 20px;">
+           <h2 style="margin: 0 0 6px 0; color: #0f172a; font-size: 1.35rem; font-weight: 700;">Identity Verification</h2>
+           <p style="color: #64748b; font-size: 0.92rem; margin: 0; line-height: 1.45;">Please provide your South African ID or International Passport number for peer educator records.</p>
+       </div>
+
+       <!-- Type Switcher -->
+       <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 20px; gap: 4px;">
+           <button type="button" id="idTypeBtnSa" onclick="setIdType('SA_ID')" 
+               style="flex: 1; padding: 9px 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; background: white; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;">
+               South African ID
+           </button>
+           <button type="button" id="idTypeBtnPassport" onclick="setIdType('PASSPORT')" 
+               style="flex: 1; padding: 9px 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s;">
+               Passport (International)
+           </button>
+       </div>
+       
+       <form id="saIdForm" onsubmit="submitSaId(event)">
+           <input type="hidden" id="selected_id_type" value="SA_ID">
+
+           <div style="margin-bottom: 18px;">
+               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                   <label id="saIdInputLabel" for="sa_id_input" style="font-weight: 600; font-size: 0.9rem; color: #1e293b;">South African ID Number</label>
+                   <span id="saIdCounter" style="font-size: 0.8rem; font-weight: 600; color: #94a3b8;">0 / 13 digits</span>
+               </div>
+               <input type="text" id="sa_id_input" name="id_number" required maxlength="16" placeholder="YYMMDD SSSS C A Z" autocomplete="off"
+                   style="width: 100%; padding: 12px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 1.05rem; letter-spacing: 1px; font-weight: 600; color: #0f172a; box-sizing: border-box; transition: border-color 0.2s; outline: none;"
+                   oninput="handleIdInputChange(this)" onfocus="this.style.borderColor='#E35205'" onblur="this.style.borderColor='#cbd5e1'">
+               <small id="saIdHelperText" style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 4px;">e.g. 010203 5000 08 1</small>
+           </div>
+           
+           <!-- POPIA Box Matching Screenshot -->
+           <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+               <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; margin: 0;">
+                   <input type="checkbox" id="sa_popia_checkbox" name="popia_consent" required 
+                       style="width: 20px; height: 20px; min-width: 20px; margin-top: 2px; cursor: pointer; accent-color: #E35205;"
+                       onchange="checkSaIdFormValidity()">
+                   <span style="font-size: 0.86rem; line-height: 1.45; color: #1e293b;">
+                       I accept that the University of Johannesburg: Centre for Student Health and Wellness must collect my personal information for Peer Education records. I hereby consent to processing my personal information for this purpose, and in accordance with the Protection of Personal Information (POPI) Act 4 of 2013.
+                   </span>
+               </label>
+           </div>
+
+           <!-- Info and Instructions -->
+           <div style="display: flex; align-items: center; gap: 8px; font-size: 0.86rem; color: #0f172a; margin-bottom: 8px;">
+               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+               <span>The collection of ID / Passport numbers is for record purposes only.</span>
+           </div>
+           <p style="font-size: 0.86rem; font-weight: 600; color: #1e293b; margin: 0 0 18px 0;">
+               If you understand and agree to the above, please tick the box to continue.
+           </p>
+
+           <div id="saIdError" style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 10px 14px; border-radius: 8px; font-size: 0.86rem; margin-bottom: 16px; display: none;"></div>
+           
+           <button type="submit" id="saIdSubmitBtn" disabled 
+               style="background: #0f172a; color: white; padding: 14px; border: none; border-radius: 10px; cursor: not-allowed; text-align: center; width: 100%; font-size: 1rem; font-weight: 600; transition: all 0.2s; opacity: 0.5;">
+               I Understand and Agree
+           </button>
+       </form>
+   </div>
+</div>
+
+<script>
+    let currentIdType = 'SA_ID';
+
+    function setIdType(type) {
+        currentIdType = type;
+        document.getElementById('selected_id_type').value = type;
+        
+        const btnSa = document.getElementById('idTypeBtnSa');
+        const btnPassport = document.getElementById('idTypeBtnPassport');
+        const label = document.getElementById('saIdInputLabel');
+        const input = document.getElementById('sa_id_input');
+        const counter = document.getElementById('saIdCounter');
+        const helper = document.getElementById('saIdHelperText');
+        const errDiv = document.getElementById('saIdError');
+
+        if (errDiv) errDiv.style.display = 'none';
+
+        if (type === 'SA_ID') {
+            btnSa.style.background = 'white';
+            btnSa.style.color = '#0f172a';
+            btnSa.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            btnPassport.style.background = 'transparent';
+            btnPassport.style.color = '#64748b';
+            btnPassport.style.boxShadow = 'none';
+
+            label.innerText = 'South African ID Number';
+            input.placeholder = 'YYMMDD SSSS C A Z';
+            input.maxLength = 16;
+            helper.innerText = 'e.g. 010203 5000 08 1';
+            input.value = '';
+            if (counter) {
+                counter.innerText = '0 / 13 digits';
+                counter.style.color = '#94a3b8';
+                counter.style.display = 'inline';
+            }
+        } else {
+            btnPassport.style.background = 'white';
+            btnPassport.style.color = '#0f172a';
+            btnPassport.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            btnSa.style.background = 'transparent';
+            btnSa.style.color = '#64748b';
+            btnSa.style.boxShadow = 'none';
+
+            label.innerText = 'International Passport Number';
+            input.placeholder = 'e.g. A12345678';
+            input.maxLength = 25;
+            helper.innerText = 'Enter your valid international passport number';
+            input.value = '';
+            if (counter) {
+                counter.innerText = 'Alphanumeric';
+                counter.style.color = '#94a3b8';
+                counter.style.display = 'inline';
+            }
+        }
+        checkSaIdFormValidity();
+    }
+
+    function formatSaId(val) {
+        const digits = val.replace(/\D/g, '').substring(0, 13);
+        let formatted = '';
+        if (digits.length > 0) formatted += digits.substring(0, 6);
+        if (digits.length > 6) formatted += ' ' + digits.substring(6, 10);
+        if (digits.length > 10) formatted += ' ' + digits.substring(10, 12);
+        if (digits.length > 12) formatted += ' ' + digits.substring(12, 13);
+        return { formatted, clean: digits };
+    }
+
+    function handleIdInputChange(input) {
+        const counter = document.getElementById('saIdCounter');
+
+        if (currentIdType === 'SA_ID') {
+            const { formatted, clean } = formatSaId(input.value);
+            input.value = formatted;
+            if (counter) {
+                counter.innerText = `${clean.length} / 13 digits`;
+                counter.style.color = clean.length === 13 ? '#16a34a' : '#94a3b8';
+            }
+        } else {
+            input.value = input.value.replace(/[^a-zA-Z0-9\-]/g, '').toUpperCase();
+            if (counter) {
+                counter.innerText = `${input.value.length} chars`;
+                counter.style.color = input.value.length >= 5 ? '#16a34a' : '#94a3b8';
+            }
+        }
+        checkSaIdFormValidity();
+    }
+
+    function checkSaIdFormValidity() {
+        const input = document.getElementById('sa_id_input');
+        const checkbox = document.getElementById('sa_popia_checkbox');
+        const btn = document.getElementById('saIdSubmitBtn');
+        
+        if (!input || !checkbox || !btn) return;
+
+        let isValid = false;
+        if (currentIdType === 'SA_ID') {
+            const clean = input.value.replace(/\D/g, '');
+            isValid = clean.length === 13;
+        } else {
+            const clean = input.value.trim();
+            isValid = clean.length >= 5 && clean.length <= 25;
+        }
+
+        const isChecked = checkbox.checked;
+
+        if (isValid && isChecked) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.background = '#E35205';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.style.background = '#0f172a';
+        }
+    }
+
+    function submitSaId(event) {
+        event.preventDefault();
+        
+        const input = document.getElementById('sa_id_input');
+        const checkbox = document.getElementById('sa_popia_checkbox');
+        const btn = document.getElementById('saIdSubmitBtn');
+        const errDiv = document.getElementById('saIdError');
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        let cleanId = '';
+        if (currentIdType === 'SA_ID') {
+            cleanId = input.value.replace(/\D/g, '');
+            if (cleanId.length !== 13) {
+                errDiv.innerText = 'Please enter a complete 13-digit South African ID number.';
+                errDiv.style.display = 'block';
+                return;
+            }
+        } else {
+            cleanId = input.value.replace(/[^a-zA-Z0-9\-]/g, '').toUpperCase();
+            if (cleanId.length < 5) {
+                errDiv.innerText = 'Please enter a valid passport number (at least 5 characters).';
+                errDiv.style.display = 'block';
+                return;
+            }
+        }
+
+        if (!checkbox.checked) {
+            errDiv.innerText = 'You must tick the POPIA consent agreement to continue.';
+            errDiv.style.display = 'block';
+            return;
+        }
+
+        errDiv.style.display = 'none';
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        fetch('/api/users/update-id-number/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                id_type: currentIdType,
+                id_number: cleanId,
+                popia_consent: true
+            })
+        })
+        .then(async response => {
+            const data = await response.json();
+            if (response.ok && data.success) {
+                const modal = document.getElementById('saIdModal');
+                if (modal) {
+                    modal.style.opacity = '0';
+                    modal.style.transition = 'opacity 0.4s ease';
+                    setTimeout(() => modal.remove(), 400);
+                }
+            } else {
+                errDiv.innerText = data.error || 'An error occurred while saving. Please check your details and try again.';
+                errDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = 'I Understand and Agree';
+                checkSaIdFormValidity();
+            }
+        })
+        .catch(err => {
+            console.error('ID save error:', err);
+            errDiv.innerText = 'Network error. Please check your internet connection and try again.';
+            errDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = 'I Understand and Agree';
+            checkSaIdFormValidity();
         });
     }
 </script>

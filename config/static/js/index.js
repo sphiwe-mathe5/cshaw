@@ -470,21 +470,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="tab-switcher-wrapper">
                     <div class="tab-switcher-pill">
                         <button type="button" id="tabSwitchActivities" class="tab-switcher-btn ${currentMainTab === 'activities' ? 'active' : ''}">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                                 <line x1="16" y1="2" x2="16" y2="6"></line>
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
-                            <span>Volunteer Activities</span>
+                            <span>Activities</span>
                             <span class="tab-badge-count">${allActivities.length}</span>
                         </button>
                         <button type="button" id="tabSwitchModules" class="tab-switcher-btn ${currentMainTab === 'modules' ? 'active' : ''}">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                             </svg>
-                            <span>Course Modules</span>
+                            <span>Modules</span>
                             <span class="tab-badge-count">${activeTopics.length}</span>
                         </button>
                     </div>
@@ -1951,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
 
                             <div class="form-grid">
-                                <div class="form-group" style="grid-column: 1 / -1;">
+                                <div class="form-group">
                                     <label>Campus</label>
                                     <select class="form-input input-disabled" name="campus" disabled>
                                         <option value="APB" ${isSelected('APB')}>APB Campus</option>
@@ -1959,6 +1959,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <option value="APK" ${isSelected('APK')}>APK Campus</option>
                                         <option value="SWC" ${isSelected('SWC')}>SWC Campus</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>${user.id_type === 'PASSPORT' ? 'Passport Number' : 'South African ID'}</label>
+                                    <input type="text" class="form-input input-disabled" value="${user.id_number ? (user.id_number.length > 6 ? user.id_number.substring(0, 4) + ' •••••• ' + user.id_number.slice(-2) : user.id_number) : 'Not Provided'}" disabled>
                                 </div>
                             </div>
 
@@ -4932,9 +4936,9 @@ window.viewSaved = function(type, title) {
 };
 
 // --- AI GENERATION FUNCTION (Attached to window) ---
-window.openGenerator = async function(type, btnElement) {
+window.openGenerator = async function(type, btnElement, forceUpdate = false) {
     const outputArea = document.getElementById('toolkitOutputArea');
-    const originalText = btnElement.innerText;
+    const originalText = btnElement.innerHTML;
     
     // 1. Set Loading State
     btnElement.innerHTML = `
@@ -4950,12 +4954,12 @@ window.openGenerator = async function(type, btnElement) {
             <div class="pulse-line"></div>
             <div class="pulse-line" style="width: 80%"></div>
             <div class="pulse-line" style="width: 60%"></div>
-            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 16px;">AI is reviewing your verified volunteer history...</p>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 16px;">AI is reviewing your verified volunteer history, leadership milestones, and awards...</p>
         </div>
     `;
 
     try {
-        // 2. Call your Django Backend
+        // 2. Call Django Backend
         const csrfToken = typeof getValidCsrfToken === 'function' ? getValidCsrfToken() : ''; 
         
         const response = await fetch('/api/career-toolkit/generate/', {
@@ -4964,7 +4968,10 @@ window.openGenerator = async function(type, btnElement) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
             },
-            body: JSON.stringify({ type: type })
+            body: JSON.stringify({ 
+                type: type,
+                force_update: Boolean(forceUpdate)
+            })
         });
 
         const data = await response.json();
@@ -4973,8 +4980,17 @@ window.openGenerator = async function(type, btnElement) {
             throw new Error(data.error || "Generation failed.");
         }
 
+        // Update local stats cache with new content
+        if (window.currentCareerStats && window.currentCareerStats.assetStatus) {
+            window.currentCareerStats.assetStatus[type] = {
+                exists: true,
+                needs_update: false,
+                content: data.content
+            };
+        }
+
         // 3. Format the Output
-        const formattedContent = data.content.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+        const formattedContent = (data.content || '').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
 
         let title = "Generated Content";
         if (type === 'cv') title = "CV Experience Section";
@@ -4990,11 +5006,18 @@ window.openGenerator = async function(type, btnElement) {
                         Copy
                     </button>
                 </div>
-                <div class="output-content">${data.content || content}</div>
+                <div class="output-content">
+                    <p>${formattedContent}</p>
+                </div>
             </div>
         `;
 
         outputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Refresh the toolkit cards state
+        if (typeof renderCareerToolkit === 'function') {
+            renderCareerToolkit();
+        }
 
     } catch (error) {
         console.error(error);
@@ -5231,6 +5254,165 @@ window.copyToClipboard = function(btnElement) {
                 </div>
             `;
 
+            // Helper: Generate Authentic Medallion SVGs with Rims, Offset Radials, Ribbon Tails & Engraved Glyphs
+            function generateMedallionSvg(theme, glyphType) {
+                const uid = 'med_' + Math.random().toString(36).substring(2, 9);
+                
+                // 5. Metal Palettes tied to meaning
+                const palettes = {
+                    blue: {
+                        rim1: '#bfdbfe', rim2: '#60a5fa', rim3: '#2563eb', rim4: '#1e3a8a',
+                        face1: '#93c5fd', face2: '#3b82f6', face3: '#1d4ed8', face4: '#172554',
+                        ribbon1: '#3b82f6', ribbon2: '#2563eb', ribbon3: '#172554',
+                        ribbonFold: '#1e40af',
+                        engrave: '#0f172a',
+                        dropShadow: 'rgba(37, 99, 235, 0.4)'
+                    },
+                    gold: {
+                        rim1: '#fef9c3', rim2: '#facc15', rim3: '#ca8a04', rim4: '#713f12',
+                        face1: '#fef08a', face2: '#eab308', face3: '#ca8a04', face4: '#854d0e',
+                        ribbon1: '#d97706', ribbon2: '#b45309', ribbon3: '#78350f',
+                        ribbonFold: '#92400e',
+                        engrave: '#451a03',
+                        dropShadow: 'rgba(180, 83, 9, 0.45)'
+                    },
+                    silver: {
+                        rim1: '#ffffff', rim2: '#e2e8f0', rim3: '#94a3b8', rim4: '#334155',
+                        face1: '#f8fafc', face2: '#cbd5e1', face3: '#94a3b8', face4: '#475569',
+                        ribbon1: '#64748b', ribbon2: '#475569', ribbon3: '#1e293b',
+                        ribbonFold: '#334155',
+                        engrave: '#0f172a',
+                        dropShadow: 'rgba(71, 85, 105, 0.4)'
+                    },
+                    copper: {
+                        rim1: '#ffedd5', rim2: '#fb923c', rim3: '#c2410c', rim4: '#7c2d12',
+                        face1: '#fed7aa', face2: '#f97316', face3: '#c2410c', face4: '#7c2d12',
+                        ribbon1: '#ea580c', ribbon2: '#c2410c', ribbon3: '#7c2d12',
+                        ribbonFold: '#9a3412',
+                        engrave: '#431407',
+                        dropShadow: 'rgba(194, 65, 12, 0.45)'
+                    }
+                };
+
+                const p = palettes[theme] || palettes.gold;
+
+                // 3. Engraved Glyphs
+                let glyphSvg = '';
+                if (glyphType === 'number1') {
+                    glyphSvg = `<text x="32" y="34" font-size="16" font-weight="900" font-family="'Inter', system-ui, sans-serif" text-anchor="middle" fill="${p.engrave}">1</text>`;
+                } else if (glyphType === 'star') {
+                    glyphSvg = `<path d="M 32 17 L 34.6 23.5 L 41.5 24.1 L 36.3 28.7 L 37.8 35.5 L 32 32 L 26.2 35.5 L 27.7 28.7 L 22.5 24.1 L 29.4 23.5 Z" fill="none" stroke="${p.engrave}" stroke-width="1.8" stroke-linejoin="round" />`;
+                } else if (glyphType === 'star-filled') {
+                    glyphSvg = `<path d="M 32 17 L 34.6 23.5 L 41.5 24.1 L 36.3 28.7 L 37.8 35.5 L 32 32 L 26.2 35.5 L 27.7 28.7 L 22.5 24.1 L 29.4 23.5 Z" fill="${p.engrave}" stroke="${p.engrave}" stroke-width="1" stroke-linejoin="round" />`;
+                } else if (glyphType === 'temple' || glyphType === 'academic') {
+                    glyphSvg = `<path d="M 23 35 L 23 33 L 41 33 L 41 35 M 22 24 L 42 24 L 32 17 Z M 25 24 L 25 33 M 29.5 24 L 29.5 33 M 34.5 24 L 34.5 33 M 39 24 L 39 33" fill="none" stroke="${p.engrave}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />`;
+                } else if (glyphType === 'heart') {
+                    glyphSvg = `<path d="M 32 34 C 32 34 23 28.5 23 23 C 23 20.2 25.2 18.5 27.8 18.5 C 29.6 18.5 31.1 19.6 32 20.8 C 32.9 19.6 34.4 18.5 36.2 18.5 C 38.8 18.5 41 20.2 41 23 C 41 28.5 32 34 32 34 Z" fill="none" stroke="${p.engrave}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />`;
+                } else if (glyphType === 'compass' || glyphType === 'sparkle') {
+                    glyphSvg = `<circle cx="32" cy="28" r="9" fill="none" stroke="${p.engrave}" stroke-width="1.2" stroke-opacity="0.6" /><path d="M 32 18 L 34.2 25.8 L 42 28 L 34.2 30.2 L 32 38 L 29.8 30.2 L 22 28 L 29.8 25.8 Z" fill="none" stroke="${p.engrave}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />`;
+                } else {
+                    glyphSvg = `<path d="M 26 23 L 24 23 C 24 23 24 27 27 27 M 38 23 L 40 23 C 40 23 40 27 37 27 M 26 21 L 38 21 L 36 29 C 36 31 34 33 32 33 C 30 33 28 31 28 29 Z M 32 33 L 32 36 M 27 36 L 37 36" fill="none" stroke="${p.engrave}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />`;
+                }
+
+                return `
+                    <svg class="medallion-svg" width="64" height="76" viewBox="0 0 64 76" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 10px ${p.dropShadow}); flex-shrink: 0;">
+                        <defs>
+                            <!-- 1. Rim Linear Gradient (Diagonal 135deg) -->
+                            <linearGradient id="${uid}_rim" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="${p.rim1}" />
+                                <stop offset="35%" stop-color="${p.rim2}" />
+                                <stop offset="70%" stop-color="${p.rim3}" />
+                                <stop offset="100%" stop-color="${p.rim4}" />
+                            </linearGradient>
+
+                            <!-- 1. Face Radial Gradient (Offset upper-left) -->
+                            <radialGradient id="${uid}_face" cx="35%" cy="32%" r="68%">
+                                <stop offset="0%" stop-color="${p.face1}" />
+                                <stop offset="40%" stop-color="${p.face2}" />
+                                <stop offset="75%" stop-color="${p.face3}" />
+                                <stop offset="100%" stop-color="${p.face4}" />
+                            </radialGradient>
+
+                            <!-- 2. Ribbon Left Gradient -->
+                            <linearGradient id="${uid}_ribbonL" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="${p.ribbonFold}" />
+                                <stop offset="30%" stop-color="${p.ribbon1}" />
+                                <stop offset="100%" stop-color="${p.ribbon3}" />
+                            </linearGradient>
+
+                            <!-- 2. Ribbon Right Gradient -->
+                            <linearGradient id="${uid}_ribbonR" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="${p.ribbonFold}" />
+                                <stop offset="30%" stop-color="${p.ribbon2}" />
+                                <stop offset="100%" stop-color="${p.ribbon3}" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- 2. RIBBON TAILS (With V-Notch) -->
+                        <g class="medallion-ribbons">
+                            <path d="M 22 34 L 14 66 L 21 60 L 28 66 L 29 34 Z" fill="url(#${uid}_ribbonL)" />
+                            <path d="M 22 34 L 14 66 L 21 60 L 28 66 L 29 34 Z" fill="black" fill-opacity="0.12" />
+
+                            <path d="M 35 34 L 36 66 L 43 60 L 50 66 L 42 34 Z" fill="url(#${uid}_ribbonR)" />
+                            <path d="M 35 34 L 36 66 L 43 60 L 50 66 L 42 34 Z" fill="black" fill-opacity="0.08" />
+                        </g>
+
+                        <!-- 1. OUTER BEVELED RIM -->
+                        <circle cx="32" cy="28" r="23" fill="url(#${uid}_rim)" />
+                        <circle cx="32" cy="28" r="23" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" />
+
+                        <!-- 1. INNER FACE -->
+                        <circle cx="32" cy="28" r="18" fill="url(#${uid}_face)" />
+                        <circle cx="32" cy="28" r="18" stroke="rgba(0,0,0,0.18)" stroke-width="0.75" />
+
+                        <!-- 4. HIGHLIGHT SHEEN ARC -->
+                        <path d="M 18 26 A 14 14 0 0 1 30 14" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2.2" stroke-linecap="round" />
+
+                        <!-- 3. ENGRAVED GLYPH -->
+                        <g class="medallion-glyph">
+                            ${glyphSvg}
+                        </g>
+                    </svg>
+                `;
+            }
+
+            function getAwardMedallion(award) {
+                const name = (award.name || '').toLowerCase();
+                let theme = 'gold';
+                let glyph = 'temple';
+
+                if (name.includes('peer educator')) {
+                    theme = 'gold';
+                    glyph = 'temple';
+                } else if (name.includes('recruiter')) {
+                    theme = 'silver';
+                    glyph = 'star';
+                } else if (name.includes('community') || name.includes('hero')) {
+                    theme = 'copper';
+                    glyph = 'heart';
+                } else if (name.includes('consistent') || name.includes('star')) {
+                    theme = 'gold';
+                    glyph = 'star-filled';
+                } else if (name.includes('change agent')) {
+                    theme = 'gold';
+                    glyph = 'compass';
+                } else {
+                    const color = (award.color || '').toUpperCase();
+                    if (color.includes('2E86C1') || color.includes('3B82F6') || color.includes('BLUE')) {
+                        theme = 'silver';
+                        glyph = 'star';
+                    } else if (color.includes('E35205') || color.includes('F97316') || color.includes('ORANGE') || color.includes('BRONZE')) {
+                        theme = 'copper';
+                        glyph = 'heart';
+                    } else {
+                        theme = 'gold';
+                        glyph = 'star-filled';
+                    }
+                }
+
+                return generateMedallionSvg(theme, glyph);
+            }
+
             // --- LEARNING ACCOLADES ---
             html += `
                 <hr style="margin: 40px 0; border: none; border-top: 1px solid var(--border-color);">
@@ -5253,9 +5435,7 @@ window.copyToClipboard = function(btnElement) {
                     html += `
                         <div class="award-gallery-card">
                             <div class="award-trophy-container">
-                                <div class="award-trophy-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); display:flex; justify-content:center; align-items:center;">
-                                    <span style="font-size: 2rem;">🥇</span>
-                                </div>
+                                ${generateMedallionSvg('blue', 'number1')}
                             </div>
                             <div class="award-gallery-details">
                                 <span class="award-gallery-date">Completed ${acc.date_completed}</span>
@@ -5290,15 +5470,7 @@ window.copyToClipboard = function(btnElement) {
                     html += `
                         <div class="award-gallery-card">
                             <div class="award-trophy-container">
-                                <div class="award-trophy-badge" style="background: linear-gradient(135deg, ${a.color || '#fbbf24'} 0%, #b45309 100%);">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="trophy-svg">
-                                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
-                                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
-                                        <path d="M4 22h16"></path>
-                                        <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"></path>
-                                        <path d="M12 2a6 6 0 0 1 6 6v1H6V8a6 6 0 0 1 6-6z"></path>
-                                    </svg>
-                                </div>
+                                ${getAwardMedallion(a)}
                             </div>
                             <div class="award-gallery-details">
                                 <span class="award-gallery-date">Awarded ${a.date_awarded || '2026'}</span>

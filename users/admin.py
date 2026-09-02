@@ -15,6 +15,9 @@ class CustomUserAdmin(admin.ModelAdmin):
         'last_name', 
         'role', 
         'campus', 
+        'id_type',
+        'id_number',
+        'popia_consent',
         'volunteer_status',
         'gender',
         'tshirt_size',
@@ -22,15 +25,18 @@ class CustomUserAdmin(admin.ModelAdmin):
     )
 
     # 2. ADD A SEARCH BAR (Search by these fields)
-    search_fields = ('email', 'first_name', 'last_name')
+    search_fields = ('email', 'first_name', 'last_name', 'id_number')
 
     # 3. ADD SIDEBAR FILTERS (Filter by these categories)
-    list_filter = ('role', 'campus', 'can_manage_attendance', 'volunteer_status', 'is_active')
+    list_filter = ('role', 'campus', 'id_type', 'popia_consent', 'can_manage_attendance', 'volunteer_status', 'is_active')
 
     # 4. ORGANIZE THE DETAIL VIEW INTO SECTIONS
     fieldsets = (
         ('Personal Info', {
-            'fields': ('email', 'first_name', 'last_name')
+            'fields': ('email', 'first_name', 'last_name', 'id_type', 'id_number')
+        }),
+        ('POPIA Compliance', {
+            'fields': ('popia_consent', 'popia_consent_at')
         }),
         ('Demographics & Logistics', {
             'fields': ('gender', 'tshirt_size', 'volunteer_status')

@@ -1485,17 +1485,16 @@ class CareerToolkitGenerateView(APIView):
         total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
         events_attended = stats['total_events'] or 0
         
-        # --- 2. 10-HOUR RULE CHECK ---
+        # --- 2. UPDATE RULE CHECK ---
         if force_update:
             existing_asset = CareerToolkitAsset.objects.filter(user=user, asset_type=gen_type).first()
-            if existing_asset and total_hours < existing_asset.hours_at_generation + 10:
-                needed_hours = existing_asset.hours_at_generation + 10
+            if existing_asset and total_hours < existing_asset.hours_at_generation + 5 and events_attended <= existing_asset.events_at_generation:
+                needed_hours = existing_asset.hours_at_generation + 5
                 return Response({
-                    "error": f"You need to log at least 10 more hours to update this section to save system resources. Keep volunteering! (Current: {total_hours}h, Needed: {needed_hours}h)"
+                    "error": f"You need to log at least 5 more hours or attend new events to update this section. Keep volunteering! (Current: {total_hours}h, Needed: {needed_hours}h)"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         # 3. Rate Limiting (Max 5 generations per user per month)
-        # We only count times we actually hit the OpenAI API
         thirty_days_ago = timezone.now() - timedelta(days=30)
         recent_generations = CareerToolkitAsset.objects.filter(user=user, last_updated__gte=thirty_days_ago).count()
         
@@ -1509,49 +1508,71 @@ class CareerToolkitGenerateView(APIView):
         first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
         start_date = first_event.sign_in_time.strftime("%B %Y") if first_event else timezone.now().strftime("%B %Y")
 
-        # Fetch completed courses from LMS
+        # Fetch completed courses/learning accolades from LMS
         from lms.models import StudentProgress
         completed_quizzes = StudentProgress.objects.filter(user=user, score=100.0).select_related('quiz')
         completed_courses = [progress.quiz.title for progress in completed_quizzes]
         completed_courses_str = ", ".join(completed_courses) if completed_courses else "None yet"
+
+        # Fetch Special Awards
+        user_awards = [f"{a.name} ({a.date_awarded})" if a.date_awarded else a.name for a in user.awards.all()]
+        awards_str = ", ".join(user_awards) if user_awards else "None yet"
+
+        exec_pos = user.executive_position if getattr(user, 'executive_position', None) else "None"
 
         # 3. Construct the Grounded Context Data
         volunteer_context = f"""
         Student Name: {user.first_name} {user.last_name}
         Organization: C-SHAW - Centre for Student Health and Wellness | University of Johannesburg
         Role(s) Held: {roles}
+        Executive Leadership Position: {exec_pos}
         Timeframe: {start_date} – Present
-        Total Verified Hours: {total_hours} hours
-        Total Events Attended: {events_attended} events
-        Completed Training/Courses: {completed_courses_str}
+        Total Verified Volunteer Hours: {total_hours} hours
+        Total Events Attended / Organized: {events_attended} events
+        Special Awards & Honors Received: {awards_str}
+        Learning Accolades & Course Certifications (100% Mastery): {completed_courses_str}
         """
 
         # 4. Build Strict OpenAI Prompts
         system_prompt = (
-            "You are a professional career coach helping a university student translate their verified "
-            "volunteer data into highly professional career content. Write in a calm, grounded, and highly realistic tone. "
+            "You are a professional career and leadership coach helping a university student translate their verified "
+            "volunteer data, executive leadership responsibilities, special awards/honors, and learning accolades into highly professional career content. "
+            "Write in a calm, grounded, confident, and highly realistic tone. "
             "DO NOT exaggerate, use hyperbole, or sound like an AI chatbot. Base everything strictly on the provided facts. "
             "Use ONLY the data provided. Emphasize employability, leadership, and community impact realistically.\n"
-            "CRITICAL INSTRUCTION: You MUST explicitly include and state the student's 'Total Verified Hours' "
-            "somewhere in the generated text (e.g. within a bullet point or summary sentence).\n\n"
+            "CRITICAL INSTRUCTIONS:\n"
+            "1. You MUST explicitly state the student's 'Total Verified Volunteer Hours'.\n"
+            "2. If the student holds an Executive Leadership Position (e.g. Chairperson, Secretary, etc.), highlight their leadership coordination and impact.\n"
+            "3. If the student has received 'Special Awards & Honors Received' or 'Learning Accolades', you MUST weave them into the text in a concise, brief, and natural way.\n\n"
             "CRITICAL FORMATTING RULE: Do not use any markdown formatting. Do not use asterisks (**), "
             "underscores (_), or header hashes (#). Return pure, clean plaintext with normal line breaks."
         )
 
         if gen_type == 'cv':
             user_prompt = (
-                f"Based on the following data, write a beautifully structured CV experience section.\n"
+                f"Based on the following verified data, write a beautifully structured CV experience section.\n"
                 f"Start with the Role Title, Organization Name, and Date Range on separate lines.\n"
-                f"Follow with exactly 4 concise, action-oriented bullet points detailing the impact.\n"
+                f"Follow with exactly 4 concise, action-oriented bullet points detailing their verified impact.\n"
+                f"Ensure bullet points cover: (1) core volunteer impact & verified hours, (2) executive leadership and team coordination (if executive), (3) specialized training/learning accolades, and (4) recognition received through their special awards/honors in a brief way.\n"
                 f"Use a standard literal bullet character (•) for each bullet point.\n\n"
                 f"Data:\n{volunteer_context}"
             )
         
         elif gen_type == 'linkedin':
-            user_prompt = f"Based on the following data, write a 2-paragraph professional LinkedIn summary in the first person. Separate the paragraphs with a single blank line. Do not include any title headers.\n\nData:\n{volunteer_context}"
+            user_prompt = (
+                f"Based on the following data, write a 2-paragraph professional LinkedIn summary in the first person.\n"
+                f"Weave together their verified hours, executive leadership role, community initiatives, and briefly mention their special awards/honors and course mastery accolades.\n"
+                f"Separate the paragraphs with a single blank line. Do not include any title headers.\n\n"
+                f"Data:\n{volunteer_context}"
+            )
         
         elif gen_type == 'scholarship':
-            user_prompt = f"Based on the following data, draft a 3-paragraph application statement suitable for a scholarship or leadership program. Write in the first person. Separate paragraphs with a single blank line. Do not include headers.\n\nData:\n{volunteer_context}"
+            user_prompt = (
+                f"Based on the following data, draft a 3-paragraph application statement suitable for a scholarship, fellowship, or leadership program.\n"
+                f"Write in the first person. In paragraph 1, introduce their volunteer journey, verified hours, and core motivation. In paragraph 2, elaborate on their executive leadership, event organizing, and community outreach. In paragraph 3, briefly highlight their learning masteries and earned awards as reflections of their dedication and personal growth.\n"
+                f"Separate paragraphs with a single blank line. Do not include headers.\n\n"
+                f"Data:\n{volunteer_context}"
+            )
 
         # 6. Call OpenAI API (Using the v1.0.0+ syntax)
         try:
@@ -1562,7 +1583,7 @@ class CareerToolkitGenerateView(APIView):
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.7, 
-                max_tokens=400
+                max_tokens=700
             )
             
             # 1. Extract the text FIRST
