@@ -1,5 +1,5 @@
 import logging
-from pyexpat.errors import messages
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
@@ -1099,11 +1099,18 @@ class LeaderboardAPIView(APIView):
             
             total_calculated_hours += student_total_hours
 
-            # 2. Package it up for the Javascript, adding the student's campus
+            # Format gender & ID / Passport number
+            gender_val = student.get_gender_display() if hasattr(student, 'get_gender_display') and student.gender else (student.gender if student.gender else "Not provided")
+            id_val = student.id_number if student.id_number else "Not provided"
+
+            # 2. Package it up for the Javascript, adding the student's campus, gender, and ID
             leaderboard_data.append({
                 'first_name': student.first_name,
                 'last_name': student.last_name,
-                'campus': student.get_campus_display() if hasattr(student, 'get_campus_display') else "Unknown Campus", # 👈 Added Campus!
+                'gender': gender_val,
+                'id_number': id_val,
+                'id_type': student.id_type if hasattr(student, 'id_type') else 'SA_ID',
+                'campus': student.get_campus_display() if hasattr(student, 'get_campus_display') else "Unknown Campus",
                 'total_hours': round(student_total_hours, 1),
                 'events_attended': events_count,
                 'on_time_count': on_time_count,
@@ -1923,9 +1930,13 @@ class LiveAwardsAPIView(APIView):
             data['power_score'] = round(score_hours + score_events + score_points + score_punctuality, 2)
             
         compiled_data.sort(key=lambda x: x['power_score'], reverse=True)
-        overall_top_5 = compiled_data[:5]
         
-        newcomers = [d for d in compiled_data if d['volunteer_status'] == 'NEWCOMER']
+        # Peer Educator of the Year: Exclusively for Senior (Returning) Volunteers (Newcomers cannot win/contend)
+        seniors = [d for d in compiled_data if d['volunteer_status'] == User.VolunteerStatus.SENIOR]
+        seniors_top_5 = seniors[:5]
+        
+        # Best Junior Peer Educator: For Newcomers (First Time)
+        newcomers = [d for d in compiled_data if d['volunteer_status'] == User.VolunteerStatus.NEWCOMER]
         newcomers_top_5 = newcomers[:5]
         
         campus_totals = {}
@@ -1969,7 +1980,7 @@ class LiveAwardsAPIView(APIView):
         campus_avg.sort(key=lambda x: x['avg_score'], reverse=True)
         
         return Response({
-            'overall': overall_top_5,
+            'overall': seniors_top_5,
             'newcomers': newcomers_top_5,
             'campuses': campus_avg
         })

@@ -319,6 +319,167 @@
             margin-left: 5px;
             font-weight: 800;
         }
+
+        .formula-guide-section {
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .guide-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .guide-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .guide-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--primary-orange-light);
+            color: var(--primary-orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .guide-header h3 {
+            font-size: 1.4rem;
+            color: var(--slate-900);
+            font-weight: 700;
+        }
+
+        .guide-header p {
+            color: var(--slate-700);
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .pillar-card {
+            background: var(--slate-50);
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .pillar-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .pillar-top h4 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--slate-900);
+        }
+
+        .pillar-badge {
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: white;
+        }
+
+        .pillar-desc {
+            font-size: 0.88rem;
+            color: var(--slate-700);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        .pillar-formula {
+            font-size: 0.78rem;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: var(--slate-800);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .eligibility-container {
+            background: #f8fafc;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            padding: 24px;
+        }
+
+        .eligibility-container h4 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--slate-900);
+            margin-bottom: 16px;
+        }
+
+        .eligibility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .eligibility-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            color: var(--slate-700);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .eligibility-tag {
+            align-self: flex-start;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .eligibility-tag.senior {
+            background: rgba(245, 158, 11, 0.12);
+            color: #d97706;
+        }
+
+        .eligibility-tag.newcomer {
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+        }
+
+        .eligibility-tag.campus {
+            background: rgba(59, 130, 246, 0.12);
+            color: #2563eb;
+        }
     </style>
 </head>
 <body>
@@ -342,11 +503,14 @@
     <div class="awards-grid">
         <!-- Award 1 -->
         <div class="award-card highlight" id="award-overall">
-            <h2 class="award-title">
-                <span class="award-title-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-orange);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <h2 class="award-title" style="flex-wrap: wrap; gap: 8px;">
+                <span style="display: flex; align-items: center; gap: 10px;">
+                    <span class="award-title-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-orange);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    </span>
+                    Peer Educator of the Year
                 </span>
-                Peer Educator of the Year
+                <span style="font-size: 0.72rem; font-weight: 700; color: #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 3px 8px; border-radius: 6px; letter-spacing: 0.3px;">Seniors Only</span>
             </h2>
             <div class="contender-list">
                 <div class="skeleton" style="height: 200px; margin-bottom: 20px; border-radius: 16px;"></div>
@@ -357,11 +521,14 @@
 
         <!-- Award 2 -->
         <div class="award-card highlight" id="award-newcomer">
-            <h2 class="award-title">
-                <span class="award-title-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9z"></path><path d="M12 22c-4.97 0-9-4.03-9-9 4.97 0 9 4.03 9 9z"></path><path d="M12 22V2"></path><path d="M7 8c2.76 0 5-2.24 5-5"></path><path d="M17 13c-2.76 0-5 2.24-5 5"></path></svg>
+            <h2 class="award-title" style="flex-wrap: wrap; gap: 8px;">
+                <span style="display: flex; align-items: center; gap: 10px;">
+                    <span class="award-title-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9z"></path><path d="M12 22c-4.97 0-9-4.03-9-9 4.97 0 9 4.03 9 9z"></path><path d="M12 22V2"></path><path d="M7 8c2.76 0 5-2.24 5-5"></path><path d="M17 13c-2.76 0-5 2.24-5 5"></path></svg>
+                    </span>
+                    Best Junior Peer Educator
                 </span>
-                Best Junior Peer Educator
+                <span style="font-size: 0.72rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 3px 8px; border-radius: 6px; letter-spacing: 0.3px;">Newcomers Only</span>
             </h2>
             <div class="contender-list">
                 <div class="skeleton" style="height: 200px; margin-bottom: 20px; border-radius: 16px;"></div>
@@ -385,6 +552,85 @@
             </div>
         </div>
     </div>
+
+    <!-- Calculation & Criteria Guide Section -->
+    <section class="formula-guide-section">
+        <div class="guide-card">
+            <div class="guide-header">
+                <div class="guide-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </div>
+                <div>
+                    <h3>How the Power Score & Awards Are Calculated</h3>
+                    <p>The leaderboard uses an objective, multi-pillar formula (0–100 Power Score) to evaluate dedication, consistency, punctuality, and self-directed learning.</p>
+                </div>
+            </div>
+
+            <div class="guide-grid">
+                <!-- Pillar 1 -->
+                <div class="pillar-card">
+                    <div class="pillar-top">
+                        <span class="pillar-badge fill-hours">50%</span>
+                        <h4>Verified Hours</h4>
+                    </div>
+                    <p class="pillar-desc">Measures total verified volunteer service hours and approved bonuses, normalized against the highest hours logged by any volunteer in the current year.</p>
+                    <div class="pillar-formula">Score = (Hours / Max Hours) × 50</div>
+                </div>
+
+                <!-- Pillar 2 -->
+                <div class="pillar-card">
+                    <div class="pillar-top">
+                        <span class="pillar-badge fill-events">25%</span>
+                        <h4>Event Participation</h4>
+                    </div>
+                    <p class="pillar-desc">Rewards sustained engagement and attendance across diverse campus activities, normalized against the highest event count.</p>
+                    <div class="pillar-formula">Score = (Events / Max Events) × 25</div>
+                </div>
+
+                <!-- Pillar 3 -->
+                <div class="pillar-card">
+                    <div class="pillar-top">
+                        <span class="pillar-badge fill-punctuality">15%</span>
+                        <h4>Punctuality & Reliability</h4>
+                    </div>
+                    <p class="pillar-desc">Calculates the percentage of attended events where the volunteer signed in on time or early (at or before scheduled activity start time).</p>
+                    <div class="pillar-formula">Score = (On-Time Arrivals / Total Events) × 15</div>
+                </div>
+
+                <!-- Pillar 4 -->
+                <div class="pillar-card">
+                    <div class="pillar-top">
+                        <span class="pillar-badge fill-points">10%</span>
+                        <h4>LMS Learning Mastery</h4>
+                    </div>
+                    <p class="pillar-desc">Recognizes self-improvement and peer educator training through gamified points earned by scoring 100% on LMS module quizzes.</p>
+                    <div class="pillar-formula">Score = (LMS Points / Max Points) × 10</div>
+                </div>
+            </div>
+
+            <!-- Eligibility Rules -->
+            <div class="eligibility-container">
+                <h4>🏆 Award Category Eligibility Rules</h4>
+                <div class="eligibility-grid">
+                    <div class="eligibility-item">
+                        <span class="eligibility-tag senior">Seniors Only</span>
+                        <strong>Peer Educator of the Year:</strong>
+                        <span>Reserved strictly for Senior (Returning) volunteers. First-time newcomers cannot win or influence this award standing.</span>
+                    </div>
+                    <div class="eligibility-item">
+                        <span class="eligibility-tag newcomer">Newcomers Only</span>
+                        <strong>Best Junior Peer Educator:</strong>
+                        <span>Recognizes outstanding first-year volunteers (Newcomers) who have demonstrated exceptional early commitment and performance.</span>
+                    </div>
+                    <div class="eligibility-item">
+                        <span class="eligibility-tag campus">All Volunteers</span>
+                        <strong>Best Performing Campus:</strong>
+                        <span>Determined by the highest average volunteer Power Score across all active peer educators registered to that campus.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script>
         function formatScore(score) {

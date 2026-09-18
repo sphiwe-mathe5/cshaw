@@ -4527,14 +4527,16 @@ window.exportToPDF = function(filterType) {
     filteredData.sort((a, b) => b.total_hours - a.total_hours);
 
     // 3. Prepare the data arrays for the table
-    const tableColumns = ["Rank", "Student Name", "Campus", "Total Hours", "Events"];
+    const tableColumns = ["Rank", "Student Name", "Gender", "ID Number", "Campus", "Total Hours", "Events"];
     const tableRows = [];
 
     filteredData.forEach((student, index) => {
         const rowData = [
             index + 1,
             `${student.first_name} ${student.last_name}`,
-            student.campus,
+            student.gender || "Not provided",
+            student.id_number || "Not provided",
+            student.campus || "Unknown Campus",
             `${student.total_hours} hrs`,
             student.events_attended
         ];
@@ -4564,13 +4566,16 @@ window.exportToPDF = function(filterType) {
             fontStyle: 'bold'
         },
         styles: { 
-            fontSize: 10, 
-            cellPadding: 6 
+            fontSize: 9, 
+            cellPadding: 5 
         },
         columnStyles: {
-            0: { halign: 'center', cellWidth: 20 },
-            3: { halign: 'right', fontStyle: 'bold', textColor: [255, 140, 66] }, // Make hours orange
-            4: { halign: 'center' }
+            0: { halign: 'center', cellWidth: 14 },
+            2: { halign: 'center', cellWidth: 22 },
+            3: { halign: 'center', cellWidth: 36 },
+            4: { halign: 'center', cellWidth: 24 },
+            5: { halign: 'right', fontStyle: 'bold', textColor: [255, 140, 66], cellWidth: 26 },
+            6: { halign: 'center', cellWidth: 18 }
         }
     });
 
