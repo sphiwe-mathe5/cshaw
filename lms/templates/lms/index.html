@@ -214,6 +214,10 @@
                         Signed in as <strong>{{ user.first_name|default:user.email }}</strong>
                     </div>
                     {% if request.user.role == 'COORDINATOR' %}
+                    <a href="{% url 'lms-export-report-pdf' %}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        Completion Report (PDF)
+                    </a>
                     <a href="{% url 'lms-create-course' %}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                         + Create Course
@@ -242,10 +246,16 @@
                 <p style="margin: 0; color: var(--text-muted); font-size: 0.95rem;">Complete modules, earn points, unlock achievements.</p>
             </div>
             {% if request.user.role == 'COORDINATOR' %}
-            <a href="{% url 'lms-create-course' %}" style="display: inline-flex; align-items: center; gap: 8px; background: var(--primary-orange); color: white; padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; text-decoration: none; box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3); transition: transform 0.2s;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                + Create Course
-            </a>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <a href="{% url 'lms-export-report-pdf' %}" style="display: inline-flex; align-items: center; gap: 8px; background: white; color: var(--primary-blue); border: 1.5px solid #e2e8f0; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.92rem; text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary-orange)'; this.style.color='var(--primary-orange)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.color='var(--primary-blue)';">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Download Completion Report
+                </a>
+                <a href="{% url 'lms-create-course' %}" style="display: inline-flex; align-items: center; gap: 8px; background: var(--primary-orange); color: white; padding: 10px 22px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; text-decoration: none; box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3); transition: transform 0.2s;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    + Create Course
+                </a>
+            </div>
             {% endif %}
         </div>
 
@@ -260,7 +270,7 @@
             <div class="quiz-header" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px;">
                 <div>
                     <h2 id="quizTitle" style="margin: 0; color: #111827; font-size: 1.5rem;">Quiz Title</h2>
-                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">🎯 Required Pass Mark: <strong style="color: var(--primary-orange);">70%</strong> · 2 points per question</p>
+                    <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">🎯 Pass Mark: <strong style="color: #0284c7;">50%</strong> · Outstanding: <strong style="color: var(--primary-orange);">70%+</strong> · 2 points per question</p>
                 </div>
                 <button onclick="closeQuizModal()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #6b7280; line-height: 1;">&times;</button>
             </div>

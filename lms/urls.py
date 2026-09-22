@@ -5,7 +5,8 @@ from .views import (
     LearningUnitViewSet,
     QuizViewSet,
     QuizListView,
-    AdminContentUploadView
+    AdminContentUploadView,
+    export_lms_completion_report_pdf
 )
 
 router = DefaultRouter()
@@ -17,5 +18,6 @@ urlpatterns = [
     re_path(r'^quizzes/(?P<pk>\d+)/submit/?$', QuizViewSet.as_view({'post': 'submit'}), name='quiz-submit'),
     re_path(r'^admin/upload-nested/?$', AdminContentUploadView.as_view(), name='admin-upload-nested'),
     path('quiz-list/', QuizListView.as_view(), name='quiz-list'),
+    path('export-report-pdf/', export_lms_completion_report_pdf, name='lms-export-report-pdf'),
     path('', include(router.urls)),
 ]

@@ -112,7 +112,8 @@ class QuizViewSet(viewsets.ModelViewSet):
                     pass
 
         score_percent = round((correct_count / total_questions) * 100.0, 1)
-        passed = score_percent >= 70.0  # 70% passing threshold
+        passed = score_percent >= 50.0  # 50% passing threshold
+        is_outstanding = score_percent >= 70.0  # 70%+ is Outstanding
         points_earned = correct_count * 2  # 2 points awarded per correct question
 
         # Save student progress & award points
@@ -140,6 +141,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         return Response({
             "score": score_percent,
             "passed": passed,
+            "is_outstanding": is_outstanding,
             "correct_count": correct_count,
             "incorrect_count": max(0, total_questions - correct_count),
             "total_questions": total_questions,
@@ -334,4 +336,327 @@ class CourseCreateView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['topics'] = Topic.objects.all().order_by('order', 'id')
         return context
+
+
+def export_lms_completion_report_pdf(request):
+    """
+    Export clean, comprehensive LMS course completion and marks report in PDF format.
+    STRICTLY restricted to Coordinators, staff, and superusers.
+    """
+    from django.http import HttpResponseForbidden, HttpResponse
+    if not (request.user.is_authenticated and (getattr(request.user, 'role', '') == 'COORDINATOR' or request.user.is_staff or request.user.is_superuser)):
+        return HttpResponseForbidden("Only coordinators can download LMS course completion reports.")
+
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from django.utils import timezone
+
+    log_audit_event(
+        action="LMS_REPORT_DOWNLOADED",
+        actor=request.user,
+        target_type="System",
+        target_id=request.user.id,
+        metadata={"report_name": "LMS_Course_Completion_Report"}
+    )
+    logger.info("LMS course completion report downloaded by %s", request.user.email)
+
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"CSHAW_LMS_Course_Completion_Report_{timezone.now().strftime('%Y%m%d_%H%M')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+
+    styles = getSampleStyleSheet()
+
+    PRIMARY_ORANGE = colors.HexColor('#ff6b1a')
+    DARK_NAVY = colors.HexColor('#0f172a')
+    SLATE_GREY = colors.HexColor('#475569')
+    LIGHT_BG = colors.HexColor('#f8fafc')
+    BORDER_COLOR = colors.HexColor('#e2e8f0')
+    GREEN_SUCCESS = colors.HexColor('#166534')
+    RED_FAIL = colors.HexColor('#991b1b')
+
+    title_style = ParagraphStyle(
+        'LmsDocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=17,
+        leading=21,
+        textColor=PRIMARY_ORANGE
+    )
+
+    meta_style = ParagraphStyle(
+        'LmsMetaStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=DARK_NAVY
+    )
+
+    section_heading = ParagraphStyle(
+        'LmsSectionHeading',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        leading=15,
+        textColor=DARK_NAVY,
+        spaceBefore=12,
+        spaceAfter=5
+    )
+
+    subsection_heading = ParagraphStyle(
+        'LmsSubSectionHeading',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9.5,
+        leading=12,
+        textColor=DARK_NAVY,
+        spaceBefore=6,
+        spaceAfter=3
+    )
+
+    cell_style = ParagraphStyle(
+        'LmsCellRegular',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=9.5,
+        textColor=DARK_NAVY
+    )
+
+    cell_header = ParagraphStyle(
+        'LmsCellHeader',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8,
+        leading=10,
+        textColor=colors.white
+    )
+
+    badge_outstanding = ParagraphStyle(
+        'LmsBadgeOutstanding',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor('#d97706')
+    )
+
+    badge_pass = ParagraphStyle(
+        'LmsBadgePass',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=GREEN_SUCCESS
+    )
+
+    badge_fail = ParagraphStyle(
+        'LmsBadgeFail',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=RED_FAIL
+    )
+
+    story = []
+
+    # 1. Header Banner
+    header_table_data = [
+        [
+            Paragraph("<b>C-SHAW LEARNING HUB</b><br/><font size=9 color='#475569'>Course Completion & Assessment Marks Report</font><br/><font size=7.5 color='#94a3b8'>Centre for Student Health and Wellness | University of Johannesburg</font>", title_style),
+            Paragraph(f"<b>Issued:</b> {timezone.now().strftime('%d %B %Y, %H:%M')}<br/><b>Coordinator:</b> {request.user.first_name} {request.user.last_name}<br/><b>Status:</b> Official Record", meta_style)
+        ]
+    ]
+    header_table = Table(header_table_data, colWidths=[335, 188])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 8))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_ORANGE, spaceBefore=2, spaceAfter=10))
+
+    # 2. Executive Summary Metrics
+    total_topics = Topic.objects.count()
+    total_units = LearningUnit.objects.count()
+    total_quizzes = Quiz.objects.count()
+    all_progress = StudentProgress.objects.select_related('user', 'quiz')
+    total_completions = all_progress.count()
+    unique_students = all_progress.values('user').distinct().count()
+    total_passed = all_progress.filter(score__gte=50.0).count()
+    total_outstanding = all_progress.filter(score__gte=70.0).count()
+    overall_pass_rate = round((total_passed / total_completions * 100), 1) if total_completions > 0 else 0.0
+    total_points = sum(p.points_earned for p in all_progress)
+
+    summary_data = [
+        [
+            Paragraph(f"<b>Active Courses</b><br/><font size=11 color='#0f172a'><b>{total_topics} Topics</b></font><br/><font size=7 color='#64748b'>{total_units} Modules · {total_quizzes} Quizzes</font>", cell_style),
+            Paragraph(f"<b>Total Submissions</b><br/><font size=11 color='#0f172a'><b>{total_completions}</b></font><br/><font size=7 color='#64748b'>Across all modules</font>", cell_style),
+            Paragraph(f"<b>Unique Learners</b><br/><font size=11 color='#2563eb'><b>{unique_students} Students</b></font><br/><font size=7 color='#64748b'>Engaged volunteers</font>", cell_style),
+            Paragraph(f"<b>Overall Pass Rate</b><br/><font size=11 color='#166534'><b>{overall_pass_rate}%</b></font><br/><font size=6.5 color='#64748b'>{total_passed} passed (≥50%)<br/>{total_outstanding} outstanding (≥70%)</font>", cell_style),
+            Paragraph(f"<b>Points Distributed</b><br/><font size=11 color='#ff6b1a'><b>+{total_points} Pts</b></font><br/><font size=7 color='#64748b'>Awarded learning pts</font>", cell_style),
+        ]
+    ]
+    summary_table = Table(summary_data, colWidths=[105, 105, 105, 104, 104])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), LIGHT_BG),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER_COLOR),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 14))
+
+    # 3. Course-by-Course Breakdown
+    topics = Topic.objects.prefetch_related('units__quiz__completions__user').order_by('order', 'id')
+
+    if not topics.exists():
+        story.append(Paragraph("No course topics found in the LMS repository.", cell_style))
+    else:
+        for topic in topics:
+            topic_units = topic.units.all()
+            
+            story.append(Paragraph(f"<b>Course {topic.order}: {topic.title}</b>", section_heading))
+
+            if not topic_units.exists():
+                story.append(Paragraph("<font color='#64748b'><i>No learning units uploaded for this course yet.</i></font>", cell_style))
+                story.append(Spacer(1, 8))
+                continue
+
+            for unit in topic_units:
+                quiz = getattr(unit, 'quiz', None)
+                if not quiz:
+                    story.append(Paragraph(f"<b>Module {unit.order}: {unit.title}</b> — <i>No quiz attached</i>", subsection_heading))
+                    story.append(Spacer(1, 6))
+                    continue
+
+                completions = quiz.completions.all().select_related('user').order_by('-score', '-completed_at')
+                c_count = completions.count()
+                c_passed = sum(1 for c in completions if c.score >= 50.0)
+                c_outstanding = sum(1 for c in completions if c.score >= 70.0)
+                c_failed = c_count - c_passed
+                c_avg = round(sum(c.score for c in completions) / c_count, 1) if c_count > 0 else 0.0
+
+                unit_header_text = (
+                    f"<b>Module {unit.order}: {unit.title}</b> &nbsp;|&nbsp; "
+                    f"<font color='#ff6b1a'>Quiz: {quiz.title}</font> "
+                    f"<font size=7.5 color='#475569'>({quiz.points_awarded} Pts Avail · Pass: 50% · Outstanding: 70%+)</font>"
+                )
+                story.append(Paragraph(unit_header_text, subsection_heading))
+
+                stats_line = (
+                    f"<font size=7.5 color='#475569'><b>Submissions:</b> {c_count} &nbsp;|&nbsp; "
+                    f"<b>Passed:</b> <font color='#166534'>{c_passed}</font> ({c_outstanding} Outstanding) &nbsp;|&nbsp; "
+                    f"<b>Failed:</b> <font color='#991b1b'>{c_failed}</font> &nbsp;|&nbsp; "
+                    f"<b>Average Mark:</b> <b>{c_avg}%</b></font>"
+                )
+                story.append(Paragraph(stats_line, cell_style))
+                story.append(Spacer(1, 4))
+
+                table_rows = [
+                    [
+                        Paragraph("<b>#</b>", cell_header),
+                        Paragraph("<b>Student Name</b>", cell_header),
+                        Paragraph("<b>Email</b>", cell_header),
+                        Paragraph("<b>Campus</b>", cell_header),
+                        Paragraph("<b>Status</b>", cell_header),
+                        Paragraph("<b>Score</b>", cell_header),
+                        Paragraph("<b>Result</b>", cell_header),
+                        Paragraph("<b>Points</b>", cell_header),
+                        Paragraph("<b>Completed</b>", cell_header),
+                    ]
+                ]
+
+                if c_count == 0:
+                    table_rows.append([
+                        Paragraph("—", cell_style),
+                        Paragraph("<i>No students have completed this module yet.</i>", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                        Paragraph("—", cell_style),
+                    ])
+                else:
+                    for idx, comp in enumerate(completions, start=1):
+                        stu = comp.user
+                        full_name = f"{stu.first_name} {stu.last_name}".strip() or stu.email
+                        campus = stu.get_campus_display() if hasattr(stu, 'get_campus_display') and stu.campus else (stu.campus or "—")
+                        status_str = stu.get_volunteer_status_display() if hasattr(stu, 'get_volunteer_status_display') and stu.volunteer_status else (stu.volunteer_status or "—")
+                        if "Senior" in status_str:
+                            status_str = "Senior"
+                        elif "Newcomer" in status_str:
+                            status_str = "Newcomer"
+
+                        if comp.score >= 70.0:
+                            result_badge = Paragraph("<b>OUTSTANDING</b>", badge_outstanding)
+                            score_style = badge_outstanding
+                        elif comp.score >= 50.0:
+                            result_badge = Paragraph("<b>PASS</b>", badge_pass)
+                            score_style = badge_pass
+                        else:
+                            result_badge = Paragraph("<b>FAIL</b>", badge_fail)
+                            score_style = badge_fail
+
+                        table_rows.append([
+                            Paragraph(str(idx), cell_style),
+                            Paragraph(f"<b>{full_name}</b>", cell_style),
+                            Paragraph(stu.email, cell_style),
+                            Paragraph(campus, cell_style),
+                            Paragraph(status_str, cell_style),
+                            Paragraph(f"<b>{comp.score}%</b>", score_style),
+                            result_badge,
+                            Paragraph(f"+{comp.points_earned}", cell_style),
+                            Paragraph(comp.completed_at.strftime("%d %b %Y"), cell_style),
+                        ])
+
+                unit_table = Table(table_rows, colWidths=[20, 105, 112, 42, 53, 42, 52, 40, 57])
+                unit_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), DARK_NAVY),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+                    ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, LIGHT_BG]),
+                    ('GRID', (0, 0), (-1, -1), 0.5, BORDER_COLOR),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                    ('ALIGN', (3, 0), (-1, -1), 'CENTER'),
+                ]))
+
+                story.append(unit_table)
+                story.append(Spacer(1, 10))
+
+    # 4. Coordinator Verification & Sign-off Block
+    story.append(Spacer(1, 8))
+    signoff_data = [
+        [
+            Paragraph("<b>Verified By (Coordinator):</b> ___________________________", meta_style),
+            Paragraph("<b>Signature:</b> ___________________________", meta_style),
+            Paragraph(f"<b>Audit Date:</b> {timezone.now().strftime('%d/%m/%Y')}", meta_style)
+        ]
+    ]
+    signoff_table = Table(signoff_data, colWidths=[180, 180, 163])
+    signoff_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(KeepTogether([signoff_table]))
+
+    doc.build(story)
+    return response
 

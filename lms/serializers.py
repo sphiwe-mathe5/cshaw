@@ -58,7 +58,7 @@ class QuizSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             progress = StudentProgress.objects.filter(user=request.user, quiz=obj).first()
             if progress:
-                return progress.score >= 70.0
+                return progress.score >= 50.0
         return False
 
     def get_total_questions(self, obj):

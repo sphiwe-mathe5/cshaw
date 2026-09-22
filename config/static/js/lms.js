@@ -109,16 +109,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                             ? unit.quiz.user_points 
                                             : (correct * 2);
 
-                                        if (unit.quiz.user_passed) {
+                                        if (unit.quiz.user_score >= 70) {
+                                            statusBadge = `<span style="font-size: 0.75rem; background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 12px; font-weight: 700;">🌟 Outstanding (${unit.quiz.user_score}%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #b45309; font-weight: 700; background: #fef3c7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} Points Earned (${correct} Correct · ${incorrect} Incorrect · Outstanding)</span>`;
+                                        } else if (unit.quiz.user_score >= 50) {
                                             statusBadge = `<span style="font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 700;">✅ Passed (${unit.quiz.user_score}%)</span>`;
-                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} Points Earned (${correct} Correct · ${incorrect} Incorrect · Passed)</span>`;
                                         } else {
                                             statusBadge = `<span style="font-size: 0.75rem; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700;">❌ Failed (${unit.quiz.user_score}%)</span>`;
-                                            pointsText = `<span class="quiz-points" style="color: #b91c1c; font-weight: 700; background: #fff1f2; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} / ${unit.quiz.points_awarded} Points Earned (${correct} Correct · ${incorrect} Incorrect · Pass mark: 70%)</span>`;
+                                            pointsText = `<span class="quiz-points" style="color: #b91c1c; font-weight: 700; background: #fff1f2; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${earned} / ${unit.quiz.points_awarded} Points Earned (${correct} Correct · ${incorrect} Incorrect · Failed <50%)</span>`;
                                         }
                                     } else {
                                         statusBadge = `<span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600;">⏳ Not Attempted</span>`;
-                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points Available (${totalQ} Questions · 2 pts each · Pass mark: 70%)</span>`;
+                                        pointsText = `<span class="quiz-points" style="color: var(--primary-orange); font-weight: 700; background: #fff4ec; padding: 3px 10px; border-radius: 20px; font-size: 0.85rem;">+${unit.quiz.points_awarded} Points Available (${totalQ} Questions · 2 pts each · Pass: 50% · Outstanding: 70%+)</span>`;
                                     }
 
                                     return `
@@ -202,37 +205,38 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeQuizModal = function() {
         document.getElementById('quizModal').style.display = 'none';
         document.getElementById('quizQuestionsContainer').innerHTML = '';
-        document.getElementById('quizForm').reset();
     };
 
     window.closeResultModal = function() {
         document.getElementById('quizResultModal').style.display = 'none';
     };
 
+    // Handle Quiz Form Submission
     const quizForm = document.getElementById('quizForm');
     if (quizForm) {
         quizForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const quizId = document.getElementById('activeQuizId').value;
-            const formData = new FormData(e.target);
+            const activeQuizId = document.getElementById('activeQuizId').value;
+            if (!activeQuizId) return;
+
+            const formData = new FormData(quizForm);
             const answers = {};
-            
-            for (let [key, value] of formData.entries()) {
-                if (key !== 'quiz_id') {
-                    answers[key] = value;
+            for (let [name, val] of formData.entries()) {
+                if (name !== 'csrfmiddlewaretoken' && name !== 'quiz_id') {
+                    answers[name] = parseInt(val, 10);
                 }
             }
-            
+
             try {
-                const res = await fetch(`/api/lms/quizzes/${quizId}/submit/`, {
+                const res = await fetch(`/api/lms/quizzes/${activeQuizId}/submit/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCsrfToken()
                     },
-                    body: JSON.stringify({ answers })
+                    body: JSON.stringify({ answers: answers })
                 });
-                
+
                 const data = await res.json();
                 if (res.ok) {
                     closeQuizModal();
@@ -252,16 +256,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         ? data.incorrect_count 
                         : Math.max(0, data.total_questions - data.correct_count);
 
-                    score.innerText = `Score: ${data.score}% (Pass mark: 70%)`;
+                    score.innerText = `Score: ${data.score}% (Pass mark: 50% · Outstanding: 70%+)`;
                     if (correctBadge) correctBadge.innerText = `✅ ${data.correct_count} Correct`;
                     if (incorrectBadge) incorrectBadge.innerText = `❌ ${incorrectCount} Incorrect`;
                     totalPoints.innerText = data.total_user_points;
 
-                    if (data.passed) {
+                    if (data.score >= 70) {
+                        icon.innerText = '🌟';
+                        title.innerText = 'Outstanding Achievement!';
+                        title.style.color = '#d97706';
+                        message.innerText = `Outstanding! You answered ${data.correct_count} of ${data.total_questions} questions correctly, achieved an Outstanding grade (≥70%), and earned +${data.points_earned} points.`;
+                        earnedPoints.innerText = `+${data.points_earned} Pts`;
+                        earnedPoints.style.color = '#d97706';
+                        pointsRate.innerText = `${data.total_questions} questions · 2 pts each`;
+                    } else if (data.score >= 50) {
                         icon.innerText = '🏆';
                         title.innerText = 'Quiz Passed!';
                         title.style.color = '#16a34a';
-                        message.innerText = `Outstanding! You answered ${data.correct_count} of ${data.total_questions} questions correctly, met the 70% pass mark, and earned +${data.points_earned} points.`;
+                        message.innerText = `Great job! You answered ${data.correct_count} of ${data.total_questions} questions correctly, met the 50% pass mark, and earned +${data.points_earned} points.`;
                         earnedPoints.innerText = `+${data.points_earned} Pts`;
                         earnedPoints.style.color = '#16a34a';
                         pointsRate.innerText = `${data.total_questions} questions · 2 pts each`;
@@ -269,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         icon.innerText = '💪';
                         title.innerText = 'Good Effort!';
                         title.style.color = '#dc2626';
-                        message.innerText = `You earned +${data.points_earned} points (${data.correct_count} of ${data.total_questions} questions correct). The pass mark is 70%. Don't give up — keep studying the course materials and aim higher on your next quizzes!`;
+                        message.innerText = `You earned +${data.points_earned} points (${data.correct_count} of ${data.total_questions} questions correct). The pass mark is 50% (70%+ is Outstanding). Don't give up — keep studying the course materials and aim higher on your next quizzes!`;
                         earnedPoints.innerText = `+${data.points_earned} Pts`;
                         earnedPoints.style.color = '#dc2626';
                         pointsRate.innerText = `${data.correct_count} correct · 2 pts each`;
