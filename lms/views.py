@@ -475,7 +475,7 @@ def export_lms_completion_report_pdf(request):
     # 1. Header Banner
     header_table_data = [
         [
-            Paragraph("<b>C-SHAW LEARNING HUB</b><br/><font size=9 color='#475569'>Course Completion & Assessment Marks Report</font><br/><font size=7.5 color='#94a3b8'>Centre for Student Health and Wellness | University of Johannesburg</font>", title_style),
+            Paragraph("<b>C-SHAW LEARNING HUB</b><br/><font size=9 color='#475569'>Course Completion & Assessment Marks Report</font><br/><font size=7.5 color='#94a3b8'>Centre for Student Health and Wellness • Peer Education Hub</font>", title_style),
             Paragraph(f"<b>Issued:</b> {timezone.now().strftime('%d %B %Y, %H:%M')}<br/><b>Coordinator:</b> {request.user.first_name} {request.user.last_name}<br/><b>Status:</b> Official Record", meta_style)
         ]
     ]

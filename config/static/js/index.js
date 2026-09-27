@@ -95,6 +95,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const linkCampTicket = document.getElementById('link-camp-ticket');
+    if (linkCampTicket) {
+        linkCampTicket.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            const navItem = document.getElementById('nav-item-camp-ticket');
+            if (navItem) navItem.classList.add('active');
+            
+            renderCampTicket();
+            
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) overlay.classList.remove('active');
+            }
+        });
+    }
+
     const linkHikingTicket = document.getElementById('link-hiking-ticket');
     if (linkHikingTicket) {
         linkHikingTicket.addEventListener('click', (e) => {
@@ -4265,8 +4284,7 @@ function renderExecutiveAttendancePage() {
                             
                             <div style="display: flex; gap: 10px; margin-top: 15px;">
                                 <button class="btn-export" onclick="window.exportToPDF('ALL')">📄 Export All</button>
-                                <button class="btn-export hike" onclick="window.exportToPDF('HIKE')">🥾 Hike List (40+)</button>
-                                <button class="btn-export camp" onclick="window.exportToPDF('CAMP')">🏕️ Camp List (80+)</button>
+                                <button class="btn-export camp" onclick="window.exportToPDF('CAMP')">👑 Camp Qualifiers (Top 78)</button>
                             </div>
                         </div>
                         <div style="display: flex; gap: 30px; text-align: right;">
@@ -4508,14 +4526,10 @@ window.exportToPDF = function(filterType) {
     let title = "Full Volunteer Leaderboard";
     let filename = "Volunteer_Leaderboard.pdf";
     
-    if (filterType === 'HIKE') {
-        filteredData = window.currentLeaderboardData.filter(s => s.total_hours >= 40);
-        title = "Hike Qualified Volunteers (40+ Hours)";
-        filename = "Hike_Qualified_Volunteers.pdf";
-    } else if (filterType === 'CAMP') {
-        filteredData = window.currentLeaderboardData.filter(s => s.total_hours >= 80);
-        title = "Camp Certified Volunteers (80+ Hours)";
-        filename = "Camp_Certified_Volunteers.pdf";
+    if (filterType === 'CAMP') {
+        filteredData = window.currentLeaderboardData.slice(0, 78);
+        title = "Year-End Camp 2026: Black Elegance (Top 78 Qualifiers)";
+        filename = "Camp_Black_Elegance_Qualifiers.pdf";
     }
 
     if (filteredData.length === 0) {
@@ -5736,6 +5750,632 @@ window.copyToClipboard = function(btnElement) {
             alert("An error occurred while cancelling your RSVP. Please try again.");
         }
     };
+
+    // ========================================================
+    // YEAR-END CAMP: BLACK ELEGANCE (78 SEATS) CLIENT LOGIC
+    // ========================================================
+
+    window.triggerCampConfetti = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.id = 'camp-confetti-canvas';
+            canvas.style.position = 'fixed';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.pointerEvents = 'none';
+            canvas.style.zIndex = '99999';
+            document.body.appendChild(canvas);
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const ctx = canvas.getContext('2d');
+            const colors = ['#d4af37', '#f59e0b', '#fef08a', '#ffffff', '#e35205', '#fcd34d', '#1e293b'];
+            const particles = [];
+            for (let i = 0; i < 110; i++) {
+                particles.push({
+                    x: window.innerWidth / 2 + (Math.random() - 0.5) * 220,
+                    y: window.innerHeight * 0.3 + (Math.random() - 0.5) * 80,
+                    vx: (Math.random() - 0.5) * 16,
+                    vy: (Math.random() - 1.3) * 15,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 9,
+                    opacity: 1
+                });
+            }
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.35;
+                    p.vx *= 0.98;
+                    p.rotation += p.rotSpeed;
+                    p.opacity -= 0.009;
+                    if (p.opacity > 0 && p.y < canvas.height) {
+                        alive = true;
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, p.opacity);
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate((p.rotation * Math.PI) / 180);
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.3);
+                        ctx.restore();
+                    }
+                });
+                if (alive) {
+                    requestAnimationFrame(animate);
+                } else {
+                    canvas.remove();
+                }
+            }
+            requestAnimationFrame(animate);
+        } catch (e) {
+            console.warn("Confetti animation skipped:", e);
+        }
+    };
+
+    window.toggleCampTicketView = function(view) {
+        const passView = document.getElementById('campViewPass');
+        const certView = document.getElementById('campViewCert');
+        const btnPass = document.getElementById('btnTabCampPass');
+        const btnCert = document.getElementById('btnTabCampCert');
+        
+        if (view === 'cert') {
+            if (passView) passView.style.display = 'none';
+            if (certView) certView.style.display = 'block';
+            if (btnPass) btnPass.classList.remove('active');
+            if (btnCert) btnCert.classList.add('active');
+        } else {
+            if (passView) passView.style.display = 'block';
+            if (certView) certView.style.display = 'none';
+            if (btnPass) btnPass.classList.add('active');
+            if (btnCert) btnCert.classList.remove('active');
+        }
+    };
+
+    window.openCampEnvelope = function() {
+        const envelopeWrapper = document.getElementById('campEnvelopeWrapper');
+        const envelopeStage = document.getElementById('campEnvelopeStage');
+        const unlockedContainer = document.getElementById('campTicketUnlockedContainer');
+        
+        if (envelopeWrapper && !envelopeWrapper.classList.contains('open')) {
+            envelopeWrapper.classList.add('open');
+        }
+        
+        // Allow time for seal to pop, top flap to rotate open, and letter card to slide out
+        setTimeout(() => {
+            if (envelopeStage) {
+                envelopeStage.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                envelopeStage.style.opacity = '0';
+                envelopeStage.style.transform = 'scale(0.96)';
+                setTimeout(() => {
+                    envelopeStage.style.display = 'none';
+                    if (unlockedContainer) {
+                        unlockedContainer.style.display = 'block';
+                        unlockedContainer.classList.add('camp-unsealed-content');
+                    }
+                    if (typeof window.triggerCampConfetti === 'function') {
+                        window.triggerCampConfetti();
+                    }
+                }, 380);
+            }
+        }, 950);
+    };
+
+    window.replayCampEnvelope = function() {
+        const envelopeWrapper = document.getElementById('campEnvelopeWrapper');
+        const envelopeStage = document.getElementById('campEnvelopeStage');
+        const unlockedContainer = document.getElementById('campTicketUnlockedContainer');
+
+        if (envelopeWrapper) {
+            envelopeWrapper.classList.remove('open');
+        }
+        if (unlockedContainer) {
+            unlockedContainer.style.display = 'none';
+        }
+        if (envelopeStage) {
+            envelopeStage.style.display = 'block';
+            envelopeStage.style.opacity = '1';
+            envelopeStage.style.transform = 'scale(1)';
+        }
+    };
+
+    let pendingCampTicketIdToCancel = null;
+
+    function ensureCampCancelModalDOM() {
+        if (document.getElementById('campCancelModal')) return;
+        const div = document.createElement('div');
+        div.id = 'campCancelModal';
+        div.className = 'camp-cancel-modal-overlay';
+        div.style.display = 'none';
+        div.setAttribute('role', 'dialog');
+        div.setAttribute('aria-modal', 'true');
+        div.setAttribute('aria-labelledby', 'campCancelModalTitle');
+        div.innerHTML = `
+            <div class="camp-cancel-modal-box">
+                <button class="camp-cancel-modal-close" onclick="window.closeCampCancelModal()" aria-label="Close dialog">&times;</button>
+                <div class="camp-cancel-icon-wrapper">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <h3 id="campCancelModalTitle" class="camp-cancel-title">Are you sure you want to cancel?</h3>
+                <div class="camp-cancel-warning-banner">
+                    <span class="camp-cancel-warning-badge">CRITICAL</span>
+                    <span>There is no going back once cancelled!</span>
+                </div>
+                <p id="campCancelModalMessage" class="camp-cancel-message">
+                    Cancelling your RSVP will <strong>permanently forfeit your guaranteed seat</strong> for the <em>Year-End Camp: Black Elegance</em>.
+                </p>
+                <p class="camp-cancel-submessage">
+                    Your ticket and entry PIN will be permanently revoked immediately, and your spot will be automatically offered to the next Peer Educator on the leaderboard.
+                </p>
+                <div id="campCancelModalError" class="camp-cancel-error-box" style="display: none;"></div>
+                <div class="camp-cancel-btn-group">
+                    <button id="btnKeepCampTicket" class="camp-cancel-btn-keep" onclick="window.closeCampCancelModal()">
+                        Keep My Ticket
+                    </button>
+                    <button id="btnConfirmCancelCampTicket" class="camp-cancel-btn-confirm" onclick="window.executeCampTicketCancellation()">
+                        Yes, Cancel RSVP
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    window.openCampCancelModal = function(ticketId, cohortRank) {
+        pendingCampTicketIdToCancel = ticketId;
+        ensureCampCancelModalDOM();
+        const modal = document.getElementById('campCancelModal');
+        if (!modal) return;
+
+        const msgElem = document.getElementById('campCancelModalMessage');
+        if (msgElem) {
+            if (cohortRank) {
+                msgElem.innerHTML = `Cancelling your RSVP will <strong>permanently forfeit your guaranteed seat (Rank #${cohortRank})</strong> for the <em>Year-End Camp: Black Elegance</em>.`;
+            } else {
+                msgElem.innerHTML = `Cancelling your RSVP will <strong>permanently forfeit your guaranteed seat</strong> for the <em>Year-End Camp: Black Elegance</em>.`;
+            }
+        }
+
+        const errElem = document.getElementById('campCancelModalError');
+        if (errElem) {
+            errElem.style.display = 'none';
+            errElem.textContent = '';
+        }
+
+        const btnConfirm = document.getElementById('btnConfirmCancelCampTicket');
+        const btnKeep = document.getElementById('btnKeepCampTicket');
+        if (btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.innerHTML = 'Yes, Cancel RSVP';
+        }
+        if (btnKeep) {
+            btnKeep.disabled = false;
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closeCampCancelModal = function() {
+        const modal = document.getElementById('campCancelModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        pendingCampTicketIdToCancel = null;
+    };
+
+    window.executeCampTicketCancellation = async function() {
+        const ticketId = pendingCampTicketIdToCancel;
+        const btnConfirm = document.getElementById('btnConfirmCancelCampTicket');
+        const btnKeep = document.getElementById('btnKeepCampTicket');
+        const errElem = document.getElementById('campCancelModalError');
+
+        if (btnConfirm) {
+            btnConfirm.disabled = true;
+            btnConfirm.innerHTML = `<span style="display:inline-block; animation: spin 1s linear infinite;">⏳</span> Cancelling RSVP...`;
+        }
+        if (btnKeep) {
+            btnKeep.disabled = true;
+        }
+        if (errElem) {
+            errElem.style.display = 'none';
+            errElem.textContent = '';
+        }
+
+        try {
+            let csrfToken = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                        csrfToken = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                        break;
+                    }
+                }
+            }
+
+            const res = await fetch('/api/camp/cancel-rsvp/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ ticket_id: ticketId })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                window.closeCampCancelModal();
+                if (window.showCustomAlert) {
+                    window.showCustomAlert(
+                        "RSVP Cancelled",
+                        data.message || "Your RSVP has been cancelled and your seat released.",
+                        "ℹ️"
+                    );
+                } else {
+                    alert(data.message || "Your RSVP has been cancelled.");
+                }
+                renderCampTicket();
+            } else {
+                if (errElem) {
+                    errElem.textContent = data.error || "Failed to cancel RSVP.";
+                    errElem.style.display = 'block';
+                } else {
+                    alert(data.error || "Failed to cancel RSVP.");
+                }
+                if (btnConfirm) {
+                    btnConfirm.disabled = false;
+                    btnConfirm.innerHTML = 'Yes, Cancel RSVP';
+                }
+                if (btnKeep) {
+                    btnKeep.disabled = false;
+                }
+            }
+        } catch (err) {
+            console.error("Error cancelling camp RSVP:", err);
+            if (errElem) {
+                errElem.textContent = "A network error occurred while cancelling your RSVP. Please try again.";
+                errElem.style.display = 'block';
+            } else {
+                alert("A network error occurred while cancelling your RSVP. Please try again.");
+            }
+            if (btnConfirm) {
+                btnConfirm.disabled = false;
+                btnConfirm.innerHTML = 'Yes, Cancel RSVP';
+            }
+            if (btnKeep) {
+                btnKeep.disabled = false;
+            }
+        }
+    };
+
+    window.cancelMyCampTicketRSVP = function(ticketId, cohortRank) {
+        window.openCampCancelModal(ticketId, cohortRank);
+    };
+
+    // Close on backdrop click and Esc key
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('campCancelModal');
+        if (modal && modal.style.display === 'flex' && e.target === modal) {
+            window.closeCampCancelModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            const modal = document.getElementById('campCancelModal');
+            if (modal && modal.style.display === 'flex') {
+                window.closeCampCancelModal();
+            }
+        }
+    });
+
+    async function renderCampTicket() {
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        const navItem = document.getElementById('nav-item-camp-ticket');
+        if (navItem) navItem.classList.add('active');
+
+        mainContent.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px;">
+                <div style="color: #d4af37; font-size: 1rem; font-weight: 700;">
+                    Loading Year-End Camp & Contribution record...
+                </div>
+            </div>
+        `;
+
+        try {
+            const res = await fetch('/api/camp/my-ticket/');
+            if (!res.ok) throw new Error('Failed to load camp ticket status');
+            const data = await res.json();
+
+            if (!data.has_ticket) {
+                mainContent.innerHTML = `
+                    <div class="header-section" style="margin-bottom: 20px;">
+                        <h1>Peer Education Year-End Camp 2026</h1>
+                        <p style="color: #d4af37; font-size: 0.9rem;">Theme: Black Elegance</p>
+                    </div>
+
+                    <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 16px; padding: 32px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); text-align: center; color: #f1f5f9;">
+                        <div style="color: #d4af37; font-size: 0.8rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;">Camp Qualification Notice</div>
+                        <h2 style="color: #ffffff; font-size: 1.4rem; margin: 8px 0 12px 0; font-weight: 900;">${data.is_revoked ? 'RSVP Cancelled / Seat Reallocated' : 'Top 78 Qualification in Progress'}</h2>
+                        <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.6; margin-bottom: 20px;">
+                            ${data.message || 'Tickets for the Year-End Camp: Black Elegance are awarded exclusively to the top 78 Peer Educators based on accumulated volunteer hours up to the closure date (28 September 2026).'}
+                        </p>
+
+                        <div style="background: #141520; border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 10px; padding: 16px; text-align: left; margin-bottom: 18px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; font-size: 0.82rem; color: #cbd5e1;">
+                                <div><strong style="color: #ffffff;">Dates:</strong> 17 – 18 October 2026</div>
+                                <div><strong style="color: #ffffff;">Theme:</strong> Black Elegance</div>
+                                <div><strong style="color: #ffffff;">Venue:</strong> TBA (To be confirmed)</div>
+                                <div><strong style="color: #ffffff;">Capacity:</strong> 78 Peer Educators</div>
+                            </div>
+                        </div>
+
+                        <p style="font-size: 0.8rem; color: #64748b; margin: 0;">
+                            Monday, 28 September 2026 marks the final closing of hours accumulation. Thank you for your dedicated service this year.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const t = data.ticket;
+
+            const statusBadge = t.is_scanned 
+                ? `<span class="camp-status-badge scanned">Checked-In (${t.scanned_at || 'Verified'})</span>`
+                : `<span class="camp-status-badge">Confirmed Delegate (#${t.cohort_rank} of 78)</span>`;
+
+            mainContent.innerHTML = `
+                <!-- STAGE 1: 3D ENVELOPE INVITATION -->
+                <div id="campEnvelopeStage">
+                    <div class="header-section" style="text-align: center; margin-bottom: 16px;">
+                        <h1 style="color: #0f172a; font-size: 1.5rem; font-weight: 900; margin-bottom: 4px;">Peer Education Year-End Camp 2026</h1>
+                        <p style="color: #b45309; font-weight: 700; font-size: 0.95rem; margin: 0;">You have received a VIP invitation</p>
+                    </div>
+
+                    <div class="real-envelope-wrapper" id="campEnvelopeWrapper" onclick="window.openCampEnvelope()">
+                        <div class="real-envelope" id="campRealEnvelope">
+                            <!-- Interior Back Lining -->
+                            <div class="envelope-back">
+                                <div class="envelope-interior-pattern"></div>
+                            </div>
+
+                            <!-- Letter Inside Pocket -->
+                            <div class="envelope-letter" id="envelopeLetter">
+                                <div class="letter-gold-badge">VIP INVITATION</div>
+                                <div class="letter-title">Year-End Camp 2026: Black Elegance</div>
+                                <div class="letter-addressed-to">Presented to:</div>
+                                <div class="letter-name">${t.attendee_name}</div>
+                                <div class="letter-rank">Rank #${t.cohort_rank} • ${t.campus} Campus</div>
+                            </div>
+
+                            <!-- Left Flap Fold -->
+                            <div class="envelope-flap flap-left"></div>
+
+                            <!-- Right Flap Fold -->
+                            <div class="envelope-flap flap-right"></div>
+
+                            <!-- Bottom Flap Fold with Front Plaque -->
+                            <div class="envelope-flap flap-bottom">
+                                <div class="envelope-front-plaque">
+                                    <div class="plaque-sub">Exclusively Addressed To</div>
+                                    <div class="plaque-name">${t.attendee_name}</div>
+                                    <div class="plaque-tag">Top 78 Qualifier • ${t.campus} Campus</div>
+                                </div>
+                            </div>
+
+                            <!-- Top Triangular Flap Fold -->
+                            <div class="envelope-flap flap-top" id="envelopeTopFlap">
+                                <div class="flap-top-crest">PE</div>
+                            </div>
+
+                            <!-- 3D Wax Seal on Seam -->
+                            <div class="envelope-wax-seal" id="envelopeWaxSeal">
+                                <div class="wax-seal-inner">CSHAW</div>
+                            </div>
+                        </div>
+
+                        <div class="envelope-hint">
+                            Tap or Click Seal to Open Invitation
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STAGE 2: UNLOCKED TICKET & PASS CONTAINER -->
+                <div id="campTicketUnlockedContainer" style="display: none;">
+                    <div class="camp-top-bar">
+                        <button class="camp-btn-envelope" onclick="window.replayCampEnvelope()">
+                            Envelope View
+                        </button>
+                        ${statusBadge}
+                    </div>
+
+                    <!-- Tab Switcher -->
+                    <div class="camp-tab-switcher">
+                        <button id="btnTabCampPass" class="camp-tab-btn active" onclick="window.toggleCampTicketView('pass')">
+                            Delegate Pass
+                        </button>
+                        <button id="btnTabCampCert" class="camp-tab-btn" onclick="window.toggleCampTicketView('cert')">
+                            Contribution Record
+                        </button>
+                    </div>
+
+                    <div style="max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+
+                        <!-- VIEW 1: VIP CAMP PASS -->
+                        <div id="campViewPass" class="camp-ticket-card">
+                            <div class="camp-header-ribbon"></div>
+                            
+                            <!-- Header -->
+                            <div class="camp-header-flex">
+                                <div>
+                                    <span class="camp-theme-badge">THEME: ${t.event_theme}</span>
+                                    <h2 style="margin: 6px 0 0 0; font-size: 1.35rem; font-weight: 900; color: #ffffff; letter-spacing: -0.3px;">${t.event_title}</h2>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="camp-rank-tag">RANK #${t.cohort_rank} OF 78</div>
+                                </div>
+                            </div>
+
+                            <!-- Body Compact -->
+                            <div class="camp-body-compact">
+                                
+                                <!-- 3-Column Stats Strip -->
+                                <div class="camp-metrics-strip">
+                                    <div class="camp-metric-card">
+                                        <div class="camp-metric-val">${t.locked_hours} hrs</div>
+                                        <div class="camp-metric-lbl">Verified Hours</div>
+                                    </div>
+                                    <div class="camp-metric-card">
+                                        <div class="camp-metric-val" style="font-size: 0.95rem; color: #38bdf8;">${t.honor_title}</div>
+                                        <div class="camp-metric-lbl">Peer Educator Standing</div>
+                                    </div>
+                                    <div class="camp-metric-card">
+                                        <div class="camp-metric-val" style="font-size: 0.92rem; color: #4ade80;">${t.lms_modules_summary}</div>
+                                        <div class="camp-metric-lbl">Learning Hub Curriculum</div>
+                                    </div>
+                                </div>
+
+                                <!-- Logistics Strip -->
+                                <div class="camp-logistics-bar">
+                                    <div class="camp-log-item">
+                                        <strong>Event Dates</strong>
+                                        <span>${t.event_dates}</span>
+                                    </div>
+                                    <div class="camp-log-item">
+                                        <strong>Venue</strong>
+                                        <span>${t.event_venue}</span>
+                                    </div>
+                                    <div class="camp-log-item">
+                                        <strong>Attire</strong>
+                                        <span>Black Elegance</span>
+                                    </div>
+                                </div>
+
+                                <!-- Boarding Row -->
+                                <div class="camp-boarding-row">
+                                    <div class="camp-delegate-meta">
+                                        <div class="camp-del-name">${t.attendee_name}</div>
+                                        <div class="camp-del-sub">${t.campus} Campus • Confirmed Attendee</div>
+                                        <div class="camp-del-drives"><strong>Campus Activations:</strong> ${t.major_drives_summary}</div>
+                                    </div>
+
+                                    <div class="camp-boarding-qr">
+                                        ${t.qr_url ? `
+                                            <img src="${t.qr_url}" alt="Camp Ticket QR" class="camp-qr-thumb">
+                                        ` : `
+                                            <div style="width: 90px; height: 90px; background: #ffffff; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #0a0a0c; font-size: 0.72rem; font-weight: 700;">
+                                                QR Ready
+                                            </div>
+                                        `}
+                                        <div class="camp-pin-badge">#${t.fallback_pin}</div>
+                                        <div style="font-size: 0.65rem; color: #64748b; margin-top: 4px;">Departure Entry PIN</div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Footer Actions & Integrated Policy -->
+                            <div class="camp-actions-footer">
+                                <div class="camp-policy-note">
+                                    <strong>Attendance Policy:</strong> Qualified delegates are confirmed automatically. If you are unable to attend, please cancel your RSVP before <strong>${t.rsvp_deadline}</strong> so your seat can be reallocated to the next qualifying Peer Educator. Camp T-shirt distribution and departure details will be shared via campus channels.
+                                </div>
+                                <div class="camp-btns-row">
+                                    <button class="camp-btn-cancel" onclick="window.cancelMyCampTicketRSVP(${t.id}, ${t.cohort_rank})">
+                                        Cancel RSVP / Release Seat
+                                    </button>
+                                    <button class="camp-btn-print" onclick="window.print()">
+                                        Print Pass
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- VIEW 2: PE HUB & IMPACT RECORD / KEEPSAKE -->
+                        <div id="campViewCert" class="camp-cert-wrapper" style="display: none;">
+                            <div style="position: absolute; top: 14px; right: 18px; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #d4af37; font-weight: 700;">
+                                RECORD ID: CSHAW-2026-PE#${t.cohort_rank}
+                            </div>
+
+                            <div style="font-size: 0.8rem; font-weight: 900; letter-spacing: 2.5px; color: #d4af37; text-transform: uppercase; margin-top: 6px;">
+                                C-SHAW PEER EDUCATION HUB
+                            </div>
+                            <h2 style="font-size: 1.5rem; font-weight: 900; color: #ffffff; margin: 6px 0 2px 0; letter-spacing: -0.3px;">
+                                ANNUAL IMPACT & CONTRIBUTION RECORD
+                            </h2>
+                            <p style="color: #94a3b8; font-size: 0.85rem; font-style: italic; margin: 0 0 16px 0;">
+                                Celebrating the dedication and active community impact of
+                            </p>
+
+                            <div style="font-size: 1.5rem; font-weight: 900; color: #f59e0b; text-decoration: underline; text-underline-offset: 6px; margin-bottom: 8px;">
+                                ${t.attendee_name}
+                            </div>
+
+                            <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 18px;">
+                                Has achieved standing as a <span style="color: #fcd34d;">${t.honor_title}</span>
+                                <br><span style="font-size: 0.82rem; color: #94a3b8;">${t.campus ? t.campus + ' Campus • ' : ''}Class of 2026</span>
+                            </div>
+
+                            <!-- Stats Pill Container -->
+                            <div style="max-width: 520px; margin: 0 auto 20px auto; background: rgba(0,0,0,0.5); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 10px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 1.2rem; font-weight: 900; color: #f59e0b;">${t.locked_hours}</div>
+                                    <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Verified Hours</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.2rem; font-weight: 900; color: #38bdf8;">#${t.cohort_rank}</div>
+                                    <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Cohort Rank</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 1.2rem; font-weight: 900; color: #4ade80;">100%</div>
+                                    <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Hub Modules</div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-around; align-items: flex-end; max-width: 480px; margin: 0 auto 10px auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+                                <div style="text-align: center;">
+                                    <div style="font-family: 'Brush Script MT', cursive; font-size: 1.3rem; color: #d4af37;">C-SHAW Executive</div>
+                                    <div style="font-size: 0.72rem; color: #94a3b8; border-top: 1px solid #d4af37; padding-top: 3px; margin-top: 3px;">Executive Coordinator</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 900; color: #d4af37; letter-spacing: 1px;">PE 2026</div>
+                                    <div style="font-size: 0.65rem; color: #d4af37; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Impact Seal</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-family: 'Brush Script MT', cursive; font-size: 1.3rem; color: #d4af37;">Peer Education Board</div>
+                                    <div style="font-size: 0.72rem; color: #94a3b8; border-top: 1px solid #d4af37; padding-top: 3px; margin-top: 3px;">Academic Year 2026</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 14px; padding: 10px 14px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(212, 175, 55, 0.3); border-radius: 8px; font-size: 0.72rem; color: #94a3b8; line-height: 1.45;">
+                                <strong style="color: #d4af37;">Disclaimer:</strong> This record is an impact and contribution summary recognizing your active participation and service on the C-SHAW Peer Education Hub. It is not an official academic certificate or accredited qualification.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+
+        } catch (err) {
+            console.error('Camp ticket error:', err);
+            mainContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    Failed to load camp ticket information. Please try again.
+                </div>
+            `;
+        }
+    }
 
     renderActivities();
 });

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import excursion_views
+from . import camp_views
 from django.views.generic import TemplateView
 
 urlpatterns = [
@@ -49,6 +50,15 @@ urlpatterns = [
     path('api/excursions/reset/', excursion_views.ResetTicketsAPIView.as_view(), name='reset-tickets'),
     path('api/excursions/export-manifest-pdf/', excursion_views.export_excursion_manifest_pdf, name='export-manifest-pdf'),
     path('api/excursions/allocate-hours/', excursion_views.AllocateExcursionHoursAPIView.as_view(), name='allocate-excursion-hours'),
+    
+    # Year-End Camp: Black Elegance (78 Seats) Endpoints
+    path('api/camp/my-ticket/', camp_views.MyCampTicketAPIView.as_view(), name='my-camp-ticket'),
+    path('api/camp/generate/', camp_views.GenerateCampTicketsAPIView.as_view(), name='generate-camp-tickets'),
+    path('api/camp/cancel-rsvp/', camp_views.CancelCampRsvpAPIView.as_view(), name='cancel-camp-rsvp'),
+    path('api/camp/confirm/', camp_views.ConfirmCampAttendanceAPIView.as_view(), name='confirm-camp-attendance'),
+    path('api/camp/validate/', camp_views.ValidateCampTicketAPIView.as_view(), name='validate-camp-ticket'),
+    path('api/camp/reset/', camp_views.ResetCampTicketsAPIView.as_view(), name='reset-camp-tickets'),
+    path('api/camp/export-manifest-pdf/', camp_views.export_camp_manifest_pdf, name='export-camp-manifest-pdf'),
     
     path('api/allocate-manual-hours/', views.ManualHoursAllocationAPIView.as_view(), name='api-allocate-manual-hours'),
 

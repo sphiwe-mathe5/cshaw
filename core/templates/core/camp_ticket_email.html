@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Pass: Peer Education Year-End Camp 2026 — Black Elegance</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #050507;
+            margin: 0;
+            padding: 30px 12px;
+            color: #f1f5f9;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        /* VIP Invitation & Boarding Pass Card */
+        .invitation-card {
+            background: linear-gradient(145deg, #0e0f14 0%, #15161f 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7);
+            border: 1.5px solid #d4af37;
+            text-align: center;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #0a0a0c 0%, #1c180f 50%, #291e0a 100%);
+            padding: 32px 24px 24px 24px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+        }
+
+        .crown-icon {
+            font-size: 42px;
+            margin-bottom: 6px;
+            display: inline-block;
+            filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.45));
+        }
+
+        .kicker {
+            color: #d4af37;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .title {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .title span {
+            color: #f59e0b;
+        }
+
+        .rank-pill {
+            background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            color: #0a0a0c;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35);
+        }
+
+        .card-body {
+            padding: 28px 24px 24px 24px;
+        }
+
+        .greeting-text {
+            color: #cbd5e1;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0 0 20px 0;
+        }
+
+        /* Event Quick Details */
+        .event-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 22px;
+            text-align: left;
+        }
+
+        /* QR & Departure Entry PIN Box */
+        .qr-card {
+            background: #08080a;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 16px;
+            padding: 22px;
+            text-align: center;
+            margin: 20px 0 22px 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .qr-img {
+            max-width: 170px;
+            height: auto;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 8px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+            display: inline-block;
+        }
+
+        .pin-label {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 14px;
+        }
+
+        .pin-display {
+            font-family: 'Courier New', monospace;
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 5px;
+            color: #0a0a0c;
+            background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+            padding: 6px 18px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 6px;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+        }
+
+        /* What's Waiting Teaser */
+        .teaser-box {
+            background: linear-gradient(145deg, #12141c 0%, #191b26 100%);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .teaser-heading {
+            color: #d4af37;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .teaser-item {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            line-height: 1.45;
+        }
+        .teaser-item:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Call To Action */
+        .cta-container {
+            margin: 24px 0 10px 0;
+        }
+
+        .cta-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            color: #0a0a0c !important;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            display: inline-block;
+            box-shadow: 0 6px 22px rgba(212, 175, 55, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .rsvp-note {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.5;
+            margin-top: 16px;
+            padding: 0 10px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+            padding: 20px 0 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        
+        <div class="invitation-card">
+            
+            <!-- Card Header -->
+            <div class="card-header">
+                <div class="crown-icon">👑</div>
+                <div class="kicker">Official VIP Pass & Invitation</div>
+                <h1 class="title">Year-End Camp 2026: <span>Black Elegance</span></h1>
+                <div class="rank-pill">Rank #{{ cohort_rank }} Qualifier</div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+                <p class="greeting-text">
+                    Dear <strong>{{ first_name }}</strong>,<br>
+                    Congratulations! Your verified dedication and active volunteering throughout 2026 have earned you one of the exclusive <strong>Top 78 seats</strong> for this year’s prestigious Year-End Camp.
+                </p>
+
+                <!-- Quick Logistics -->
+                <div class="event-box">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13px;">
+                        <tr>
+                            <td align="left" style="color: #94a3b8; font-weight: 600;">Event:</td>
+                            <td align="right" style="color: #ffffff; font-weight: 700;">{{ event_title }}</td>
+                        </tr>
+                        <tr>
+                            <td align="left" style="color: #94a3b8; font-weight: 600;">Theme:</td>
+                            <td align="right" style="color: #fcd34d; font-weight: 800;">✨ {{ event_theme }}</td>
+                        </tr>
+                        <tr>
+                            <td align="left" style="color: #94a3b8; font-weight: 600;">Dates:</td>
+                            <td align="right" style="color: #ffffff; font-weight: 700;">📅 {{ event_dates }}</td>
+                        </tr>
+                        <tr>
+                            <td align="left" style="color: #94a3b8; font-weight: 600;">Venue:</td>
+                            <td align="right" style="color: #ffffff; font-weight: 700;">📍 {{ event_venue }}</td>
+                        </tr>
+                        <tr>
+                            <td align="left" style="color: #94a3b8; font-weight: 600;">Delegate:</td>
+                            <td align="right" style="color: #ffffff; font-weight: 700;">{{ attendee_name }} ({{ campus }})</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- QR Code & Entry PIN Block -->
+                <div class="qr-card">
+                    {% if qr_url %}
+                    <div>
+                        <img src="{{ qr_url }}" alt="Camp Pass QR Code" class="qr-img">
+                    </div>
+                    {% endif %}
+                    <div class="pin-label">Official Boarding & Check-In PIN</div>
+                    <div class="pin-display">#{{ pin }}</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+                        Present this QR Code or 6-digit PIN to coordinators at departure check-in.
+                    </div>
+                </div>
+
+                <!-- Teaser Section for Fun Stuff on Portal -->
+                <div class="teaser-box">
+                    <div class="teaser-heading">✨ Experience More on the Student Portal</div>
+                    <div class="teaser-item">✉️ <strong>Interactive VIP Envelope</strong> — Open your personalized envelope with live unboxing animation & confetti.</div>
+                    <div class="teaser-item">📊 <strong>Annual Impact Record</strong> — Explore your full 2026 volunteer journey, hub modules mastered, and major campus drives.</div>
+                    <div class="teaser-item">🏆 <strong>Distinction & Honors</strong> — View your cohort honor standing and peer leadership recognition.</div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="cta-container">
+                    <a href="https://cshaw.co.za/" class="cta-btn">
+                        Open Interactive Envelope & Experience →
+                    </a>
+                </div>
+
+                <p class="rsvp-note">
+                    Your ticket confirms your attendance automatically.<br>
+                    If you are unable to attend, please open the portal to <strong>cancel your RSVP by {{ rsvp_deadline }}</strong> so your seat can be offered to the next Peer Educator on the leaderboard.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Access your interactive pass and contribution record anytime from the C-SHAW Hub under <strong>Camp Ticket</strong>.</p>
+            <p>© 2026 C-SHAW • Community Service & Health Awareness Hub</p>
+        </div>
+
+    </div>
+</body>
+</html>

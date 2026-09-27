@@ -17,6 +17,7 @@ class CustomUserAdmin(admin.ModelAdmin):
         'campus', 
         'id_type',
         'id_number',
+        'is_camp_eligible',
         'popia_consent',
         'volunteer_status',
         'gender',
@@ -28,7 +29,7 @@ class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ('email', 'first_name', 'last_name', 'id_number')
 
     # 3. ADD SIDEBAR FILTERS (Filter by these categories)
-    list_filter = ('role', 'campus', 'id_type', 'popia_consent', 'can_manage_attendance', 'volunteer_status', 'is_active')
+    list_filter = ('role', 'is_camp_eligible', 'campus', 'id_type', 'popia_consent', 'can_manage_attendance', 'volunteer_status', 'is_active')
 
     # 4. ORGANIZE THE DETAIL VIEW INTO SECTIONS
     fieldsets = (
@@ -42,7 +43,7 @@ class CustomUserAdmin(admin.ModelAdmin):
             'fields': ('gender', 'tshirt_size', 'volunteer_status')
         }),
         ('Roles & Campus', {
-            'fields': ('role', 'campus', 'executive_position', 'can_manage_attendance')
+            'fields': ('role', 'campus', 'executive_position', 'can_manage_attendance', 'is_camp_eligible')
         }),
         ('Bonus Hours & Gamification', {
             'fields': ('manual_bonus_hours', 'recruited_by', 'awards')

@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.template.loader import render_to_string
-from .models import ExcursionTicket, ExcursionLeaderboardSnapshot
+from .models import ExcursionTicket, ExcursionLeaderboardSnapshot, CampTicket, CampLeaderboardSnapshot
 from .audit import log_audit_event
 from users.services import BackgroundEmailService
 from django.http import HttpResponseForbidden
@@ -194,14 +194,47 @@ class ValidateTicketAPIView(APIView):
         fallback_pin = request.data.get('fallback_pin')
         
         ticket = None
+        is_camp = False
         if ticket_uuid:
             ticket = ExcursionTicket.objects.filter(ticket_uuid=ticket_uuid).first()
         elif fallback_pin:
             ticket = ExcursionTicket.objects.filter(fallback_pin=fallback_pin).first()
             
         if not ticket:
+            # Check CampTicket (Black Elegance)
+            clean_uuid = str(ticket_uuid).replace('CAMP:', '').strip() if ticket_uuid else None
+            if clean_uuid:
+                try:
+                    parsed_u = uuid.UUID(clean_uuid)
+                    ticket = CampTicket.objects.select_related('user').filter(ticket_uuid=parsed_u).first()
+                except (ValueError, AttributeError):
+                    pass
+            elif fallback_pin:
+                clean_pin = str(fallback_pin).replace('#', '').strip()
+                ticket = CampTicket.objects.select_related('user').filter(fallback_pin=clean_pin).first()
+            if ticket:
+                is_camp = True
+                
+        if not ticket:
             logger.warning("Ticket validation failed: ticket not found (PIN: %s, UUID: %s) scanned by %s", fallback_pin, ticket_uuid, request.user.email)
             return Response({'error': 'Ticket not found.', 'status': 'error'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if is_camp:
+            if ticket.status == 'revoked':
+                return Response({'error': 'This Camp ticket was cancelled/revoked.', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
+            if ticket.is_scanned:
+                return Response({'error': f'Already Scanned ({ticket.scanned_at.strftime("%H:%M") if ticket.scanned_at else "earlier"})', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
+            ticket.is_scanned = True
+            ticket.scanned_at = timezone.now()
+            ticket.save(update_fields=['is_scanned', 'scanned_at'])
+            return Response({
+                'message': f'👑 Valid Camp Pass - Welcome {ticket.user.first_name} {ticket.user.last_name} to Black Elegance! (Rank #{ticket.cohort_rank})',
+                'status': 'success',
+                'student_name': f"{ticket.user.first_name} {ticket.user.last_name}".strip(),
+                'email': ticket.user.email,
+                'scanned_count': CampTicket.objects.filter(status__in=['active', 'confirmed'], is_scanned=True).count(),
+                'seats_filled': CampTicket.objects.filter(status__in=['active', 'confirmed']).count()
+            }, status=status.HTTP_200_OK)
             
         if ticket.status == 'revoked':
             logger.warning("Ticket validation failed: ticket %s is revoked", ticket.id)
@@ -437,13 +470,28 @@ def scanner_dashboard_view(request):
     seats_filled = active_tickets.count()
     scanned_count = active_tickets.filter(is_scanned=True).count()
     pending_count = seats_filled - scanned_count
+
+    active_camp_tickets = CampTicket.objects.filter(status__in=['active', 'confirmed']).select_related('user').order_by('cohort_rank')
+    camp_has_locked_snapshot = CampLeaderboardSnapshot.objects.exists()
+    camp_seats_filled = active_camp_tickets.count()
+    camp_scanned_count = active_camp_tickets.filter(is_scanned=True).count()
+    camp_pending_count = camp_seats_filled - camp_scanned_count
+
     context = {
         'active_tickets': active_tickets,
         'seats_filled': seats_filled,
         'scanned_count': scanned_count,
         'pending_count': pending_count,
         'max_seats': 68,
-        'has_locked_snapshot': has_locked_snapshot
+        'has_locked_snapshot': has_locked_snapshot,
+
+        # Camp 2026: Black Elegance (78 Seats)
+        'active_camp_tickets': active_camp_tickets,
+        'camp_seats_filled': camp_seats_filled,
+        'camp_scanned_count': camp_scanned_count,
+        'camp_pending_count': camp_pending_count,
+        'camp_max_seats': 78,
+        'camp_has_locked_snapshot': camp_has_locked_snapshot,
     }
     return render(request, 'core/scanner_dashboard.html', context)
 

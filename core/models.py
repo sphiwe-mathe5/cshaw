@@ -169,6 +169,47 @@ class ExcursionTicket(models.Model):
         return f"Ticket {self.fallback_pin} for {self.user.email} - {self.status}"
 
 
+class CampLeaderboardSnapshot(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='camp_snapshots')
+    locked_hours = models.FloatField(default=0.0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-locked_hours', 'created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - Camp Locked Hours: {self.locked_hours}"
+
+
+class CampTicket(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('revoked', 'Revoked'),
+        ('confirmed', 'Confirmed'),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='camp_tickets')
+    ticket_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    fallback_pin = models.CharField(max_length=8, unique=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='active')
+    locked_hours = models.FloatField(default=0.0, help_text="Hours locked at camp ticket generation (cutoff 28 Sept 2026)")
+    lms_modules_summary = models.CharField(max_length=255, default="All Core Modules Completed", help_text="Summary of LMS modules mastered")
+    drives_attended_count = models.PositiveIntegerField(default=0, help_text="Number of major volunteer drives attended")
+    major_drives_summary = models.TextField(blank=True, default="", help_text="Titles of notable drives attended")
+    cohort_rank = models.PositiveIntegerField(default=1, help_text="Leaderboard rank among the 78 qualifiers")
+    honor_title = models.CharField(max_length=100, default="Certified Peer Educator", help_text="Honor title (e.g. Senior Peer Educator)")
+    tshirt_size = models.CharField(max_length=10, blank=True, null=True, help_text="Confirmed T-Shirt size")
+    qr_code = models.ImageField(storage=GoogleCloudMediaFileStorage(), upload_to=secure_qr_path, blank=True, null=True)
+    is_scanned = models.BooleanField(default=False)
+    scanned_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['cohort_rank', '-locked_hours']
+
+    def __str__(self):
+        return f"Camp Ticket #{self.fallback_pin} (Rank #{self.cohort_rank}) - {self.user.email} [{self.status}]"
+
+
 class AuditLog(models.Model):
     """
     Lightweight audit log model for recording critical business state transitions,

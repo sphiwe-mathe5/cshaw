@@ -192,8 +192,8 @@
                 <div>
                     <div class="stat-label">Checked-In Volunteers</div>
                     <div class="stat-value" style="color: #16a34a;">
-                        <span id="stat-scanned-count">{{ scanned_count }}</span>
-                        <span style="font-size: 16px; color: #94a3b8; font-weight: 600;">/ {{ seats_filled }}</span>
+                        <span id="stat-scanned-count">{{ camp_scanned_count }}</span>
+                        <span style="font-size: 16px; color: #94a3b8; font-weight: 600;">/ <span id="stat-total-seats">{{ camp_seats_filled }}</span></span>
                     </div>
                 </div>
                 <div class="stat-icon" style="background: #f0fdf4; color: #16a34a;">
@@ -208,12 +208,12 @@
                 <div>
                     <div class="stat-label">Pending Check-In</div>
                     <div class="stat-value" style="color: #d97706;">
-                        <span id="stat-pending-count">{{ pending_count }}</span>
+                        <span id="stat-pending-count">{{ camp_pending_count }}</span>
                         <span style="font-size: 15px; color: #94a3b8; font-weight: 600;">remaining</span>
                     </div>
                 </div>
                 <div class="stat-icon" style="background: #fffbeb; color: #d97706;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
@@ -224,12 +224,12 @@
                 <div>
                     <div class="stat-label">Seats Allocated</div>
                     <div class="stat-value" style="color: #E35205;">
-                        <span id="stat-seats-filled">{{ seats_filled }}</span>
-                        <span style="font-size: 16px; color: #94a3b8; font-weight: 600;">/ {{ max_seats }}</span>
+                        <span id="stat-seats-filled">{{ camp_seats_filled }}</span>
+                        <span style="font-size: 16px; color: #94a3b8; font-weight: 600;">/ <span id="stat-max-seats">{{ camp_max_seats }}</span></span>
                     </div>
                 </div>
                 <div class="stat-icon" style="background: #fff7ed; color: #E35205;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -241,42 +241,133 @@
 
         <!-- SECTION A: TICKET LAUNCHPAD (Coordinator Only) -->
         {% if user.role == 'COORDINATOR' %}
-        <div class="card">
+        <!-- EVENT TABS -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button id="tabBtnCamp" onclick="switchScannerTab('camp')" style="padding: 10px 20px; border-radius: 10px; font-weight: 800; font-size: 14px; cursor: pointer; border: 1.5px solid #d4af37; background: #0a0a0c; color: #f59e0b; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                <span>👑</span> Year-End Camp: Black Elegance (78 Seats)
+            </button>
+            <button id="tabBtnHike" onclick="switchScannerTab('hike')" style="padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: 1px solid #cbd5e1; background: white; color: #64748b; display: inline-flex; align-items: center; gap: 8px;">
+                <span>📁</span> Empowerment Hike (Archived)
+            </button>
+        </div>
+
+        <!-- 1. YEAR-END CAMP LAUNCHPAD -->
+        <div id="panel-camp" class="card" style="border-top: 4px solid #d4af37;">
             <div class="header">
-                <h2>Ticket Launchpad</h2>
+                <div>
+                    <h2 style="display: flex; align-items: center; gap: 8px; margin: 0 0 4px 0;">
+                        <span>👑</span> Year-End Camp 2026: Black Elegance
+                    </h2>
+                    <p style="margin: 0; font-size: 13px; color: #64748b;">17 – 18 October 2026 • 78 Peer Educators Qualification Cap</p>
+                </div>
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    {% if has_locked_snapshot %}
-                        <span style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                    {% if camp_has_locked_snapshot %}
+                        <span style="background: #fefce8; color: #854d0e; border: 1px solid #fef08a; padding: 5px 12px; border-radius: 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                            Leaderboard Locked
+                            Camp Hours Locked (28 Sept Closure)
                         </span>
                     {% endif %}
-                    <div class="seats-counter">Seats Filled: <span id="header-seats-filled">{{ seats_filled }}</span> / {{ max_seats }}</div>
+                    <div class="seats-counter" style="background: #0a0a0c; color: #f59e0b; border: 1px solid #d4af37;">Seats Filled: <span id="camp-seats-filled">{{ camp_seats_filled }}</span> / {{ camp_max_seats }}</div>
                 </div>
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button id="allocateHoursBtn" onclick="allocateExcursionHours()" style="padding: 10px 18px; background: #16a34a; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25); transition: 0.2s;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    Allocate Hours to Scanned Attendees
+                <button id="resetCampBtn" class="btn-danger" onclick="resetCampTickets()" style="padding: 10px 16px; font-size: 13px;">
+                    Reset Camp Tickets
                 </button>
+                <a href="/api/camp/export-manifest-pdf/" class="btn-primary" style="text-decoration: none; background: white; color: #1e293b; border: 1.5px solid #cbd5e1; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" target="_blank">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Download Camp Manifest (PDF)
+                </a>
+                <button id="generateCampBtn" class="btn-primary" style="background: linear-gradient(135deg, #0a0a0c 0%, #261c0a 100%); color: #f59e0b; border: 1.5px solid #d4af37; font-weight: 800;" onclick="generateCampTickets()">👑 Generate & Fill 78 Camp Seats</button>
+            </div>
+            
+            <h3>Qualified Peer Educators (Top 78)</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th>Campus</th>
+                            <th>Locked Hours</th>
+                            <th>PIN</th>
+                            <th>Status</th>
+                            <th>Check-In</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in active_camp_tickets %}
+                        <tr id="camp-row-{{ ticket.id }}">
+                            <td><strong>#{{ ticket.cohort_rank }}</strong></td>
+                            <td>{{ ticket.user.first_name }} {{ ticket.user.last_name }}</td>
+                            <td>{{ ticket.user.email }}</td>
+                            <td>{{ ticket.user.campus|default:"-" }}</td>
+                            <td><strong>{{ ticket.locked_hours|floatformat:"1" }}</strong> hrs</td>
+                            <td><code style="font-weight: 800; color: #d4af37; background: #0a0a0c; padding: 2px 6px; border-radius: 4px;">#{{ ticket.fallback_pin }}</code></td>
+                            <td>
+                                {% if ticket.status == 'confirmed' %}
+                                    <span style="background: #fefce8; color: #854d0e; border: 1px solid #fef08a; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 11px;">Confirmed</span>
+                                {% else %}
+                                    <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 11px;">Active</span>
+                                {% endif %}
+                            </td>
+                            <td id="camp-status-{{ ticket.id }}">
+                                {% if ticket.is_scanned %}
+                                    <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 11px;">✓ Scanned</span>
+                                {% else %}
+                                    <span style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 11px;">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="revokeCampTicket('{{ ticket.id }}')">Cancel RSVP</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 30px; color: #999;">No camp tickets generated yet. Click "Generate & Fill 78 Camp Seats" above!</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. HIKE LAUNCHPAD (ARCHIVE) -->
+        <div id="panel-hike" class="card" style="display: none; border-top: 4px solid #94a3b8;">
+            <div class="header">
+                <div>
+                    <h2 style="margin: 0 0 4px 0;">Empowerment Hike (68 Seats)</h2>
+                    <p style="margin: 0; font-size: 13px; color: #64748b;">Event Date: 28 August 2026 • Concluded</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 12px; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Event Concluded & Archived
+                    </span>
+                    <div class="seats-counter" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">Seats Filled: <span id="header-seats-filled">{{ seats_filled }}</span> / {{ max_seats }}</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
                 <a href="/api/excursions/export-manifest-pdf/" class="btn-primary" style="text-decoration: none; background: white; color: #1e293b; border: 1.5px solid #cbd5e1; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" target="_blank">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E35205" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Download Excursion Manifest (PDF)
                 </a>
-                <button id="generateBtn" class="btn-primary" onclick="generateTickets()">Generate & Fill Empty Seats</button>
             </div>
             
-            <h3>Current Ticket Holders</h3>
+            <h3>Archived Ticket Holders</h3>
             <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
                             <th>Student</th>
                             <th>Email</th>
+                            <th>Campus</th>
                             <th>Locked Hours</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -284,16 +375,14 @@
                         <tr id="ticket-row-{{ ticket.id }}">
                             <td>{{ ticket.user.first_name }} {{ ticket.user.last_name }}</td>
                             <td>{{ ticket.user.email }}</td>
+                            <td>{{ ticket.user.campus|default:"-" }}</td>
                             <td><strong>{{ ticket.locked_hours|floatformat:"1" }}</strong> hrs</td>
                             <td id="ticket-status-{{ ticket.id }}">
                                 {% if ticket.is_scanned %}
-                                    <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">Scanned</span>
+                                    <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">✓ Scanned & Attended</span>
                                 {% else %}
-                                    <span style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">Pending</span>
+                                    <span style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 12px;">Absent / Unused</span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <button class="btn-danger" onclick="revokeTicket('{{ ticket.id }}')">Cancel RSVP</button>
                             </td>
                         </tr>
                         {% empty %}
@@ -345,6 +434,134 @@
                 }
             }
             return cookieValue || csrfToken;
+        }
+
+        const statsData = {
+            camp: {
+                scanned: {{ camp_scanned_count }},
+                pending: {{ camp_pending_count }},
+                filled: {{ camp_seats_filled }},
+                max: {{ camp_max_seats }}
+            },
+            hike: {
+                scanned: {{ scanned_count }},
+                pending: {{ pending_count }},
+                filled: {{ seats_filled }},
+                max: {{ max_seats }}
+            }
+        };
+
+        let currentActiveTab = 'camp';
+
+        function updateTopStats(tab) {
+            const d = statsData[tab] || statsData.camp;
+            const scannedEl = document.getElementById('stat-scanned-count');
+            const pendingEl = document.getElementById('stat-pending-count');
+            const seatsEl = document.getElementById('stat-seats-filled');
+            const totalSeatsEl = document.getElementById('stat-total-seats');
+            const maxSeatsEl = document.getElementById('stat-max-seats');
+
+            if (scannedEl) scannedEl.innerText = d.scanned;
+            if (pendingEl) pendingEl.innerText = d.pending;
+            if (seatsEl) seatsEl.innerText = d.filled;
+            if (totalSeatsEl) totalSeatsEl.innerText = d.filled;
+            if (maxSeatsEl) maxSeatsEl.innerText = d.max;
+        }
+
+        // --- Tab Switcher & Camp Actions --- //
+        function switchScannerTab(tab) {
+            currentActiveTab = tab;
+            updateTopStats(tab);
+            const pCamp = document.getElementById('panel-camp');
+            const pHike = document.getElementById('panel-hike');
+            const btnCamp = document.getElementById('tabBtnCamp');
+            const btnHike = document.getElementById('tabBtnHike');
+
+            if (tab === 'hike') {
+                if (pCamp) pCamp.style.display = 'none';
+                if (pHike) pHike.style.display = 'block';
+                if (btnCamp) {
+                    btnCamp.style.background = 'white';
+                    btnCamp.style.color = '#64748b';
+                    btnCamp.style.border = '1px solid #cbd5e1';
+                }
+                if (btnHike) {
+                    btnHike.style.background = '#1e293b';
+                    btnHike.style.color = 'white';
+                    btnHike.style.border = '1px solid #1e293b';
+                }
+            } else {
+                if (pCamp) pCamp.style.display = 'block';
+                if (pHike) pHike.style.display = 'none';
+                if (btnCamp) {
+                    btnCamp.style.background = '#0a0a0c';
+                    btnCamp.style.color = '#f59e0b';
+                    btnCamp.style.border = '1.5px solid #d4af37';
+                }
+                if (btnHike) {
+                    btnHike.style.background = 'white';
+                    btnHike.style.color = '#64748b';
+                    btnHike.style.border = '1px solid #cbd5e1';
+                }
+            }
+        }
+
+        async function generateCampTickets() {
+            const btn = document.getElementById('generateCampBtn');
+            btn.innerText = "👑 Issuing Camp Passes...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/camp/generate/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
+                });
+                const data = await res.json();
+                alert(data.message || "Camp tickets successfully generated!");
+                location.reload();
+            } catch (err) {
+                alert("Error generating camp tickets. Please try again.");
+                btn.innerText = "👑 Generate & Fill 78 Camp Seats";
+                btn.disabled = false;
+            }
+        }
+
+        async function resetCampTickets() {
+            if (!confirm("⚠️ WARNING: Are you sure you want to RESET all 2026 Year-End Camp tickets?\n\nThis will delete all 78 generated tickets and unlock hours.")) return;
+            const btn = document.getElementById('resetCampBtn');
+            btn.innerText = "Resetting...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/camp/reset/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
+                });
+                const data = await res.json();
+                alert(data.message || "Camp tickets reset.");
+                location.reload();
+            } catch (err) {
+                alert("Error resetting camp tickets.");
+                btn.innerText = "Reset Camp Tickets";
+                btn.disabled = false;
+            }
+        }
+
+        async function revokeCampTicket(ticketId) {
+            if (!confirm("Are you sure you want to cancel/revoke this camp ticket? The seat will be made available for the next Peer Educator on the leaderboard.")) return;
+
+            try {
+                const res = await fetch('/api/camp/cancel-rsvp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                    body: JSON.stringify({ ticket_id: ticketId })
+                });
+                const data = await res.json();
+                alert(data.message || "Ticket revoked.");
+                location.reload();
+            } catch (err) {
+                alert("Error revoking camp ticket.");
+            }
         }
 
         // --- Ticket Launchpad Actions --- //
@@ -513,13 +730,13 @@
 
                     // Live update the stats counters dynamically
                     if (data.scanned_count !== undefined) {
-                        const scannedEl = document.getElementById('stat-scanned-count');
-                        if (scannedEl) scannedEl.innerText = data.scanned_count;
-                        
-                        const pendingEl = document.getElementById('stat-pending-count');
-                        if (pendingEl && data.seats_filled !== undefined) {
-                            pendingEl.innerText = Math.max(0, data.seats_filled - data.scanned_count);
+                        const target = (data.message && data.message.includes('Camp')) ? 'camp' : currentActiveTab;
+                        statsData[target].scanned = data.scanned_count;
+                        if (data.seats_filled !== undefined) {
+                            statsData[target].filled = data.seats_filled;
                         }
+                        statsData[target].pending = Math.max(0, statsData[target].filled - data.scanned_count);
+                        updateTopStats(currentActiveTab);
                     }
 
                     // Update table row if present

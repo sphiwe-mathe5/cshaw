@@ -107,6 +107,11 @@ class User(AbstractUser):
         related_name='recruits'
     )
 
+    is_camp_eligible = models.BooleanField(
+        default=True, 
+        help_text="Designates whether this student is eligible to receive a Year-End Camp ticket."
+    )
+
     awards = models.ManyToManyField(Award, blank=True, related_name='winners')
 
     USERNAME_FIELD = 'email'
@@ -117,6 +122,15 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.is_camp_eligible and self.pk:
+            try:
+                from core.models import CampTicket
+                CampTicket.objects.filter(user=self, status__in=['active', 'confirmed']).update(status='revoked')
+            except Exception:
+                pass
 
     @property
     def is_executive(self):
