@@ -24,7 +24,7 @@ from django.db.models import Sum, Count, F, Case, When, Value, IntegerField
 from datetime import date, timedelta, datetime
 from users.services import BackgroundEmailService, send_new_event_email, send_signup_confirmation_email , send_series_event_email
 from django.db.models import Q
-from .reports import get_event_stats, get_comparative_stats, get_or_create_ai_insight, get_detailed_quarterly_stats
+from .reports import get_event_stats, get_comparative_stats, get_or_create_ai_insight, get_detailed_quarterly_stats, get_annual_report_data
 from django.db.models.functions import TruncQuarter
 from .utils import render_to_pdf
 from django.core.mail import EmailMessage
@@ -868,12 +868,22 @@ def event_report_view(request, pk):
 @api_view(['GET'])
 @permission_classes([IsAuthorizedExecutiveOrCoordinator])
 def quarterly_report_api_view(request):
-    year = int(request.query_params.get('year', timezone.now().year))
+    try:
+        year = int(request.query_params.get('year', timezone.now().year))
+    except (ValueError, TypeError):
+        year = timezone.now().year
     
-    # Use the new detailed function
-    report_data = get_detailed_quarterly_stats(year)
-        
-    return Response({"year": year, "data": report_data})
+    annual_data = get_annual_report_data(year)
+    return Response({
+        "year": year,
+        "data": annual_data['report_data'],
+        "kpis": annual_data['kpis'],
+        "campus_matrix": annual_data['campus_matrix'],
+        "lms_stats": annual_data['lms_stats'],
+        "honor_roll": annual_data['honor_roll'],
+        "demographics": annual_data['demographics'],
+        "feedback": annual_data['feedback']
+    })
 
 
 @api_view(['GET'])
@@ -882,27 +892,32 @@ def download_report_pdf(request, pk):
     """
     Generates and downloads the PDF directly.
     """
-    stats = get_event_stats(pk)
-    comparison = get_comparative_stats(pk)
-    activity = VolunteerActivity.objects.get(pk=pk)
-    
-    # Reuse the AI logic (fetch from DB or generate)
-    ai_analysis = get_or_create_ai_insight(activity, stats, comparison)
+    try:
+        stats = get_event_stats(pk)
+        comparison = get_comparative_stats(pk)
+        activity = VolunteerActivity.objects.get(pk=pk)
+        
+        # Reuse the AI logic (fetch from DB or generate)
+        ai_analysis = get_or_create_ai_insight(activity, stats, comparison)
 
-    data = {
-        'stats': stats,
-        'comparison': comparison,
-        'ai_analysis': ai_analysis
-    }
-    
-    pdf = render_to_pdf('core/pdf_report.html', data)
-    
-    if pdf:
-        response = HttpResponse(pdf, content_type='application/pdf')
-        filename = f"Report_{stats['title'].replace(' ', '_')}.pdf"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-    return Response({"error": "PDF Generation Error"}, status=500)
+        data = {
+            'stats': stats,
+            'comparison': comparison,
+            'ai_analysis': ai_analysis
+        }
+        
+        pdf = render_to_pdf('core/pdf_report.html', data)
+        
+        if pdf:
+            response = HttpResponse(pdf, content_type='application/pdf')
+            safe_title = str(stats.get('title', 'Event')).replace(' ', '_').replace('/', '_')
+            response['Content-Disposition'] = f'attachment; filename="Report_{safe_title}.pdf"'
+            return response
+        logger.error("download_report_pdf: PDF rendering returned None for activity %s", pk)
+        return HttpResponse("Unable to generate PDF report at this time.", status=500, content_type="text/plain")
+    except Exception as e:
+        logger.error("download_report_pdf exception for activity %s: %s", pk, e, exc_info=True)
+        return HttpResponse(f"Error generating event report: {str(e)}", status=500, content_type="text/plain")
 
 @api_view(['POST'])
 @permission_classes([IsAuthorizedExecutiveOrCoordinator])
@@ -918,76 +933,81 @@ def email_report_pdf(request, pk):
     # Clean email list
     recipient_list = [e.strip() for e in emails_raw.split(',') if e.strip()]
 
-    # Generate Data & PDF
-    stats = get_event_stats(pk)
-    comparison = get_comparative_stats(pk)
-    activity = VolunteerActivity.objects.get(pk=pk)
-    ai_analysis = get_or_create_ai_insight(activity, stats, comparison)
-
-    data = {'stats': stats, 'comparison': comparison, 'ai_analysis': ai_analysis}
-    pdf = render_to_pdf('core/pdf_report.html', data)
-
-    if not pdf:
-        return Response({"error": "PDF Generation Failed"}, status=500)
-
-    # Send Email
     try:
+        # Generate Data & PDF
+        stats = get_event_stats(pk)
+        comparison = get_comparative_stats(pk)
+        activity = VolunteerActivity.objects.get(pk=pk)
+        ai_analysis = get_or_create_ai_insight(activity, stats, comparison)
+
+        data = {'stats': stats, 'comparison': comparison, 'ai_analysis': ai_analysis}
+        pdf = render_to_pdf('core/pdf_report.html', data)
+
+        if not pdf:
+            return Response({"error": "PDF Generation Failed"}, status=500)
+
+        # Send Email
         subject = f"Event Report: {stats['title']}"
         message = f"Please find attached the performance report for the event '{stats['title']}' held on {stats['date']}."
         email = EmailMessage(
             subject,
             message,
-            settings.DEFAULT_FROM_EMAIL, # Ensure this is set in settings.py
+            settings.DEFAULT_FROM_EMAIL,
             recipient_list
         )
-        filename = f"Report_{stats['title'].replace(' ', '_')}.pdf"
-        email.attach(filename, pdf, 'application/pdf')
+        safe_title = str(stats.get('title', 'Event')).replace(' ', '_').replace('/', '_')
+        email.attach(f"Report_{safe_title}.pdf", pdf, 'application/pdf')
         email.send()
         
         return Response({"message": f"Report sent to {len(recipient_list)} recipients."})
     except Exception as e:
-        logger.error("Email Error sending report: %s", e, exc_info=True)
-        return Response({"error": "Failed to send email."}, status=500)
+        logger.error("Email Error sending report for activity %s: %s", pk, e, exc_info=True)
+        return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
     
 @api_view(['GET'])
 @permission_classes([IsAuthorizedExecutiveOrCoordinator])
 def download_quarterly_pdf(request):
-    year = int(request.query_params.get('year', timezone.now().year))
-    report_data = get_detailed_quarterly_stats(year)
-    
-    data = {
-        'year': year,
-        'report_data': report_data
-    }
-    
-    pdf = render_to_pdf('core/quarterly_pdf.html', data)
-    
-    if pdf:
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="Annual_Report_{year}.pdf"'
-        return response
-    return Response({"error": "PDF Generation Error"}, status=500)
+    try:
+        year = int(request.query_params.get('year', timezone.now().year))
+    except (ValueError, TypeError):
+        year = timezone.now().year
+
+    try:
+        data = get_annual_report_data(year)
+        pdf = render_to_pdf('core/quarterly_pdf.html', data)
+        
+        if pdf:
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="Annual_Report_{year}.pdf"'
+            return response
+        
+        logger.error("download_quarterly_pdf: PDF rendering returned None for year %s", year)
+        return HttpResponse("Unable to generate PDF report at this time. Please contact the administrator.", status=500, content_type="text/plain")
+    except Exception as e:
+        logger.error("download_quarterly_pdf exception: %s", e, exc_info=True)
+        return HttpResponse(f"Server error generating report: {str(e)}", status=500, content_type="text/plain")
 
 @api_view(['POST'])
 @permission_classes([IsAuthorizedExecutiveOrCoordinator])
 def email_quarterly_pdf(request):
-    year = int(request.data.get('year', timezone.now().year))
+    try:
+        year = int(request.data.get('year', timezone.now().year))
+    except (ValueError, TypeError):
+        year = timezone.now().year
+
     emails_raw = request.data.get('emails', '')
-    
     if not emails_raw:
         return Response({"error": "No email addresses provided."}, status=400)
 
     recipient_list = [e.strip() for e in emails_raw.split(',') if e.strip()]
 
-    # Generate PDF
-    report_data = get_detailed_quarterly_stats(year)
-    data = {'year': year, 'report_data': report_data}
-    pdf = render_to_pdf('core/quarterly_pdf.html', data)
-
-    if not pdf:
-        return Response({"error": "PDF Generation Failed"}, status=500)
-
     try:
+        data = get_annual_report_data(year)
+        pdf = render_to_pdf('core/quarterly_pdf.html', data)
+
+        if not pdf:
+            return Response({"error": "PDF Generation Failed"}, status=500)
+
         subject = f"Annual Volunteer Report: {year}"
         message = f"Please find attached the quarterly breakdown and campus performance report for the year {year}."
         email = EmailMessage(subject, message, settings.DEFAULT_FROM_EMAIL, recipient_list)
@@ -997,7 +1017,7 @@ def email_quarterly_pdf(request):
         return Response({"message": f"Yearly report sent to {len(recipient_list)} recipients."})
     except Exception as e:
         logger.error("Email Error sending quarterly report: %s", e, exc_info=True)
-        return Response({"error": "Failed to send email."}, status=500)
+        return Response({"error": f"Failed to send email: {str(e)}"}, status=500)
     
 class SendAnnouncementView(APIView):
     permission_classes = [IsAuthorizedExecutiveOrCoordinator] 
