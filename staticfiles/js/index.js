@@ -6288,12 +6288,9 @@ window.copyToClipboard = function(btnElement) {
                             <!-- Footer Actions & Integrated Policy -->
                             <div class="camp-actions-footer">
                                 <div class="camp-policy-note">
-                                    <strong>Attendance Policy:</strong> Qualified delegates are confirmed automatically. If you are unable to attend, please cancel your RSVP before <strong>${t.rsvp_deadline}</strong> so your seat can be reallocated to the next qualifying Peer Educator. Camp T-shirt distribution and departure details will be shared via campus channels.
+                                    <strong>Attendance Policy:</strong> Qualified delegates are confirmed automatically. RSVP cancellations for the Year-End Camp have now closed (deadline was <strong>${t.rsvp_deadline}</strong>). More details will be shared via campus channels.
                                 </div>
                                 <div class="camp-btns-row">
-                                    <button class="camp-btn-cancel" onclick="window.cancelMyCampTicketRSVP(${t.id}, ${t.cohort_rank})">
-                                        Cancel RSVP / Release Seat
-                                    </button>
                                     <button class="camp-btn-print" onclick="window.print()">
                                         Print Pass
                                     </button>
