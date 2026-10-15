@@ -1,5 +1,5 @@
-from django.contrib import admin
-from core.models import VolunteerActivity, ActivityRole, ActivitySignup, Feedback, AuditLog
+from django.contrib import admin, messages
+from core.models import VolunteerActivity, ActivityRole, ActivitySignup, Feedback, AuditLog, CampTicket
 
 from django import forms
 from django.contrib.admin import widgets
@@ -82,4 +82,40 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(CampTicket)
+class CampTicketAdmin(admin.ModelAdmin):
+    list_display = ('fallback_pin', 'cohort_rank', 'user_email', 'status', 'locked_hours', 'is_scanned', 'tshirt_size', 'created_at')
+    list_filter = ('status', 'is_scanned', 'user__campus')
+    search_fields = ('fallback_pin', 'user__email', 'user__first_name', 'user__last_name')
+    actions = ['reinstate_tickets', 'revoke_tickets']
+
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'Student Email'
+
+    @admin.action(description="Reinstate selected camp tickets (restore to active)")
+    def reinstate_tickets(self, request, queryset):
+        reinstated = 0
+        active_count = CampTicket.objects.filter(status__in=['active', 'confirmed']).count()
+        for ticket in queryset.filter(status='revoked'):
+            if active_count >= 78:
+                self.message_user(request, "Cannot reinstate all selected: 78 camp seats limit reached. Please revoke other tickets first.", level=messages.WARNING)
+                break
+            ticket.status = 'active'
+            student = ticket.user
+            if not getattr(student, 'is_camp_eligible', True):
+                student.is_camp_eligible = True
+                student.save(update_fields=['is_camp_eligible'])
+            ticket.save()
+            active_count += 1
+            reinstated += 1
+        if reinstated:
+            self.message_user(request, f"Successfully reinstated {reinstated} camp ticket(s).", level=messages.SUCCESS)
+
+    @admin.action(description="Revoke selected camp tickets (cancel RSVP)")
+    def revoke_tickets(self, request, queryset):
+        revoked = queryset.filter(status__in=['active', 'confirmed']).update(status='revoked')
+        self.message_user(request, f"Successfully revoked {revoked} camp ticket(s).", level=messages.SUCCESS)
 

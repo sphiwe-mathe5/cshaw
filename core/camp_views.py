@@ -380,6 +380,59 @@ class CancelCampRsvpAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class ReinstateCampTicketAPIView(APIView):
+    """
+    POST /api/camp/reinstate/
+    Allows a coordinator to reinstate a revoked camp ticket.
+    Checks that total active/confirmed tickets do not exceed MAX_CAMP_SEATS (78).
+    """
+    def post(self, request):
+        if not request.user.is_authenticated or (request.user.role != 'COORDINATOR' and not request.user.is_superuser):
+            return Response({'error': 'Unauthorized. Coordinators only.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        ticket_id = request.data.get('ticket_id')
+        if not ticket_id:
+            return Response({'error': 'ticket_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            ticket = CampTicket.objects.select_related('user').get(id=ticket_id, status='revoked')
+        except CampTicket.DoesNotExist:
+            return Response({'error': 'Revoked camp ticket not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Check if seats are full
+        active_count = CampTicket.objects.filter(status__in=['active', 'confirmed']).count()
+        if active_count >= MAX_CAMP_SEATS:
+            return Response({
+                'error': f'Cannot reinstate. All {MAX_CAMP_SEATS} seats are currently full ({active_count}/{MAX_CAMP_SEATS}). Please revoke/cancel another seat first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Restore ticket and ensure student is marked eligible
+        ticket.status = 'active'
+        student = ticket.user
+        if not getattr(student, 'is_camp_eligible', True):
+            student.is_camp_eligible = True
+            student.save(update_fields=['is_camp_eligible'])
+        ticket.save()
+        
+        log_audit_event(
+            action="CAMP_TICKET_REINSTATED",
+            actor=request.user,
+            target_type="CampTicket",
+            target_id=ticket.id,
+            metadata={
+                "student_email": student.email,
+                "pin": ticket.fallback_pin,
+                "rank": ticket.cohort_rank
+            }
+        )
+        logger.info("Camp Ticket %s for %s reinstated by %s", ticket.fallback_pin, student.email, request.user.email)
+        
+        return Response({
+            'message': f"Ticket for {student.first_name} {student.last_name} ({student.email}) has been successfully reinstated!",
+            'status': 'success'
+        }, status=status.HTTP_200_OK)
+
+
 class ConfirmCampAttendanceAPIView(APIView):
     """
     POST /api/camp/confirm/

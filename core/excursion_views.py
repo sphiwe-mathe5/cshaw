@@ -472,6 +472,7 @@ def scanner_dashboard_view(request):
     pending_count = seats_filled - scanned_count
 
     active_camp_tickets = CampTicket.objects.filter(status__in=['active', 'confirmed']).select_related('user').order_by('cohort_rank')
+    revoked_camp_tickets = CampTicket.objects.filter(status='revoked').select_related('user').order_by('cohort_rank')
     camp_has_locked_snapshot = CampLeaderboardSnapshot.objects.exists()
     camp_seats_filled = active_camp_tickets.count()
     camp_scanned_count = active_camp_tickets.filter(is_scanned=True).count()
@@ -487,6 +488,7 @@ def scanner_dashboard_view(request):
 
         # Camp 2026: Black Elegance (78 Seats)
         'active_camp_tickets': active_camp_tickets,
+        'revoked_camp_tickets': revoked_camp_tickets,
         'camp_seats_filled': camp_seats_filled,
         'camp_scanned_count': camp_scanned_count,
         'camp_pending_count': camp_pending_count,

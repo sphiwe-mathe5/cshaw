@@ -333,6 +333,55 @@
                     </tbody>
                 </table>
             </div>
+
+            {% if revoked_camp_tickets %}
+            <div style="margin-top: 32px; border-top: 2px dashed #e2e8f0; padding-top: 20px;">
+                <div style="margin-bottom: 14px;">
+                    <h3 style="margin: 0 0 4px 0; color: #dc2626; font-size: 15px; display: flex; align-items: center; gap: 8px;">
+                        <span>⚠️</span> Cancelled & Revoked Seats ({{ revoked_camp_tickets|length }})
+                    </h3>
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">
+                        Students below forfeited their RSVP or had their tickets revoked. If an open seat is available (&lt; 78 active seats), you can reinstate any student below directly to restore their pass.
+                    </p>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th>Rank</th>
+                                <th>Student</th>
+                                <th>Email</th>
+                                <th>Campus</th>
+                                <th>Locked Hours</th>
+                                <th>PIN</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in revoked_camp_tickets %}
+                            <tr id="camp-revoked-row-{{ ticket.id }}" style="background: #fffafa;">
+                                <td><strong>#{{ ticket.cohort_rank }}</strong></td>
+                                <td>{{ ticket.user.first_name }} {{ ticket.user.last_name }}</td>
+                                <td>{{ ticket.user.email }}</td>
+                                <td>{{ ticket.user.campus|default:"-" }}</td>
+                                <td><strong>{{ ticket.locked_hours|floatformat:"1" }}</strong> hrs</td>
+                                <td><code style="font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">#{{ ticket.fallback_pin }}</code></td>
+                                <td>
+                                    <span style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 10px; font-weight: 700; font-size: 11px;">Cancelled / Revoked</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <button class="btn-primary" style="padding: 5px 12px; font-size: 12px; background: #16a34a; border: 1px solid #15803d; color: white; cursor: pointer; border-radius: 5px; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="reinstateCampTicket('{{ ticket.id }}', '{{ ticket.user.first_name|escapejs }} {{ ticket.user.last_name|escapejs }}')">
+                                        ✓ Reinstate Ticket
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- 2. HIKE LAUNCHPAD (ARCHIVE) -->
@@ -561,6 +610,28 @@
                 location.reload();
             } catch (err) {
                 alert("Error revoking camp ticket.");
+            }
+        }
+
+        async function reinstateCampTicket(ticketId, studentName) {
+            const promptName = studentName ? ` for ${studentName}` : '';
+            if (!confirm(`Are you sure you want to REINSTATE the camp ticket${promptName}?\n\nThis will re-activate their pass for the Year-End Camp (if an open seat is available).`)) return;
+
+            try {
+                const res = await fetch('/api/camp/reinstate/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                    body: JSON.stringify({ ticket_id: ticketId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Camp ticket successfully reinstated!");
+                    location.reload();
+                } else {
+                    alert(data.error || "Failed to reinstate camp ticket.");
+                }
+            } catch (err) {
+                alert("Error reinstating camp ticket. Please try again.");
             }
         }
 

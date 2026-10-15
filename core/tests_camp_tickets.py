@@ -258,4 +258,43 @@ class CampTicketTests(TestCase):
         self.assertEqual(res['Content-Type'], 'application/pdf')
         self.assertTrue(len(res.content) > 1000)
 
+    def test_coordinator_reinstate_camp_ticket(self):
+        self.client.force_login(self.coordinator)
+        self.client.post(reverse('generate-camp-tickets'))
+
+        t0 = CampTicket.objects.get(user=self.students[0])
+        # Revoke student 0's ticket
+        self.client.post(reverse('cancel-camp-rsvp'), data={'ticket_id': t0.id})
+        t0.refresh_from_db()
+        self.assertEqual(t0.status, 'revoked')
+
+        # Coordinator reinstates student 0's ticket
+        res = self.client.post(
+            reverse('reinstate-camp-ticket'),
+            data=json.dumps({'ticket_id': t0.id}),
+            content_type='application/json'
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['status'], 'success')
+
+        t0.refresh_from_db()
+        self.assertEqual(t0.status, 'active')
+        self.assertTrue(t0.user.is_camp_eligible)
+
+        # Attempt to reinstate when full: generate seat 78 so active is 78
+        # Now active count is 78. Let's create another revoked ticket
+        t_revoked = CampTicket.objects.create(
+            user=self.students[80],
+            fallback_pin='999888',
+            status='revoked',
+            cohort_rank=81
+        )
+        res_full = self.client.post(
+            reverse('reinstate-camp-ticket'),
+            data=json.dumps({'ticket_id': t_revoked.id}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_full.status_code, 400)
+        self.assertIn('All 78 seats are currently full', res_full.json()['error'])
+
 

@@ -55,6 +55,7 @@ urlpatterns = [
     path('api/camp/my-ticket/', camp_views.MyCampTicketAPIView.as_view(), name='my-camp-ticket'),
     path('api/camp/generate/', camp_views.GenerateCampTicketsAPIView.as_view(), name='generate-camp-tickets'),
     path('api/camp/cancel-rsvp/', camp_views.CancelCampRsvpAPIView.as_view(), name='cancel-camp-rsvp'),
+    path('api/camp/reinstate/', camp_views.ReinstateCampTicketAPIView.as_view(), name='reinstate-camp-ticket'),
     path('api/camp/confirm/', camp_views.ConfirmCampAttendanceAPIView.as_view(), name='confirm-camp-attendance'),
     path('api/camp/validate/', camp_views.ValidateCampTicketAPIView.as_view(), name='validate-camp-ticket'),
     path('api/camp/reset/', camp_views.ResetCampTicketsAPIView.as_view(), name='reset-camp-tickets'),
