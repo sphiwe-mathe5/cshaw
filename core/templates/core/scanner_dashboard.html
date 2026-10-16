@@ -171,7 +171,15 @@
                 <span class="user-tag">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     <strong>{{ user.first_name|default:user.email }}</strong>
-                    <span style="color: #94a3b8;">({{ user.get_role_display|default:user.role }})</span>
+                    <span style="color: #94a3b8;">
+                        {% if is_coordinator %}
+                            (Coordinator)
+                        {% elif user.is_executive %}
+                            (Executive • {{ user.executive_position }})
+                        {% else %}
+                            ({{ user.get_role_display|default:user.role }})
+                        {% endif %}
+                    </span>
                 </span>
                 
                 <a href="/" class="btn-nav-link">Main Portal</a>
@@ -240,7 +248,7 @@
         </div>
 
         <!-- SECTION A: TICKET LAUNCHPAD (Coordinator Only) -->
-        {% if user.role == 'COORDINATOR' %}
+        {% if is_coordinator %}
         <!-- EVENT TABS -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
             <button id="tabBtnCamp" onclick="switchScannerTab('camp')" style="padding: 10px 20px; border-radius: 10px; font-weight: 800; font-size: 14px; cursor: pointer; border: 1.5px solid #d4af37; background: #0a0a0c; color: #f59e0b; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">

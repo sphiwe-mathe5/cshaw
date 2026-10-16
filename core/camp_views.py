@@ -18,6 +18,7 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse, HttpResponseForbidden
 from .models import CampTicket, CampLeaderboardSnapshot, VolunteerActivity, ActivitySignup
 from .audit import log_audit_event
+from .permissions import check_scanner_access
 from users.services import BackgroundEmailService
 from lms.models import StudentProgress
 
@@ -483,8 +484,12 @@ class ValidateCampTicketAPIView(APIView):
     Used by departure coordinators / scanner dashboard to check in campers via QR UUID or 6-digit PIN.
     """
     def post(self, request):
-        if not request.user.is_authenticated or (request.user.role != 'COORDINATOR' and not request.user.is_superuser):
-            return Response({'error': 'Unauthorized. Coordinators only.'}, status=status.HTTP_403_FORBIDDEN)
+        if not request.user.is_authenticated:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        allowed, denial_reason = check_scanner_access(request.user)
+        if not allowed:
+            return Response({'error': denial_reason or 'Unauthorized. Coordinators and attending executives only.'}, status=status.HTTP_403_FORBIDDEN)
             
         identifier = str(request.data.get('identifier', '')).strip()
         if not identifier:

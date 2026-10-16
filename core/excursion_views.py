@@ -15,6 +15,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from .models import ExcursionTicket, ExcursionLeaderboardSnapshot, CampTicket, CampLeaderboardSnapshot
 from .audit import log_audit_event
+from .permissions import check_scanner_access
 from users.services import BackgroundEmailService
 from django.http import HttpResponseForbidden
 
@@ -185,10 +186,11 @@ class RevokeTicketAPIView(APIView):
 class ValidateTicketAPIView(APIView):
     def post(self, request):
         if not request.user.is_authenticated:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'Unauthorized', 'status': 'error'}, status=status.HTTP_401_UNAUTHORIZED)
             
-        if request.user.role != 'COORDINATOR' and not request.user.is_superuser:
-            return Response({'error': 'Unauthorized. Only coordinators can scan tickets.'}, status=status.HTTP_403_FORBIDDEN)
+        allowed, denial_reason = check_scanner_access(request.user)
+        if not allowed:
+            return Response({'error': denial_reason or 'Unauthorized. Only coordinators and attending executives can scan tickets.', 'status': 'error'}, status=status.HTTP_403_FORBIDDEN)
                 
         ticket_uuid = request.data.get('ticket_uuid')
         fallback_pin = request.data.get('fallback_pin')
@@ -220,6 +222,8 @@ class ValidateTicketAPIView(APIView):
             return Response({'error': 'Ticket not found.', 'status': 'error'}, status=status.HTTP_404_NOT_FOUND)
             
         if is_camp:
+            if not getattr(ticket.user, 'is_camp_eligible', True):
+                return Response({'error': 'Access Denied: Attendee is marked as ineligible for the Year-End Camp.', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
             if ticket.status == 'revoked':
                 return Response({'error': 'This Camp ticket was cancelled/revoked.', 'status': 'error'}, status=status.HTTP_400_BAD_REQUEST)
             if ticket.is_scanned:
@@ -227,11 +231,28 @@ class ValidateTicketAPIView(APIView):
             ticket.is_scanned = True
             ticket.scanned_at = timezone.now()
             ticket.save(update_fields=['is_scanned', 'scanned_at'])
+
+            log_audit_event(
+                action="CAMP_TICKET_VERIFIED",
+                actor=request.user,
+                target_type="CampTicket",
+                target_id=ticket.id,
+                metadata={
+                    "student_email": ticket.user.email,
+                    "pin": ticket.fallback_pin,
+                    "cohort_rank": ticket.cohort_rank,
+                    "scanned_by": request.user.email,
+                    "scanned_by_role": getattr(request.user, 'role', ''),
+                    "scanned_by_position": getattr(request.user, 'executive_position', '') or ''
+                }
+            )
+
             return Response({
                 'message': f'👑 Valid Camp Pass - Welcome {ticket.user.first_name} {ticket.user.last_name} to Black Elegance! (Rank #{ticket.cohort_rank})',
                 'status': 'success',
                 'student_name': f"{ticket.user.first_name} {ticket.user.last_name}".strip(),
                 'email': ticket.user.email,
+                'ticket_id': ticket.id,
                 'scanned_count': CampTicket.objects.filter(status__in=['active', 'confirmed'], is_scanned=True).count(),
                 'seats_filled': CampTicket.objects.filter(status__in=['active', 'confirmed']).count()
             }, status=status.HTTP_200_OK)
@@ -455,15 +476,16 @@ def scanner_dashboard_view(request):
     if not request.user.is_authenticated:
         return redirect(f'/login/?next={request.path}')
     
-    # 2. Check if user is a Coordinator (or superuser)
-    is_coordinator = (request.user.role == 'COORDINATOR' or request.user.is_superuser)
-    
-    if not is_coordinator:
+    # 2. Check if user is authorized to use scanner (Coordinator or Attending Executive)
+    allowed, denial_reason = check_scanner_access(request.user)
+    if not allowed:
         context = {
             'user': request.user,
-            'message': 'Access to the Excursion Boarding Scanner is restricted strictly to C-SHAW Coordinators only.'
+            'message': denial_reason
         }
         return render(request, 'core/permission_denied.html', context, status=403)
+        
+    is_coordinator = (request.user.role == 'COORDINATOR' or request.user.is_superuser)
         
     active_tickets = ExcursionTicket.objects.filter(status='active').select_related('user').order_by('created_at')
     has_locked_snapshot = ExcursionLeaderboardSnapshot.objects.exists()
@@ -479,6 +501,7 @@ def scanner_dashboard_view(request):
     camp_pending_count = camp_seats_filled - camp_scanned_count
 
     context = {
+        'is_coordinator': is_coordinator,
         'active_tickets': active_tickets,
         'seats_filled': seats_filled,
         'scanned_count': scanned_count,

@@ -297,4 +297,94 @@ class CampTicketTests(TestCase):
         self.assertEqual(res_full.status_code, 400)
         self.assertIn('All 78 seats are currently full', res_full.json()['error'])
 
+    def test_executive_scanner_pipeline(self):
+        # 1. Generate tickets for top 78 students
+        self.client.force_login(self.coordinator)
+        self.client.post(reverse('generate-camp-tickets'))
+
+        # Student 0 is Rank 1, make student 0 an executive
+        exec_attending = self.students[0]
+        exec_attending.executive_position = 'Chairperson'
+        exec_attending.save()
+
+        # Student 82 is low hours (no ticket generated), make student 82 an executive who didn't qualify
+        exec_no_ticket = self.students[82]
+        exec_no_ticket.executive_position = 'Secretary'
+        exec_no_ticket.save()
+
+        # Student 1 is Rank 2 (holds a ticket), make student 1 an executive whose ticket gets revoked
+        exec_revoked = self.students[1]
+        exec_revoked.executive_position = 'Treasurer'
+        exec_revoked.save()
+        t1 = CampTicket.objects.get(user=exec_revoked)
+        t1.status = 'revoked'
+        t1.save()
+
+        # Student 2 is a regular student (attending camp, but NOT an executive)
+        regular_student = self.students[2]
+
+        # Target student to scan
+        target_student = self.students[3]
+        target_ticket = CampTicket.objects.get(user=target_student)
+
+        # CASE A: Regular student tries to access scanner dashboard -> 403 Denied
+        self.client.force_login(regular_student)
+        res = self.client.get(reverse('scanner-dashboard'))
+        self.assertEqual(res.status_code, 403)
+        res_val = self.client.post(reverse('validate-ticket'), {'fallback_pin': target_ticket.fallback_pin})
+        self.assertEqual(res_val.status_code, 403)
+
+        # CASE B: Executive who didn't qualify (no ticket) -> 403 Denied
+        self.client.force_login(exec_no_ticket)
+        res = self.client.get(reverse('scanner-dashboard'))
+        self.assertEqual(res.status_code, 403)
+        self.assertIn('Only executives who qualified', res.content.decode())
+        res_val = self.client.post(reverse('validate-ticket'), {'fallback_pin': target_ticket.fallback_pin})
+        self.assertEqual(res_val.status_code, 403)
+
+        # CASE C: Executive whose ticket was revoked -> 403 Denied
+        self.client.force_login(exec_revoked)
+        res = self.client.get(reverse('scanner-dashboard'))
+        self.assertEqual(res.status_code, 403)
+        self.assertIn('Your Year-End Camp ticket was cancelled or revoked', res.content.decode())
+        res_val = self.client.post(reverse('validate-ticket'), {'fallback_pin': target_ticket.fallback_pin})
+        self.assertEqual(res_val.status_code, 403)
+
+        # CASE D: Executive who is attending -> 200 OK & Can scan via PIN or QR
+        self.client.force_login(exec_attending)
+        res = self.client.get(reverse('scanner-dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'QR Code Scanner')
+        self.assertContains(res, 'Verify PIN')
+        # Section A coordinator controls should NOT be visible to executives
+        self.assertNotContains(res, 'id="resetCampBtn"')
+        self.assertNotContains(res, 'id="generateCampBtn"')
+
+        # Executive scans target student's ticket via PIN
+        res_val = self.client.post(reverse('validate-ticket'), {'fallback_pin': target_ticket.fallback_pin})
+        self.assertEqual(res_val.status_code, 200)
+        self.assertEqual(res_val.json()['status'], 'success')
+        target_ticket.refresh_from_db()
+        self.assertTrue(target_ticket.is_scanned)
+
+        # CASE E: Reinstatement allows revoked executive to regain scanner access
+        self.client.force_login(self.coordinator)
+        # First revoke student 4 to free up a seat
+        t4 = CampTicket.objects.get(user=self.students[4])
+        t4.status = 'revoked'
+        t4.save()
+        # Reinstate exec_revoked
+        res_reinstate = self.client.post(
+            reverse('reinstate-camp-ticket'),
+            data=json.dumps({'ticket_id': t1.id}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_reinstate.status_code, 200)
+
+        # Now exec_revoked can access scanner dashboard
+        self.client.force_login(exec_revoked)
+        res_after = self.client.get(reverse('scanner-dashboard'))
+        self.assertEqual(res_after.status_code, 200)
+
+
 
