@@ -491,7 +491,8 @@ class ValidateCampTicketAPIView(APIView):
         if not allowed:
             return Response({'error': denial_reason or 'Unauthorized. Coordinators and attending executives only.'}, status=status.HTTP_403_FORBIDDEN)
             
-        identifier = str(request.data.get('identifier', '')).strip()
+        raw_val = request.data.get('identifier') or request.data.get('ticket_uuid') or request.data.get('fallback_pin') or ''
+        identifier = str(raw_val).replace('#', '').strip()
         if not identifier:
             return Response({'error': 'No QR code or PIN provided.'}, status=status.HTTP_400_BAD_REQUEST)
             

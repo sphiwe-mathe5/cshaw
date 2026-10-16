@@ -197,26 +197,42 @@ class ValidateTicketAPIView(APIView):
         
         ticket = None
         is_camp = False
-        if ticket_uuid:
-            ticket = ExcursionTicket.objects.filter(ticket_uuid=ticket_uuid).first()
-        elif fallback_pin:
-            ticket = ExcursionTicket.objects.filter(fallback_pin=fallback_pin).first()
-            
-        if not ticket:
-            # Check CampTicket (Black Elegance)
-            clean_uuid = str(ticket_uuid).replace('CAMP:', '').strip() if ticket_uuid else None
-            if clean_uuid:
-                try:
-                    parsed_u = uuid.UUID(clean_uuid)
-                    ticket = CampTicket.objects.select_related('user').filter(ticket_uuid=parsed_u).first()
-                except (ValueError, AttributeError):
-                    pass
-            elif fallback_pin:
-                clean_pin = str(fallback_pin).replace('#', '').strip()
-                ticket = CampTicket.objects.select_related('user').filter(fallback_pin=clean_pin).first()
+
+        # 1. Safely clean and parse UUID (handling CAMP: prefix from QR codes)
+        clean_uuid = None
+        raw_uuid_str = str(ticket_uuid).strip() if ticket_uuid else None
+        if raw_uuid_str:
+            if raw_uuid_str.startswith('CAMP:'):
+                raw_uuid_str = raw_uuid_str.replace('CAMP:', '', 1).strip()
+            try:
+                clean_uuid = uuid.UUID(raw_uuid_str)
+            except (ValueError, AttributeError):
+                clean_uuid = None
+
+        clean_pin = str(fallback_pin).replace('#', '').strip() if fallback_pin else None
+
+        # 2. Check CampTicket FIRST (Year-End Camp 2026 is the active event)
+        if clean_uuid:
+            ticket = CampTicket.objects.select_related('user').filter(ticket_uuid=clean_uuid).first()
             if ticket:
                 is_camp = True
-                
+        elif clean_pin:
+            ticket = CampTicket.objects.select_related('user').filter(fallback_pin=clean_pin).first()
+            if ticket:
+                is_camp = True
+
+        # 3. If not found in Camp, check archived ExcursionTicket (Hike)
+        if not ticket:
+            if clean_uuid:
+                try:
+                    ticket = ExcursionTicket.objects.select_related('user').filter(ticket_uuid=clean_uuid).first()
+                except Exception:
+                    ticket = None
+            elif clean_pin:
+                ticket = ExcursionTicket.objects.select_related('user').filter(fallback_pin=clean_pin).first()
+            if ticket:
+                is_camp = False
+
         if not ticket:
             logger.warning("Ticket validation failed: ticket not found (PIN: %s, UUID: %s) scanned by %s", fallback_pin, ticket_uuid, request.user.email)
             return Response({'error': 'Ticket not found.', 'status': 'error'}, status=status.HTTP_404_NOT_FOUND)

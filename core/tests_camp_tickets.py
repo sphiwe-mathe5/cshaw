@@ -367,6 +367,15 @@ class CampTicketTests(TestCase):
         target_ticket.refresh_from_db()
         self.assertTrue(target_ticket.is_scanned)
 
+        # Executive scans second target student's ticket via QR UUID with "CAMP:" prefix
+        target_student_2 = self.students[5]
+        target_ticket_2 = CampTicket.objects.get(user=target_student_2)
+        res_qr = self.client.post(reverse('validate-ticket'), {'ticket_uuid': f"CAMP:{target_ticket_2.ticket_uuid}"})
+        self.assertEqual(res_qr.status_code, 200)
+        self.assertEqual(res_qr.json()['status'], 'success')
+        target_ticket_2.refresh_from_db()
+        self.assertTrue(target_ticket_2.is_scanned)
+
         # CASE E: Reinstatement allows revoked executive to regain scanner access
         self.client.force_login(self.coordinator)
         # First revoke student 4 to free up a seat
