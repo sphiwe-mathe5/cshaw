@@ -1214,14 +1214,33 @@ document.addEventListener('DOMContentLoaded', () => {
             </style>
 
             <div class="yer-wrapper">
-                <!-- 1. SEASON FINALE BANNER -->
-                <div class="yer-hero" style="padding: 20px 24px;">
+                <!-- 1. SEASON FINALE BANNER & SUMMARY STATS -->
+                <div class="yer-hero" style="padding: 22px 24px;">
                     <h1 style="margin:0 0 4px; font-size:clamp(1.2rem, 2vw, 1.45rem); font-weight:800; letter-spacing:-0.3px; color:#ffffff;">
                         The ${year} Volunteering Year Has Officially Ended
                     </h1>
-                    <p style="margin:0; color:#94a3b8; font-size:0.86rem;">
+                    <p style="margin:0 0 16px; color:#94a3b8; font-size:0.86rem;">
                         Thank you for being part of the ${year} C-SHAW programme across all campuses.
                     </p>
+
+                    <div class="yer-hero-metrics" style="margin-top:0;">
+                        <div class="yer-hero-metric">
+                            <div class="yer-hero-metric-val">${season.total_hours || 0}<span style="font-size:0.9rem; font-weight:700; color:#f59e0b; margin-left:2px;">hrs</span></div>
+                            <div class="yer-hero-metric-lbl">Total Verified Hours</div>
+                        </div>
+                        <div class="yer-hero-metric">
+                            <div class="yer-hero-metric-val">${season.total_events || 0}</div>
+                            <div class="yer-hero-metric-lbl">Events Hosted</div>
+                        </div>
+                        <div class="yer-hero-metric">
+                            <div class="yer-hero-metric-val">${season.active_volunteers || 0}</div>
+                            <div class="yer-hero-metric-lbl">Active Peer Educators</div>
+                        </div>
+                        <div class="yer-hero-metric" style="border-color:rgba(245, 158, 11, 0.35); background:rgba(245, 158, 11, 0.1);">
+                            <div class="yer-hero-metric-val" style="color:#fbbf24;">${season.campus_of_the_year || 'APB'} 🏆</div>
+                            <div class="yer-hero-metric-lbl" style="color:#fde68a;">Campus of the Year</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 2. LIVE AWARDS WINNERS & NUMBERS -->
