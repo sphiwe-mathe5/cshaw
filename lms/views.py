@@ -116,27 +116,18 @@ class QuizViewSet(viewsets.ModelViewSet):
         is_outstanding = score_percent >= 70.0  # 70%+ is Outstanding
         points_earned = correct_count * 2  # 2 points awarded per correct question
 
-        # Save student progress & award points
+        # Save student progress (2026 season concluded: points are locked so Live Awards never change)
         with transaction.atomic():
             progress, created = StudentProgress.objects.get_or_create(
                 user=user,
                 quiz=quiz,
-                defaults={'score': score_percent, 'points_earned': points_earned}
+                defaults={'score': score_percent, 'points_earned': 0}
             )
 
-            if created:
-                user.points += points_earned
-                user.save(update_fields=['points'])
-                points_added = points_earned
-            else:
-                # If retried and scored higher points, award the difference
-                points_added = max(0, points_earned - progress.points_earned)
-                if points_added > 0:
-                    user.points += points_added
-                    user.save(update_fields=['points'])
+            points_added = 0
+            if not created:
                 progress.score = score_percent
-                progress.points_earned = max(progress.points_earned, points_earned)
-                progress.save()
+                progress.save(update_fields=['score'])
 
         return Response({
             "score": score_percent,
@@ -145,8 +136,8 @@ class QuizViewSet(viewsets.ModelViewSet):
             "correct_count": correct_count,
             "incorrect_count": max(0, total_questions - correct_count),
             "total_questions": total_questions,
-            "points_earned": points_earned,
-            "points_added": points_added,
+            "points_earned": 0,
+            "points_added": 0,
             "total_user_points": user.points
         }, status=status.HTTP_200_OK)
 

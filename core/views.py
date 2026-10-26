@@ -813,6 +813,18 @@ class StudentStatsView(APIView):
             'session_history': e.session_history
         } for e in recent_events]
 
+        # --- YEAR-END COMPLETION & CERTIFICATE HOLDER STATUS ---
+        from .models import CampTicket
+        user_camp_ticket = CampTicket.objects.filter(
+            user=user,
+            status__in=['active', 'confirmed'],
+            user__is_camp_eligible=True
+        ).first()
+
+        is_certificate_holder = bool(user_camp_ticket)
+        is_completed = bool(total_hours >= TARGET_HOURS or is_certificate_holder)
+        is_apb_champion = (user.campus == 'APB')
+
         return Response({
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -841,6 +853,12 @@ class StudentStatsView(APIView):
             "early_count": early_count,
             "late_count": late_count,
             "executive_position": user.executive_position,
+            "year_ended": True,
+            "is_certificate_holder": is_certificate_holder,
+            "is_completed": is_completed,
+            "is_apb_champion": is_apb_champion,
+            "camp_cohort_rank": user_camp_ticket.cohort_rank if user_camp_ticket else None,
+            "camp_honor_title": user_camp_ticket.honor_title if user_camp_ticket else None,
         })
         
 
@@ -1442,30 +1460,246 @@ def quarterly_report_page(request):
 
 client = OpenAI(api_key=getattr(settings, 'OPENAI_API_KEY', ''))
 
+
+def _gather_user_career_facts(user):
+    """
+    Collects all verified facts for a student's Career Toolkit generation & PDF report:
+    - Verified hours (event + manual bonus), events count, punctuality, recent event names
+    - 2026 Programme completion status & 2026 Official Certificate Holder (Camp Delegate) status
+    - Executive role & campus (including APB 2026 Campus of the Year recognition)
+    - All earned awards (SpecialAwards, Milestone Badges, 2026 Live Awards standings, and Management Awards)
+    - All completed LMS courses & quiz certifications
+    """
+    from .models import CampTicket
+    from users.models import User, VolunteerBadge
+    from lms.models import StudentProgress
+    import json
+    import os
+
+    current_year = timezone.now().year
+    stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
+        total_hours=Sum('hours_earned'),
+        total_events=Count('id'),
+        early_count=Sum(
+            Case(
+                When(sign_in_time__lte=F('activity__date_time'), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            )
+        )
+    )
+    total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0) or 0.0), 1)
+    events_attended = stats['total_events'] or 0
+    early_count = stats['early_count'] or 0
+    punctuality_pct = round((early_count / events_attended) * 100, 1) if events_attended > 0 else 0.0
+
+    CAMPUS_NAMES = {
+        'APB': 'Auckland Park Bunting Road (APB)',
+        'APK': 'Auckland Park Kingsway (APK)',
+        'DFC': 'Doornfontein Campus (DFC)',
+        'SWC': 'Soweto Campus (SWC)',
+    }
+    campus_code = (getattr(user, 'campus', '') or 'APB').upper()
+    campus_display = CAMPUS_NAMES.get(campus_code, campus_code)
+
+    exec_pos = getattr(user, 'executive_position', None)
+    if exec_pos and exec_pos != "None":
+        roles = f"{exec_pos} & Peer Educator Volunteer"
+    else:
+        exec_pos = None
+        roles = "Campus Peer Educator Volunteer"
+
+    first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
+    start_date = first_event.sign_in_time.strftime("%B %Y") if (first_event and first_event.sign_in_time) else f"February {current_year}"
+    start_year = first_event.sign_in_time.year if (first_event and first_event.sign_in_time) else current_year
+    years_active = f"{start_year} – {current_year}" if start_year != current_year else f"{current_year}"
+
+    # 1. Camp Ticket / Official 2026 Certificate Holder Status
+    camp_ticket = CampTicket.objects.filter(
+        user=user,
+        status__in=['active', 'confirmed'],
+        user__is_camp_eligible=True
+    ).first()
+    is_certificate_holder = bool(camp_ticket)
+    is_programme_completed = bool(total_hours >= 80.0 or is_certificate_holder)
+
+    if is_programme_completed and total_hours >= 80.0:
+        completion_status = f"Officially Completed the {current_year} C-SHAW Peer Educator Volunteering Programme (Exceeded the 80-hour annual target with {total_hours} verified hours)"
+    elif is_programme_completed and is_certificate_holder:
+        completion_status = f"Officially Completed the {current_year} C-SHAW Peer Educator Volunteering Programme ({total_hours} verified hours & Selected Year-End Camp Delegate)"
+    else:
+        completion_status = f"Completed {total_hours} verified hours across {events_attended} events in the {current_year} C-SHAW Peer Educator Volunteering Programme"
+
+    certificates_list = []
+    if is_certificate_holder:
+        rank_str = f", Cohort Rank #{camp_ticket.cohort_rank}" if camp_ticket.cohort_rank else ""
+        title_str = f" — {camp_ticket.honor_title}" if camp_ticket.honor_title else ""
+        certificates_list.append(
+            f"2026 Official C-SHAW Peer Educator Certificate Holder (Year-End Camp Delegate{rank_str}{title_str})"
+        )
+
+    # 2. LMS Courses & Certificates Completed
+    lms_progress = StudentProgress.objects.filter(
+        user=user,
+        score__gte=50.0
+    ).select_related('quiz', 'quiz__learning_unit', 'quiz__learning_unit__topic').order_by('-score', '-completed_at')
+
+    lms_courses = []
+    for prog in lms_progress:
+        topic_name = prog.quiz.learning_unit.topic.title if (prog.quiz and prog.quiz.learning_unit and prog.quiz.learning_unit.topic) else ""
+        quiz_name = prog.quiz.title if prog.quiz else "Training Module"
+        label = f"{topic_name}: {quiz_name}" if topic_name and topic_name.lower() not in quiz_name.lower() else quiz_name
+        if prog.score >= 100.0:
+            lms_courses.append(f"{label} (100% Mastery Certificate)")
+        else:
+            lms_courses.append(f"{label} ({int(round(prog.score))}% Score)")
+
+    all_certificates = certificates_list + lms_courses
+
+    # 3. Awards & Honours (Profile Awards + Milestone Badges + Live Awards + Management Awards + APB Campus of the Year)
+    awards_list = []
+    for a in user.awards.all():
+        awards_list.append(f"{a.name} ({a.date_awarded})" if a.date_awarded else a.name)
+
+    full_name_clean = f"{user.first_name} {user.last_name}".strip().lower()
+    if "vuyiswa" in full_name_clean and "mbena" in full_name_clean:
+        awards_list.append("2026 Innovator of the Year Award (Decided by C-SHAW Management)")
+    if "siyabonga" in full_name_clean and ("hlatshwayo" in full_name_clean or "hlatswayo" in full_name_clean):
+        awards_list.append("2026 Social Media Award (Decided by C-SHAW Management)")
+
+    # Check Live Awards Top 3 placements from locked snapshot if present
+    try:
+        snapshot_path = LiveAwardsAPIView.get_locked_snapshot_path()
+        if os.path.exists(snapshot_path):
+            with open(snapshot_path, 'r', encoding='utf-8') as f:
+                snap = json.load(f)
+            for idx, item in enumerate(snap.get('overall', [])[:3], 1):
+                if item.get('id') == user.id or (item.get('name', '').strip().lower() == full_name_clean):
+                    place = "Winner (#1)" if idx == 1 else f"Top {idx} Finalist"
+                    awards_list.append(f"2026 Peer Educator of the Year — {place} ({item.get('power_score')} Power Score)")
+            for idx, item in enumerate(snap.get('newcomers', [])[:3], 1):
+                if item.get('id') == user.id or (item.get('name', '').strip().lower() == full_name_clean):
+                    place = "Winner (#1)" if idx == 1 else f"Top {idx} Finalist"
+                    awards_list.append(f"2026 Best Junior Peer Educator — {place} ({item.get('power_score')} Power Score)")
+    except Exception:
+        pass
+
+    if total_hours >= 80.0:
+        awards_list.append("80+ Hours Gold Service Milestone Badge")
+    elif total_hours >= 40.0:
+        awards_list.append("40+ Hours Silver Service Milestone Badge")
+
+    if campus_code == 'APB':
+        awards_list.append("Member of APB Campus — 2026 C-SHAW Campus of the Year Winner")
+
+    # Deduplicate while preserving order
+    seen_awards = set()
+    dedup_awards = []
+    for aw in awards_list:
+        if aw.lower() not in seen_awards:
+            seen_awards.add(aw.lower())
+            dedup_awards.append(aw)
+
+    # 4. Key Events Attended
+    attended_signups = ActivitySignup.objects.filter(
+        user=user,
+        attended=True
+    ).exclude(
+        activity__description="Manual hours allocation event"
+    ).select_related('activity').order_by('-hours_earned', '-sign_out_time')[:8]
+
+    event_titles = []
+    seen_titles = set()
+    for s in attended_signups:
+        t = (s.activity.title or '').strip()
+        if t and t.lower() not in seen_titles:
+            seen_titles.add(t.lower())
+            event_titles.append(f"{t} ({s.hours_earned}h)")
+
+    return {
+        'total_hours': total_hours,
+        'events_attended': events_attended,
+        'early_count': early_count,
+        'punctuality_pct': punctuality_pct,
+        'roles': roles,
+        'exec_pos': exec_pos,
+        'campus_code': campus_code,
+        'campus_display': campus_display,
+        'start_date': start_date,
+        'years_active': years_active,
+        'current_year': current_year,
+        'is_certificate_holder': is_certificate_holder,
+        'is_programme_completed': is_programme_completed,
+        'completion_status': completion_status,
+        'certificates_list': certificates_list,
+        'lms_courses': lms_courses,
+        'all_certificates': all_certificates,
+        'awards_list': dedup_awards,
+        'event_titles': event_titles,
+    }
+
+
+def _build_fallback_career_text(gen_type, user, facts):
+    """
+    Deterministic, 100% fact-grounded fallback generator if the OpenAI API is unreachable.
+    """
+    org_line = f"C-SHAW (Centre for Student Health and Wellness) — {facts['campus_display']}"
+    certs_str = ", ".join(facts['all_certificates']) if facts['all_certificates'] else "Peer Educator Training Modules"
+    awards_str = ", ".join(facts['awards_list']) if facts['awards_list'] else "Verified Service Recognition"
+    events_str = ", ".join(facts['event_titles'][:4]) if facts['event_titles'] else "campus health and community outreach drives"
+
+    if gen_type == 'cv':
+        bullets = [
+            f"• {facts['completion_status']}, logging {facts['total_hours']} verified volunteer hours across {facts['events_attended']} campus wellness and community outreach initiatives ({events_str}).",
+        ]
+        if facts['exec_pos']:
+            bullets.append(
+                f"• Served as {facts['exec_pos']} for {facts['campus_display']}, coordinating peer educators, managing event execution, and maintaining a {facts['punctuality_pct']}% on-time attendance record."
+            )
+        else:
+            bullets.append(
+                f"• Collaborated with campus executive teams at {facts['campus_display']} to facilitate student health awareness drives, peer education activations, and community engagement programmes."
+            )
+        bullets.append(
+            f"• Earned official programme certifications and training masteries including: {certs_str}."
+        )
+        bullets.append(
+            f"• Recognized with the following honours and milestones: {awards_str}."
+        )
+        return f"{facts['roles']}\n{org_line}\n{facts['start_date']} – Present\n\n" + "\n".join(bullets)
+
+    if gen_type == 'linkedin':
+        lead_sentence = (
+            f"As a {facts['roles']} with C-SHAW at {facts['campus_display']}, I have {facts['completion_status'].lower()}, contributing {facts['total_hours']} verified service hours across {facts['events_attended']} health awareness and community outreach initiatives."
+        )
+        p1 = f"{lead_sentence} Throughout my time in the programme, I actively supported campaigns including {events_str}, working alongside fellow peer educators to promote student wellbeing and community impact."
+        p2 = f"To strengthen my practical leadership and peer education skills, I completed specialized certifications ({certs_str}) and was honoured with {awards_str}. This experience has shaped my ability to lead with empathy, communicate effectively, and deliver measurable impact in team environments."
+        return f"{p1}\n\n{p2}"
+
+    # scholarship / application statement
+    p1 = (
+        f"My commitment to community service and student wellness was shaped through my role as a {facts['roles']} with C-SHAW (Centre for Student Health and Wellness) at {facts['campus_display']}. "
+        f"During the {facts['current_year']} season, I {facts['completion_status'].lower()}, dedicating {facts['total_hours']} verified hours across {facts['events_attended']} structured outreach events and campaigns."
+    )
+    p2 = (
+        f"Across initiatives such as {events_str}, I worked directly with students and community members to advance health awareness, mentorship, and inclusive peer support. "
+        + (f"In my executive capacity as {facts['exec_pos']}, I also helped coordinate campus volunteer teams and drive consistent event execution. " if facts['exec_pos'] else "")
+        + f"Maintaining a {facts['punctuality_pct']}% punctuality record across my attended events reinforced the discipline and reliability required for effective community leadership."
+    )
+    p3 = (
+        f"Beyond field service, I invested in continuous learning and earned the following certifications and honours: {certs_str}, alongside {awards_str}. "
+        f"Completing the C-SHAW programme has equipped me with the resilience, collaborative mindset, and proven service record that I will bring to future academic and professional opportunities."
+    )
+    return f"{p1}\n\n{p2}\n\n{p3}"
+
+
 class CareerToolkitStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        
-        # 1. Gather Verified Data (Same as before)
-        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
-            total_hours=Sum('hours_earned'),
-            total_events=Count('id')
-        )
-        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
-        events_attended = stats['total_events'] or 0
-        
-        roles = "Peer Educator Volunteer"
-        if getattr(user, 'executive_position', None):
-            roles = f"{user.executive_position}, Peer Educator Volunteer"
-            
-        first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
-        start_year = first_event.sign_in_time.year if first_event else timezone.now().year
-        current_year = timezone.now().year
-        years_active = f"{start_year} - Present" if start_year != current_year else f"{current_year}"
+        facts = _gather_user_career_facts(user)
 
-        # 2. Check Saved Assets & Staleness
         saved_assets = CareerToolkitAsset.objects.filter(user=user)
         asset_status = {
             'cv': {'exists': False, 'needs_update': False},
@@ -1474,164 +1708,133 @@ class CareerToolkitStatsView(APIView):
         }
 
         for asset in saved_assets:
-            # Check if their current hours/events are higher than when the asset was generated
-            needs_update = (total_hours > asset.hours_at_generation) or (events_attended > asset.events_at_generation)
-            
+            # Allow updating any saved asset so students can refresh with their final 2026 Year-End awards & certificates
             asset_status[asset.asset_type] = {
                 'exists': True,
-                'needs_update': needs_update,
-                'content': asset.generated_content # Send the saved text!
+                'needs_update': True,
+                'content': asset.generated_content
             }
 
         return Response({
-            "totalHours": total_hours,
-            "eventsAttended": events_attended,
-            "roles": roles,
-            "yearsActive": years_active,
-            "assetStatus": asset_status # <-- Pass the asset statuses to the frontend
+            "totalHours": facts['total_hours'],
+            "eventsAttended": facts['events_attended'],
+            "roles": facts['roles'],
+            "yearsActive": facts['years_active'],
+            "assetStatus": asset_status
         })
-         
+
+
 class CareerToolkitGenerateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        gen_type = request.data.get('type') 
-        force_update = request.data.get('force_update', False) # True if user clicks "Update"
+        gen_type = request.data.get('type')
         user = request.user
 
         if gen_type not in ['cv', 'linkedin', 'scholarship']:
             return Response({"error": "Invalid generation type."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        # 1. Re-fetch exact verified data to feed to OpenAI
-        # Adjust 'ActivitySignup' and fields based on your actual model names
-        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
-            total_hours=Sum('hours_earned'),
-            total_events=Count('id')
-        )
-        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
-        events_attended = stats['total_events'] or 0
-        
-        # --- 2. UPDATE RULE CHECK ---
-        if force_update:
-            existing_asset = CareerToolkitAsset.objects.filter(user=user, asset_type=gen_type).first()
-            if existing_asset and total_hours < existing_asset.hours_at_generation + 5 and events_attended <= existing_asset.events_at_generation:
-                needed_hours = existing_asset.hours_at_generation + 5
-                return Response({
-                    "error": f"You need to log at least 5 more hours or attend new events to update this section. Keep volunteering! (Current: {total_hours}h, Needed: {needed_hours}h)"
-                }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 3. Rate Limiting (Max 5 generations per user per month)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        recent_generations = CareerToolkitAsset.objects.filter(user=user, last_updated__gte=thirty_days_ago).count()
-        
-        if force_update and recent_generations >= 5:
-            return Response({"error": "You have reached the monthly limit for AI generations. Please try again next month."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        facts = _gather_user_career_facts(user)
+        total_hours = facts['total_hours']
+        events_attended = facts['events_attended']
 
-        roles = "Campus Peer Educator Volunteer"
-        if getattr(user, 'executive_position', None):
-            roles = f"{user.executive_position} & Peer Educator Volunteer"
+        certs_str = "; ".join(facts['all_certificates']) if facts['all_certificates'] else "None recorded"
+        awards_str = "; ".join(facts['awards_list']) if facts['awards_list'] else "None recorded"
+        events_str = "; ".join(facts['event_titles']) if facts['event_titles'] else "General campus wellness activities"
 
-        first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
-        start_date = first_event.sign_in_time.strftime("%B %Y") if first_event else timezone.now().strftime("%B %Y")
-
-        # Fetch completed courses/learning accolades from LMS
-        from lms.models import StudentProgress
-        completed_quizzes = StudentProgress.objects.filter(user=user, score=100.0).select_related('quiz')
-        completed_courses = [progress.quiz.title for progress in completed_quizzes]
-        completed_courses_str = ", ".join(completed_courses) if completed_courses else "None yet"
-
-        # Fetch Special Awards
-        user_awards = [f"{a.name} ({a.date_awarded})" if a.date_awarded else a.name for a in user.awards.all()]
-        awards_str = ", ".join(user_awards) if user_awards else "None yet"
-
-        exec_pos = user.executive_position if getattr(user, 'executive_position', None) else "None"
-
-        # 3. Construct the Grounded Context Data
+        # Construct the Grounded Context Data with all verified facts
         volunteer_context = f"""
         Student Name: {user.first_name} {user.last_name}
-        Organization: C-SHAW - Centre for Student Health and Wellness | University of Johannesburg
-        Role(s) Held: {roles}
-        Executive Leadership Position: {exec_pos}
-        Timeframe: {start_date} – Present
-        Total Verified Volunteer Hours: {total_hours} hours
-        Total Events Attended / Organized: {events_attended} events
-        Special Awards & Honors Received: {awards_str}
-        Learning Accolades & Course Certifications (100% Mastery): {completed_courses_str}
+        Organization: C-SHAW - Centre for Student Health and Wellness ({facts['campus_display']})
+        Role(s) Held: {facts['roles']}
+        Executive Leadership Position: {facts['exec_pos'] or 'None'}
+        Timeframe: {facts['start_date']} – Present ({facts['years_active']})
+        Overall Programme Completion Status: {facts['completion_status']}
+        2026 Official Certificate Holder (Year-End Camp Delegate): {'Yes — ' + '; '.join(facts['certificates_list']) if facts['is_certificate_holder'] else 'No'}
+        Total Verified Volunteer Hours: {total_hours} hours (Target: 80 hours)
+        Total Events Attended / Organized: {events_attended} events ({facts['punctuality_pct']}% on-time arrival rate)
+        Key Events & Campaigns Attended: {events_str}
+        Awards, Badges & Honours Won: {awards_str}
+        Certificates & LMS Training Modules Completed: {certs_str}
         """
 
-        # 4. Build Strict OpenAI Prompts
         system_prompt = (
-            "You are a professional career and leadership coach helping a university student translate their verified "
-            "volunteer data, executive leadership responsibilities, special awards/honors, and learning accolades into highly professional career content. "
-            "Write in a calm, grounded, confident, and highly realistic tone. "
-            "DO NOT exaggerate, use hyperbole, or sound like an AI chatbot. Base everything strictly on the provided facts. "
-            "Use ONLY the data provided. Emphasize employability, leadership, and community impact realistically.\n"
-            "CRITICAL INSTRUCTIONS:\n"
-            "1. You MUST explicitly state the student's 'Total Verified Volunteer Hours'.\n"
-            "2. If the student holds an Executive Leadership Position (e.g. Chairperson, Secretary, etc.), highlight their leadership coordination and impact.\n"
-            "3. If the student has received 'Special Awards & Honors Received' or 'Learning Accolades', you MUST weave them into the text in a concise, brief, and natural way.\n\n"
-            "CRITICAL FORMATTING RULE: Do not use any markdown formatting. Do not use asterisks (**), "
+            "You are an expert career coach helping a university student translate their verified 2026 C-SHAW "
+            "volunteering record into factual, high-impact career content. "
+            "Write in a grounded, confident, professional tone. "
+            "DO NOT invent facts or use generic filler—use the exact verified facts provided.\n"
+            "CRITICAL FACT REQUIREMENTS:\n"
+            "1. Explicitly state their 'Overall Programme Completion Status', 'Total Verified Volunteer Hours', and 'Total Events Attended'.\n"
+            "2. Explicitly include their 'Awards, Badges & Honours Won' (including Campus of the Year, Management Awards, or Milestone Badges if listed).\n"
+            "3. Explicitly include their '2026 Official Certificate Holder' status (if Yes) and 'Certificates & LMS Training Modules Completed'.\n"
+            "4. Mention specific 'Key Events & Campaigns Attended' and their Executive Leadership Position (if any).\n\n"
+            "CRITICAL FORMATTING RULE: Do not use markdown formatting. Do not use asterisks (**), "
             "underscores (_), or header hashes (#). Return pure, clean plaintext with normal line breaks."
         )
 
         if gen_type == 'cv':
             user_prompt = (
-                f"Based on the following verified data, write a beautifully structured CV experience section.\n"
+                f"Based strictly on the verified data below, write a structured CV experience section.\n"
                 f"Start with the Role Title, Organization Name, and Date Range on separate lines.\n"
-                f"Follow with exactly 4 concise, action-oriented bullet points detailing their verified impact.\n"
-                f"Ensure bullet points cover: (1) core volunteer impact & verified hours, (2) executive leadership and team coordination (if executive), (3) specialized training/learning accolades, and (4) recognition received through their special awards/honors in a brief way.\n"
-                f"Use a standard literal bullet character (•) for each bullet point.\n\n"
-                f"Data:\n{volunteer_context}"
+                f"Follow with 4 to 5 concise, action-oriented bullet points using the literal bullet character (•).\n"
+                f"Ensure the bullet points explicitly cover:\n"
+                f"(1) Overall programme completion status, exact verified hours ({total_hours}h), and event count ({events_attended} events),\n"
+                f"(2) Executive leadership responsibilities (if executive) or key campaigns attended,\n"
+                f"(3) Official 2026 Certificate Holder status and LMS training modules/certificates completed,\n"
+                f"(4) Exact awards, honours, and campus recognition won.\n\n"
+                f"Verified Data:\n{volunteer_context}"
             )
-        
         elif gen_type == 'linkedin':
             user_prompt = (
-                f"Based on the following data, write a 2-paragraph professional LinkedIn summary in the first person.\n"
-                f"Weave together their verified hours, executive leadership role, community initiatives, and briefly mention their special awards/honors and course mastery accolades.\n"
-                f"Separate the paragraphs with a single blank line. Do not include any title headers.\n\n"
-                f"Data:\n{volunteer_context}"
+                f"Based strictly on the verified data below, write a 2-paragraph professional LinkedIn summary in the first person.\n"
+                f"Paragraph 1 must state their role, overall 2026 programme completion status, exact verified hours ({total_hours}h), events attended ({events_attended}), and key campaigns.\n"
+                f"Paragraph 2 must highlight their Official 2026 Certificate status, completed LMS training modules/certificates, and all awards/honours won.\n"
+                f"Separate paragraphs with a single blank line. Do not include title headers.\n\n"
+                f"Verified Data:\n{volunteer_context}"
             )
-        
-        elif gen_type == 'scholarship':
+        else:
             user_prompt = (
-                f"Based on the following data, draft a 3-paragraph application statement suitable for a scholarship, fellowship, or leadership program.\n"
-                f"Write in the first person. In paragraph 1, introduce their volunteer journey, verified hours, and core motivation. In paragraph 2, elaborate on their executive leadership, event organizing, and community outreach. In paragraph 3, briefly highlight their learning masteries and earned awards as reflections of their dedication and personal growth.\n"
+                f"Based strictly on the verified data below, draft a 3-paragraph application statement suitable for a scholarship, graduate programme, or job application in the first person.\n"
+                f"Paragraph 1: Introduce their C-SHAW journey, overall programme completion status, and exact verified hours ({total_hours}h across {events_attended} events).\n"
+                f"Paragraph 2: Detail their executive leadership role (if applicable), specific campaigns supported, and reliability.\n"
+                f"Paragraph 3: Explicitly cite their Official 2026 Certificate status, completed LMS training modules, and awards/honours won.\n"
                 f"Separate paragraphs with a single blank line. Do not include headers.\n\n"
-                f"Data:\n{volunteer_context}"
+                f"Verified Data:\n{volunteer_context}"
             )
 
-        # 6. Call OpenAI API (Using the v1.0.0+ syntax)
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo", 
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7, 
-                max_tokens=700
-            )
-            
-            # 1. Extract the text FIRST
-            generated_text = response.choices[0].message.content.strip()
-            
-            # 2. THEN save it to the database
-            asset, created = CareerToolkitAsset.objects.update_or_create(
-                user=user,
-                asset_type=gen_type,
-                defaults={
-                    'generated_content': generated_text,
-                    'hours_at_generation': total_hours,
-                    'events_at_generation': events_attended
-                }
-            )
-            
-            # 3. Return it to the frontend
-            return Response({"content": generated_text})
-            
-        except Exception as e:
-            return Response({"error": f"AI Generation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        generated_text = None
+        api_key = getattr(settings, 'OPENAI_API_KEY', '')
+        if api_key:
+            for model_name in ("gpt-4o-mini", "gpt-4o"):
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.5,
+                        max_tokens=750
+                    )
+                    generated_text = response.choices[0].message.content.strip()
+                    break
+                except Exception as e:
+                    logger.warning("OpenAI generation with model %s failed: %s", model_name, e)
+
+        if not generated_text:
+            generated_text = _build_fallback_career_text(gen_type, user, facts)
+
+        CareerToolkitAsset.objects.update_or_create(
+            user=user,
+            asset_type=gen_type,
+            defaults={
+                'generated_content': generated_text,
+                'hours_at_generation': total_hours,
+                'events_at_generation': events_attended
+            }
+        )
+
+        return Response({"content": generated_text})
 
 
 class CareerToolkitReportView(APIView):
@@ -1639,36 +1842,29 @@ class CareerToolkitReportView(APIView):
 
     def get(self, request):
         user = request.user
+        facts = _gather_user_career_facts(user)
 
-        # 1. Fetch Verified Data
-        # Ensure 'ActivitySignup' matches your actual model name
-        stats = ActivitySignup.objects.filter(user=user, attended=True).aggregate(
-            total_hours=Sum('hours_earned'),
-            total_events=Count('id')
-        )
-        total_hours = round(float(stats['total_hours'] or 0.0) + float(getattr(user, 'manual_bonus_hours', 0.0)), 1)
-        events_attended = stats['total_events'] or 0
-        
-        roles = "Peer Educator Volunteer"
-        if getattr(user, 'executive_position', None):
-            roles = f"{user.executive_position}"
+        total_hours = facts["total_hours"]
+        events_attended = facts["events_attended"]
+        roles = facts["roles"]
 
         first_event = ActivitySignup.objects.filter(user=user, attended=True).order_by('sign_in_time').first()
-        start_year = first_event.sign_in_time.year if first_event else timezone.now().year
+        start_year = first_event.sign_in_time.year if (first_event and first_event.sign_in_time) else timezone.now().year
         current_year = timezone.now().year
-        years_active = f"{start_year} - Present" if start_year != current_year else f"{current_year}"
+        years_active = f"{start_year} - {current_year}" if start_year != current_year else f"{current_year}"
 
-        # 2. Setup the PDF Response
+        # Setup the PDF Response
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="CSHAW_Impact_Report_{user.last_name}.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="CSHAW_Impact_Report_{user.last_name or user.username}.pdf"'
 
-        # 3. Create the PDF Canvas
+        # Create the PDF Canvas
         p = canvas.Canvas(response, pagesize=letter)
         width, height = letter
 
         # --- Define Brand Colors ---
         NAVY = colors.HexColor("#0f172a")
         ORANGE = colors.HexColor("#E35205")
+        GREEN = colors.HexColor("#059669")
         LIGHT_GREY = colors.HexColor("#f8fafc")
         BORDER_GREY = colors.HexColor("#e2e8f0")
         TEXT_MAIN = colors.HexColor("#1e293b")
@@ -1676,89 +1872,130 @@ class CareerToolkitReportView(APIView):
 
         # --- 1. HEADER (Deep Navy with Orange Accent) ---
         p.setFillColor(NAVY)
-        p.rect(0, height - 110, width, 110, fill=1, stroke=0)
+        p.rect(0, height - 105, width, 105, fill=1, stroke=0)
         
-        # Orange Accent Line
         p.setFillColor(ORANGE)
-        p.rect(0, height - 115, width, 5, fill=1, stroke=0)
+        p.rect(0, height - 110, width, 5, fill=1, stroke=0)
         
-        # Header Text
         p.setFillColor(colors.white)
-        p.setFont("Helvetica-Bold", 24)
-        p.drawString(40, height - 55, "OFFICIAL IMPACT REPORT")
+        p.setFont("Helvetica-Bold", 22)
+        p.drawString(40, height - 52, "OFFICIAL 2026 IMPACT & COMPLETION REPORT")
         
         p.setFillColor(colors.HexColor("#cbd5e1"))
         p.setFont("Helvetica", 11)
-        p.drawString(40, height - 80, "C-SHAW | Centre for Student Health and Wellness | University of Johannesburg")
+        p.drawString(40, height - 76, "C-SHAW | Centre for Student Health and Wellness | University of Johannesburg")
 
         # --- 2. DOCUMENT META ---
         p.setFillColor(TEXT_MUTED)
         p.setFont("Helvetica", 10)
-        p.drawString(40, height - 150, f"Issued: {timezone.now().strftime('%d %B %Y')}")
-        p.drawString(40, height - 165, "Document Type: Verified Volunteer Record")
+        p.drawString(40, height - 140, f"Issued: {timezone.now().strftime('%d %B %Y')}   |   Campus: {facts['campus_display']} ({facts['campus_code']})")
+        p.drawString(40, height - 155, f"Programme Status: {facts['completion_status']}")
 
         # --- 3. STUDENT PROFILE BOX (Light Grey Rounded Rectangle) ---
         p.setFillColor(LIGHT_GREY)
         p.setStrokeColor(BORDER_GREY)
-        p.roundRect(40, height - 280, width - 80, 90, radius=8, fill=1, stroke=1)
+        p.roundRect(40, height - 255, width - 80, 80, radius=8, fill=1, stroke=1)
 
-        # Profile Labels
         p.setFillColor(TEXT_MUTED)
         p.setFont("Helvetica-Bold", 9)
-        p.drawString(60, height - 220, "VOLUNTEER NAME")
-        p.drawString(260, height - 220, "PRIMARY ROLE")
-        p.drawString(450, height - 220, "ACTIVE PERIOD")
+        p.drawString(60, height - 200, "VOLUNTEER NAME")
+        p.drawString(250, height - 200, "PRIMARY ROLE")
+        p.drawString(460, height - 200, "ACTIVE COHORT")
 
-        # Profile Values
         p.setFillColor(TEXT_MAIN)
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(60, height - 245, f"{user.first_name} {user.last_name}")
+        p.setFont("Helvetica-Bold", 13)
+        full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+        p.drawString(60, height - 224, full_name[:26])
 
-        p.setFont("Helvetica", 12)
-        # Truncate role if it's too long to fit the box cleanly
-        display_role = roles[:22] + "..." if len(roles) > 22 else roles
-        p.drawString(260, height - 245, display_role)
-        p.drawString(450, height - 245, str(years_active))
+        p.setFont("Helvetica", 11)
+        display_role = roles[:28] + "..." if len(roles) > 28 else roles
+        p.drawString(250, height - 224, display_role)
+        p.drawString(460, height - 224, str(years_active))
 
         # --- 4. THE METRICS DASHBOARD ---
-        
-        # Badge 1: Total Hours (Highlighted with Orange)
+        # Badge 1: Total Hours
         p.setFillColor(colors.white)
         p.setStrokeColor(ORANGE)
-        p.roundRect(40, height - 400, 240, 90, radius=8, fill=1, stroke=1)
-
+        p.roundRect(40, height - 355, 165, 80, radius=8, fill=1, stroke=1)
         p.setFillColor(ORANGE)
-        p.setFont("Helvetica-Bold", 32)
-        p.drawString(60, height - 355, f"{total_hours}")
-        
+        p.setFont("Helvetica-Bold", 26)
+        p.drawString(55, height - 315, f"{total_hours}h")
         p.setFillColor(TEXT_MAIN)
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(60, height - 380, "Total Verified Hours")
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(55, height - 338, "Total Verified Hours")
 
         # Badge 2: Events Attended
         p.setFillColor(colors.white)
         p.setStrokeColor(BORDER_GREY)
-        p.roundRect(310, height - 400, width - 350, 90, radius=8, fill=1, stroke=1)
+        p.roundRect(220, height - 355, 165, 80, radius=8, fill=1, stroke=1)
+        p.setFillColor(NAVY)
+        p.setFont("Helvetica-Bold", 26)
+        p.drawString(235, height - 315, f"{events_attended}")
+        p.setFillColor(TEXT_MUTED)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(235, height - 338, f"Events ({facts['punctuality_pct']}% On-Time)")
+
+        # Badge 3: Certificates & Courses
+        cert_count = len(facts["all_certificates"])
+        p.setFillColor(colors.white)
+        p.setStrokeColor(GREEN if facts["is_programme_completed"] else BORDER_GREY)
+        p.roundRect(400, height - 355, width - 440, 80, radius=8, fill=1, stroke=1)
+        p.setFillColor(GREEN if facts["is_programme_completed"] else NAVY)
+        p.setFont("Helvetica-Bold", 26)
+        p.drawString(415, height - 315, f"{cert_count}")
+        p.setFillColor(TEXT_MAIN)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(415, height - 338, "Certificates & Modules")
+
+        # --- 5. AWARDS, CERTIFICATES & TRAINING DETAILS ---
+        y_cursor = height - 390
 
         p.setFillColor(NAVY)
-        p.setFont("Helvetica-Bold", 32)
-        p.drawString(330, height - 355, f"{events_attended}")
-        
-        p.setFillColor(TEXT_MUTED)
-        p.setFont("Helvetica", 12)
-        p.drawString(330, height - 380, "Events Supported")
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(40, y_cursor, "VERIFIED AWARDS & HONOURS")
+        y_cursor -= 18
 
-        # --- 5. VERIFICATION FOOTER ---
-        # A clean line above the footer
+        p.setFillColor(TEXT_MAIN)
+        p.setFont("Helvetica", 10)
+        awards_to_show = facts["awards_list"][:6] if facts["awards_list"] else ["Active C-SHAW Peer Educator Member (2026 Season)"]
+        for award_item in awards_to_show:
+            p.drawString(52, y_cursor, f"• {award_item[:95]}")
+            y_cursor -= 15
+
+        y_cursor -= 12
+        p.setFillColor(NAVY)
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(40, y_cursor, "CERTIFICATES & TRAINING COMPLETED")
+        y_cursor -= 18
+
+        p.setFillColor(TEXT_MAIN)
+        p.setFont("Helvetica", 10)
+        cert_lines = facts["all_certificates"][:7] if facts["all_certificates"] else ["Active C-SHAW Peer Educator Training Participant"]
+        for cline in cert_lines:
+            p.drawString(52, y_cursor, f"• {cline[:95]}")
+            y_cursor -= 15
+
+        if facts["event_titles"]:
+            y_cursor -= 12
+            p.setFillColor(NAVY)
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(40, y_cursor, "KEY CAMPAIGNS & OUTREACH EVENTS SUPPORTED")
+            y_cursor -= 18
+            p.setFillColor(TEXT_MAIN)
+            p.setFont("Helvetica", 10)
+            for ev_title in facts["event_titles"][:5]:
+                p.drawString(52, y_cursor, f"• {ev_title[:95]}")
+                y_cursor -= 15
+
+        # --- 6. VERIFICATION FOOTER ---
         p.setStrokeColor(BORDER_GREY)
         p.line(40, 70, width - 40, 70)
 
         p.setFillColor(TEXT_MUTED)
         p.setFont("Helvetica-Oblique", 9)
         p.drawString(40, 50, "This is an automated, official record generated by the C-SHAW Volunteer Management System.")
-        p.drawString(40, 35, "All hours represented here have been actively verified by campus executives and clinic staff.")
+        p.drawString(40, 35, "All hours, awards, and certificates represented here have been verified by campus executives and C-SHAW staff.")
 
-        # Save and close the PDF
         p.showPage()
         p.save()
 
@@ -1766,10 +2003,6 @@ class CareerToolkitReportView(APIView):
 
 @login_required
 def live_awards_page(request):
-    from users.models import User
-    if request.user.role != User.Roles.COORDINATOR:
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden("Only coordinators can view this page.")
     return render(request, 'core/live_awards.html')
 
 @login_required
@@ -1860,9 +2093,27 @@ class ManualHoursAllocationAPIView(APIView):
         return Response({"message": f"Successfully allocated {hours} hours to {students.count()} students for '{event_name}'."})
 
 class LiveAwardsAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoordinator]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @staticmethod
+    def get_locked_snapshot_path():
+        from django.conf import settings
+        import os
+        media_root = getattr(settings, 'MEDIA_ROOT', None) or os.path.join(settings.BASE_DIR, 'media')
+        os.makedirs(media_root, exist_ok=True)
+        return os.path.join(media_root, 'locked_live_awards_2026.json')
 
     def get(self, request):
+        import json
+        import os
+        snapshot_path = self.get_locked_snapshot_path()
+        if os.path.exists(snapshot_path):
+            try:
+                with open(snapshot_path, 'r', encoding='utf-8') as f:
+                    return Response(json.load(f))
+            except Exception:
+                pass
+
         from users.models import User
         from django.db.models import Sum, Count, Case, When, Value, IntegerField, F
         from django.utils import timezone
@@ -1999,8 +2250,320 @@ class LiveAwardsAPIView(APIView):
             
         campus_avg.sort(key=lambda x: x['avg_score'], reverse=True)
         
-        return Response({
+        payload = {
+            'locked': True,
             'overall': seniors_top_5,
             'newcomers': newcomers_top_5,
             'campuses': campus_avg
+        }
+        try:
+            with open(snapshot_path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2)
+        except Exception:
+            pass
+
+        return Response(payload)
+
+
+class YearEndRoundupAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from users.models import User
+        from .models import CampTicket, VolunteerActivity
+        from django.db.models import Sum, Count, Case, When, Value, IntegerField, F
+        from django.utils import timezone
+
+        current_year = timezone.now().year
+        user = request.user
+
+        # 1. Per-student attendance & punctuality stats for the year
+        stats = ActivitySignup.objects.filter(
+            user__role=User.Roles.STUDENT,
+            attended=True,
+            sign_out_time__year=current_year
+        ).values('user').annotate(
+            total_hours=Sum('hours_earned'),
+            events_attended=Count('id'),
+            early_count=Sum(
+                Case(
+                    When(sign_in_time__lte=F('activity__date_time'), then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField()
+                )
+            )
+        )
+
+        user_stats_map = {}
+        for s in stats:
+            user_stats_map[s['user']] = {
+                'total_hours': float(s['total_hours'] or 0.0),
+                'events_attended': s['events_attended'] or 0,
+                'early_count': s['early_count'] or 0
+            }
+
+        students = User.objects.filter(role=User.Roles.STUDENT)
+        all_students = list(students.values(
+            'id', 'first_name', 'last_name', 'points',
+            'manual_bonus_hours', 'campus', 'volunteer_status',
+            'executive_position', 'is_camp_eligible'
+        ))
+
+        max_hours = 0.0
+        max_events = 0
+        max_points = 0
+        compiled_data = []
+        student_by_id = {}
+
+        for student in all_students:
+            uid = student['id']
+            base_points = student['points'] or 0
+            bonus = float(student['manual_bonus_hours'] or 0.0)
+            s_data = user_stats_map.get(uid, {'total_hours': 0.0, 'events_attended': 0, 'early_count': 0})
+
+            t_hours = round(s_data['total_hours'] + bonus, 2)
+            t_events = s_data['events_attended']
+
+            if t_hours > max_hours:
+                max_hours = t_hours
+            if t_events > max_events:
+                max_events = t_events
+            if base_points > max_points:
+                max_points = base_points
+
+            entry = {
+                'id': uid,
+                'name': f"{student['first_name']} {student['last_name']}".strip(),
+                'first_name': student['first_name'],
+                'last_name': student['last_name'],
+                'campus': student['campus'] or 'APB',
+                'volunteer_status': student['volunteer_status'],
+                'executive_position': student['executive_position'],
+                'hours': t_hours,
+                'events': t_events,
+                'points': base_points,
+                'early_count': s_data['early_count'],
+            }
+            compiled_data.append(entry)
+            student_by_id[uid] = entry
+
+        if max_hours == 0:
+            max_hours = 1
+        if max_events == 0:
+            max_events = 1
+        if max_points == 0:
+            max_points = 1
+
+        for data in compiled_data:
+            score_hours = (data['hours'] / max_hours) * 100 * 0.50
+            score_events = (data['events'] / max_events) * 100 * 0.25
+            score_points = (data['points'] / max_points) * 100 * 0.10
+            punctuality_pct = (data['early_count'] / data['events']) * 100 if data['events'] > 0 else 0
+            score_punctuality = punctuality_pct * 0.15
+
+            data['punctuality_pct'] = round(punctuality_pct, 1)
+            data['score_hours'] = round(score_hours, 2)
+            data['score_events'] = round(score_events, 2)
+            data['score_points'] = round(score_points, 2)
+            data['score_punctuality'] = round(score_punctuality, 2)
+            data['power_score'] = round(score_hours + score_events + score_points + score_punctuality, 2)
+
+        compiled_data.sort(key=lambda x: x['power_score'], reverse=True)
+
+        # 2. Official Certificate Holders (Camp Attendees)
+        cert_tickets = list(
+            CampTicket.objects.filter(
+                status__in=['active', 'confirmed'],
+                user__is_camp_eligible=True
+            ).select_related('user')
+        )
+
+        cert_user_ids = {t.user_id for t in cert_tickets}
+        certificate_holders = []
+        for t in cert_tickets:
+            u_info = student_by_id.get(t.user_id)
+            u_hours = u_info['hours'] if u_info else float(t.user.manual_bonus_hours or 0.0)
+            u_events = u_info['events'] if u_info else 0
+            u_campus = (t.user.campus or 'APB').upper()
+            certificate_holders.append({
+                'id': t.user_id,
+                'name': f"{t.user.first_name} {t.user.last_name}".strip(),
+                'campus': u_campus,
+                'hours': round(u_hours, 1),
+                'events': u_events,
+                'cohort_rank': t.cohort_rank,
+                'honor_title': t.honor_title or 'Official 2026 Certificate Holder',
+                'executive_position': t.user.executive_position if t.user.executive_position and t.user.executive_position != 'None' else None,
+                'is_apb': u_campus == 'APB',
+                'is_current_user': (t.user_id == user.id),
+            })
+
+        certificate_holders.sort(key=lambda x: (x['cohort_rank'] or 999, -x['hours']))
+
+        # 3. Campus Summaries (APB, DFC, APK, SWC)
+        CAMPUS_NAMES = {
+            'APB': 'Auckland Park Bunting Road',
+            'APK': 'Auckland Park Kingsway',
+            'DFC': 'Doornfontein Campus',
+            'SWC': 'Soweto Campus',
+        }
+        campus_map = {
+            c: {
+                'campus': c,
+                'campus_name': CAMPUS_NAMES[c],
+                'total_hours': 0.0,
+                'total_events_participations': 0,
+                'active_volunteers': 0,
+                'total_registered': 0,
+                'total_power_score': 0.0,
+                'camp_delegates_count': 0,
+                'is_campus_of_the_year': (c == 'APB'),
+            }
+            for c in ['APB', 'DFC', 'APK', 'SWC']
+        }
+
+        total_programme_hours = 0.0
+        active_programme_volunteers = 0
+
+        for d in compiled_data:
+            c = (d['campus'] or '').upper()
+            if c not in campus_map:
+                continue
+            campus_map[c]['total_registered'] += 1
+            campus_map[c]['total_hours'] += d['hours']
+            campus_map[c]['total_events_participations'] += d['events']
+            campus_map[c]['total_power_score'] += d['power_score']
+            total_programme_hours += d['hours']
+            if d['hours'] > 0 or d['events'] > 0:
+                campus_map[c]['active_volunteers'] += 1
+                active_programme_volunteers += 1
+            if d['id'] in cert_user_ids:
+                campus_map[c]['camp_delegates_count'] += 1
+
+        campus_summaries = []
+        for c, info in campus_map.items():
+            reg = info['total_registered']
+            act = info['active_volunteers']
+            info['total_hours'] = round(info['total_hours'], 1)
+            info['avg_hours'] = round(info['total_hours'] / act, 1) if act > 0 else 0.0
+            info['avg_power_score'] = round(info['total_power_score'] / reg, 2) if reg > 0 else 0.0
+            info['hours_share_pct'] = round((info['total_hours'] / total_programme_hours) * 100, 1) if total_programme_hours > 0 else 0.0
+            campus_summaries.append(info)
+
+        # Sort with APB (Campus of the Year) first, then by total_hours descending
+        campus_summaries.sort(key=lambda x: (0 if x['is_campus_of_the_year'] else 1, -x['total_hours']))
+
+        # 4. Live Awards Summary (Concise Top Winners & Numbers — Locked Snapshot)
+        import json
+        import os
+        seniors = [d for d in compiled_data if d['volunteer_status'] == User.VolunteerStatus.SENIOR]
+        newcomers = [d for d in compiled_data if d['volunteer_status'] == User.VolunteerStatus.NEWCOMER]
+
+        snapshot_path = LiveAwardsAPIView.get_locked_snapshot_path()
+        locked_awards = None
+        if os.path.exists(snapshot_path):
+            try:
+                with open(snapshot_path, 'r', encoding='utf-8') as f:
+                    locked_awards = json.load(f)
+            except Exception:
+                locked_awards = None
+
+        def serialize_contender(d, rank_idx):
+            return {
+                'rank': rank_idx,
+                'name': d['name'],
+                'campus': d['campus'],
+                'power_score': d['power_score'],
+                'hours': round(d['hours'], 1),
+                'events': d['events'],
+                'punctuality_pct': d['punctuality_pct'],
+                'points': d['points'],
+            }
+
+        overall_source = locked_awards.get('overall', seniors[:3]) if locked_awards else seniors[:3]
+        newcomers_source = locked_awards.get('newcomers', newcomers[:3]) if locked_awards else newcomers[:3]
+
+        campus_standings = sorted(
+            [
+                {
+                    'campus': c_info['campus'],
+                    'campus_name': c_info['campus_name'],
+                    'avg_score': c_info['avg_power_score'],
+                    'total_hours': c_info['total_hours'],
+                    'active_volunteers': c_info['active_volunteers'],
+                    'camp_delegates_count': c_info['camp_delegates_count'],
+                    'is_winner': c_info['is_campus_of_the_year'],
+                }
+                for c_info in campus_summaries
+            ],
+            key=lambda x: (0 if x['is_winner'] else 1, -x['avg_score'])
+        )
+
+        # 5. APB Campus of the Year Spotlight (Camp Delegates + Active Contributors)
+        apb_camp_delegates = [ch for ch in certificate_holders if ch['campus'] == 'APB']
+        apb_active_contributors = [
+            {
+                'id': d['id'],
+                'name': d['name'],
+                'hours': round(d['hours'], 1),
+                'events': d['events'],
+                'power_score': d['power_score'],
+                'is_camp_delegate': (d['id'] in cert_user_ids),
+                'executive_position': d['executive_position'] if d['executive_position'] and d['executive_position'] != 'None' else None,
+                'is_current_user': (d['id'] == user.id),
+            }
+            for d in sorted(compiled_data, key=lambda x: (-x['hours'], -x['power_score']))
+            if (d['campus'] or '').upper() == 'APB' and (d['hours'] > 0 or d['id'] in cert_user_ids)
+        ]
+
+        # 6. Current User Personal Spotlight
+        current_user_entry = student_by_id.get(user.id)
+        user_hours = current_user_entry['hours'] if current_user_entry else float(getattr(user, 'manual_bonus_hours', 0.0) or 0.0)
+        user_events = current_user_entry['events'] if current_user_entry else 0
+        user_is_cert = (user.id in cert_user_ids)
+        user_cert_entry = next((ch for ch in certificate_holders if ch['id'] == user.id), None)
+
+        total_hosted_events = VolunteerActivity.objects.exclude(
+            description="Manual hours allocation event"
+        ).filter(date_time__year=current_year).count()
+
+        return Response({
+            'season_summary': {
+                'year': current_year,
+                'total_hours': round(total_programme_hours, 1),
+                'total_events': total_hosted_events,
+                'active_volunteers': active_programme_volunteers,
+                'certificate_holders_count': len(certificate_holders),
+                'campus_of_the_year': 'APB',
+                'campus_of_the_year_name': CAMPUS_NAMES['APB'],
+            },
+            'user_spotlight': {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role,
+                'campus': user.campus or 'APB',
+                'is_apb': (user.campus == 'APB'),
+                'total_hours': round(user_hours, 1),
+                'events_count': user_events,
+                'is_certificate_holder': user_is_cert,
+                'has_completed_goal': bool(user_hours >= 80 or user_is_cert),
+                'cohort_rank': user_cert_entry['cohort_rank'] if user_cert_entry else None,
+                'honor_title': user_cert_entry['honor_title'] if user_cert_entry else None,
+            },
+            'campus_summaries': campus_summaries,
+            'awards_summary': {
+                'overall': [serialize_contender(d, idx + 1) for idx, d in enumerate(overall_source[:3])],
+                'newcomers': [serialize_contender(d, idx + 1) for idx, d in enumerate(newcomers_source[:3])],
+                'campuses': campus_standings,
+            },
+            'certificate_holders': certificate_holders,
+            'apb_champions': {
+                'campus': 'APB',
+                'campus_name': CAMPUS_NAMES['APB'],
+                'total_hours': campus_map['APB']['total_hours'],
+                'active_volunteers': campus_map['APB']['active_volunteers'],
+                'camp_delegates_count': len(apb_camp_delegates),
+                'camp_delegates': apb_camp_delegates,
+                'active_contributors': apb_active_contributors,
+            },
         })

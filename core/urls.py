@@ -66,5 +66,6 @@ urlpatterns = [
     path('live-awards/', views.live_awards_page, name='live-awards-page'),
     path('allocate-hours/', views.allocate_hours_page, name='allocate-hours-page'),
     path('api/live-awards/', views.LiveAwardsAPIView.as_view(), name='api-live-awards'),
+    path('api/year-end-roundup/', views.YearEndRoundupAPIView.as_view(), name='api-year-end-roundup'),
 
 ]

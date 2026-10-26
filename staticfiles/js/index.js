@@ -490,13 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="tab-switcher-pill">
                         <button type="button" id="tabSwitchActivities" class="tab-switcher-btn ${currentMainTab === 'activities' ? 'active' : ''}">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                             </svg>
-                            <span>Activities</span>
-                            <span class="tab-badge-count">${allActivities.length}</span>
+                            <span>${allActivities.length === 0 ? '2026 Year-End Roundup' : 'Activities'}</span>
+                            <span class="tab-badge-count">${allActivities.length === 0 ? '✦' : allActivities.length}</span>
                         </button>
                         <button type="button" id="tabSwitchModules" class="tab-switcher-btn ${currentMainTab === 'modules' ? 'active' : ''}">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -510,9 +507,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
 
-            // 4. Generate Activities Tab Content
+            // 4. Generate Activities / Year-End Roundup Tab Content
+            let roundupData = null;
+            if (showTabs) {
+                const roundupRes = await fetch('/api/year-end-roundup/').catch(() => null);
+                if (roundupRes && roundupRes.ok) {
+                    roundupData = await roundupRes.json();
+                }
+            }
+
             let activitiesContentHtml = '';
-            if (allActivities.length === 0) {
+            if (showTabs && roundupData) {
+                activitiesContentHtml = buildYearEndRoundupHtml(roundupData);
+                if (allActivities.length > 0) {
+                    const groups = {};
+                    allActivities.forEach(activity => {
+                        const isSeriesIdentifier = /\s\(Day\s\d+\)$/i.test(activity.title);
+                        const groupKey = isSeriesIdentifier
+                            ? activity.title.replace(/\s\(Day\s\d+\)$/i, '').trim()
+                            : `single_${activity.id}`;
+                        if (!groups[groupKey]) groups[groupKey] = [];
+                        groups[groupKey].push(activity);
+                    });
+                    const displayList = Object.keys(groups).map(key => {
+                        const events = groups[key];
+                        events.sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
+                        return { name: key, events: events, startDate: new Date(events[0].date_time) };
+                    }).sort((a, b) => a.startDate - b.startDate);
+
+                    let cardsHtml = '';
+                    displayList.forEach(item => {
+                        cardsHtml += item.events.length === 1
+                            ? createSingleEventCard(item.events[0])
+                            : createSeriesFolderCard(item.name, item.events);
+                    });
+                    activitiesContentHtml += `<div style="margin-top: 28px;"><div class="cards-grid">${cardsHtml}</div></div>`;
+                }
+            } else if (allActivities.length === 0) {
                 activitiesContentHtml = `
                     <div class="cards-grid">
                         <div class="empty-state-container" style="grid-column: 1 / -1;">
@@ -528,8 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </svg>
                                 </div>
                             </div>
-                            <h3 class="empty-state-title">Zero events right now.</h3>
-                            <p class="empty-state-text" style="margin-bottom: 24px;">Take this time to focus on your studies${showTabs ? ' or check out the Course Modules!' : '!'}</p>
+                            <h3 class="empty-state-title">The 2026 Volunteering Year Has Concluded.</h3>
+                            <p class="empty-state-text" style="margin-bottom: 24px;">Log in to view the official 2026 Year-End Roundup, Campus Standings, and Certificate Holders!</p>
                             <div class="empty-state-cta">
                                 <a href="/about/" class="btn-read-cshaw">
                                     <span>Read about the C-SHAW Program</span>
@@ -705,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // 8. ATTACH ACTIVITY DETAILS LISTENERS
+            // 8. ATTACH ACTIVITY DETAILS & YEAR-END ROUNDUP LISTENERS
             allActivities.forEach(activity => {
                 const btn = document.getElementById(`view-btn-${activity.id}`);
                 if (btn) {
@@ -713,9 +744,608 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            if (showTabs && roundupData) {
+                attachYearEndRoundupListeners();
+            }
+
         } catch (error) {
             console.error(error);
             mainContent.innerHTML = `<div class="header-section"><h1>Error</h1><p>Could not load activities.</p></div>`;
+        }
+    }
+
+    function buildYearEndRoundupHtml(roundup) {
+        const season = roundup.season_summary || {};
+        const userSpot = roundup.user_spotlight || {};
+        const campuses = roundup.campus_summaries || [];
+        const awards = roundup.awards_summary || {};
+        const certHolders = roundup.certificate_holders || [];
+        const apbData = roundup.apb_champions || {};
+
+        const year = season.year || 2026;
+        const userBadges = [];
+        if (userSpot.is_certificate_holder) {
+            userBadges.push(`
+                <span style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #f59e0b, #d97706); color:#0f172a; padding:6px 13px; border-radius:999px; font-size:0.78rem; font-weight:800; letter-spacing:0.3px;">
+                    🎓 2026 Official Certificate Holder${userSpot.cohort_rank ? ` • Cohort #${userSpot.cohort_rank}` : ''}
+                </span>
+            `);
+        }
+        if (userSpot.is_apb) {
+            userBadges.push(`
+                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.18); border:1px solid rgba(16, 185, 129, 0.45); color:#34d399; padding:6px 13px; border-radius:999px; font-size:0.78rem; font-weight:800;">
+                    🏆 APB — ${year} Campus of the Year Champion
+                </span>
+            `);
+        }
+        if (userSpot.has_completed_goal) {
+            userBadges.push(`
+                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(255, 255, 255, 0.1); border:1px solid rgba(255, 255, 255, 0.2); color:#f8fafc; padding:6px 13px; border-radius:999px; font-size:0.78rem; font-weight:700;">
+                    ✅ Programme Completed (${userSpot.total_hours || 0}h Verified)
+                </span>
+            `);
+        } else if (userSpot.role === 'STUDENT') {
+            userBadges.push(`
+                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(255, 255, 255, 0.08); border:1px solid rgba(255, 255, 255, 0.16); color:#e2e8f0; padding:6px 13px; border-radius:999px; font-size:0.78rem; font-weight:700;">
+                    ⏱️ ${userSpot.total_hours || 0}h Logged Across ${userSpot.events_count || 0} Events
+                </span>
+            `);
+        }
+
+        // Helper for Individual Award Card (Senior / Junior)
+        const renderAwardCategoryCard = (title, tagText, tagColor, items, iconSvg) => {
+            if (!items || items.length === 0) {
+                return `
+                    <div class="yer-award-card">
+                        <div class="yer-award-header">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${iconSvg}
+                                <span style="font-weight:800; color:#0f172a; font-size:1rem;">${title}</span>
+                            </div>
+                            <span style="font-size:0.7rem; font-weight:800; padding:3px 8px; border-radius:6px; background:${tagColor}18; color:${tagColor};">${tagText}</span>
+                        </div>
+                        <p style="color:#94a3b8; font-size:0.88rem; padding:20px 0; text-align:center;">Standings finalized on Live Awards page.</p>
+                    </div>
+                `;
+            }
+            const winner = items[0];
+            const runners = items.slice(1, 3);
+            return `
+                <div class="yer-award-card">
+                    <div class="yer-award-header">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${iconSvg}
+                            <span style="font-weight:800; color:#0f172a; font-size:1rem;">${title}</span>
+                        </div>
+                        <span style="font-size:0.68rem; font-weight:800; padding:3px 8px; border-radius:6px; background:${tagColor}18; color:${tagColor}; text-transform:uppercase;">${tagText}</span>
+                    </div>
+
+                    <div class="yer-winner-box">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                            <div>
+                                <div style="font-size:0.7rem; font-weight:800; color:#E35205; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">👑 #1 Winner</div>
+                                <div style="font-size:1.12rem; font-weight:800; color:#0f172a;">${winner.name}</div>
+                                <div style="font-size:0.78rem; color:#64748b; font-weight:600; margin-top:2px;">${winner.campus} Campus • ${winner.hours}h • ${winner.events} events</div>
+                            </div>
+                            <div style="background:#E35205; color:#fff; font-weight:800; font-size:0.82rem; padding:5px 11px; border-radius:999px; white-space:nowrap;">
+                                ${Number(winner.power_score).toFixed(1)} PWR
+                            </div>
+                        </div>
+                    </div>
+
+                    ${runners.length > 0 ? `
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                            ${runners.map(r => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 11px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; font-size:0.84rem;">
+                                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                        <span style="font-weight:800; color:#64748b; width:22px;">#${r.rank}</span>
+                                        <span style="font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${r.name}</span>
+                                        <span style="font-size:0.7rem; color:#64748b; background:#e2e8f0; padding:1px 6px; border-radius:4px; font-weight:700;">${r.campus}</span>
+                                    </div>
+                                    <div style="font-weight:800; color:#0f172a; white-space:nowrap; margin-left:8px;">
+                                        ${Number(r.power_score).toFixed(1)} <span style="font-size:0.72rem; color:#64748b; font-weight:600;">(${r.hours}h)</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        };
+
+        // Campus of the Year Award Card
+        const campusStandings = awards.campuses || [];
+        const apbStanding = campusStandings.find(c => c.campus === 'APB') || { campus: 'APB', campus_name: 'Auckland Park Bunting Road', avg_score: 0, total_hours: 0 };
+        const otherCampusStandings = campusStandings.filter(c => c.campus !== 'APB');
+
+        const campusAwardCardHtml = `
+            <div class="yer-award-card" style="border-color: rgba(245, 158, 11, 0.45); background: linear-gradient(180deg, #fffbeb 0%, #ffffff 45%);">
+                <div class="yer-award-header">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="color:#d97706; display:flex;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+                        </span>
+                        <span style="font-weight:800; color:#0f172a; font-size:1rem;">Campus of the Year</span>
+                    </div>
+                    <span style="font-size:0.68rem; font-weight:800; padding:3px 8px; border-radius:6px; background:rgba(245, 158, 11, 0.18); color:#b45309; text-transform:uppercase;">2026 Winner</span>
+                </div>
+
+                <div class="yer-winner-box" style="border-color:#f59e0b; background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                        <div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#b45309; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">🏆 Official Champion</div>
+                            <div style="font-size:1.2rem; font-weight:900; color:#0f172a;">APB Campus</div>
+                            <div style="font-size:0.78rem; color:#78350f; font-weight:600; margin-top:2px;">${apbStanding.total_hours}h Verified • ${apbStanding.active_volunteers || 0} Active Volunteers</div>
+                        </div>
+                        <div style="background:#d97706; color:#fff; font-weight:800; font-size:0.82rem; padding:5px 11px; border-radius:999px; white-space:nowrap;">
+                            ${Number(apbStanding.avg_score).toFixed(1)} AVG PWR
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                    ${otherCampusStandings.map((c, idx) => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 11px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; font-size:0.84rem;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-weight:800; color:#64748b; width:22px;">#${idx + 2}</span>
+                                <span style="font-weight:800; color:#1e293b;">${c.campus}</span>
+                                <span style="font-size:0.75rem; color:#64748b;">${c.total_hours}h total</span>
+                            </div>
+                            <div style="font-weight:800; color:#0f172a;">
+                                ${Number(c.avg_score).toFixed(1)} <span style="font-size:0.72rem; color:#64748b; font-weight:600;">PWR</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        // Campus Hours Summary Cards (4 Campuses)
+        const campusSummaryCardsHtml = campuses.map(c => {
+            const isApb = c.is_campus_of_the_year;
+            return `
+                <div class="yer-campus-card ${isApb ? 'yer-campus-winner' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:7px;">
+                                <span style="font-size:1.25rem; font-weight:900; color:#0f172a;">${c.campus}</span>
+                                ${isApb ? `<span style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:999px; letter-spacing:0.4px;">🏆 CAMPUS OF THE YEAR</span>` : ''}
+                            </div>
+                            <div style="font-size:0.76rem; color:#64748b; font-weight:500;">${c.campus_name}</div>
+                        </div>
+                        <span style="font-size:0.75rem; font-weight:800; color:${isApb ? '#b45309' : '#475569'}; background:${isApb ? '#fef3c7' : '#f1f5f9'}; padding:3px 8px; border-radius:6px;">
+                            ${c.hours_share_pct}% of Total
+                        </span>
+                    </div>
+
+                    <div style="margin: 12px 0 10px;">
+                        <div style="font-size:2rem; font-weight:900; color:${isApb ? '#E35205' : '#0f172a'}; line-height:1;">
+                            ${c.total_hours}<span style="font-size:0.95rem; font-weight:700; color:#64748b; margin-left:3px;">hrs</span>
+                        </div>
+                        <div style="font-size:0.73rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">
+                            Verified Service Hours
+                        </div>
+                    </div>
+
+                    <div style="height:6px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-bottom:14px;">
+                        <div style="width:${Math.min(100, Math.max(4, c.hours_share_pct))}%; height:100%; background:${isApb ? 'linear-gradient(90deg, #f59e0b, #E35205)' : '#3b82f6'}; border-radius:999px;"></div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; padding-top:10px; border-top:1px solid #f1f5f9; font-size:0.78rem;">
+                        <div>
+                            <div style="font-weight:800; color:#0f172a;">${c.active_volunteers}</div>
+                            <div style="color:#64748b; font-size:0.7rem;">Active Peers</div>
+                        </div>
+                        <div>
+                            <div style="font-weight:800; color:#0f172a;">${c.avg_hours}h</div>
+                            <div style="color:#64748b; font-size:0.7rem;">Avg / Peer</div>
+                        </div>
+                        <div>
+                            <div style="font-weight:800; color:#0f172a;">${c.camp_delegates_count}</div>
+                            <div style="color:#64748b; font-size:0.7rem;">Camp Certs</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // APB Champions Spotlight (Highlighting APB Camp Delegates + Option to view all active APB contributors)
+        const apbDelegates = apbData.camp_delegates || [];
+        const apbContributors = apbData.active_contributors || [];
+        const apbSpotlightList = apbDelegates.length > 0 ? apbDelegates : apbContributors.slice(0, 12);
+
+        const apbSpotlightHtml = `
+            <div class="yer-apb-banner">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px;">
+                    <div>
+                        <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(245, 158, 11, 0.2); border:1px solid rgba(245, 158, 11, 0.45); color:#fbbf24; font-size:0.72rem; font-weight:800; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:6px;">
+                            🏆 2026 Campus of the Year Spotlight
+                        </div>
+                        <h3 style="margin:0; font-size:1.3rem; font-weight:800; color:#ffffff;">
+                            Congratulations to APB (${apbData.campus_name || 'Auckland Park Bunting Road'})!
+                        </h3>
+                        <p style="margin:4px 0 0; font-size:0.88rem; color:#cbd5e1;">
+                            Celebrating the APB Camp Delegates and active Peer Educators who powered APB to ${apbData.total_hours || 0} verified hours and the 2026 Campus of the Year title.
+                        </p>
+                    </div>
+                    ${apbContributors.length > apbSpotlightList.length ? `
+                        <button type="button" id="btnToggleAllApb" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:8px 14px; border-radius:10px; font-size:0.8rem; font-weight:700; cursor:pointer;">
+                            View All ${apbContributors.length} Active APB Contributors
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div id="apbDelegatesGrid" class="yer-apb-grid">
+                    ${apbSpotlightList.map(p => `
+                        <div class="yer-apb-pill ${p.is_current_user ? 'yer-apb-pill-me' : ''}">
+                            <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+                                <span style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #f59e0b, #E35205); color:#0f172a; font-weight:900; font-size:0.75rem; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    ${p.cohort_rank ? `#${p.cohort_rank}` : '🏆'}
+                                </span>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:700; color:#f8fafc; font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        ${p.name} ${p.is_current_user ? '<span style="background:#f59e0b; color:#0f172a; font-size:0.62rem; font-weight:900; padding:1px 5px; border-radius:4px; margin-left:4px;">YOU</span>' : ''}
+                                    </div>
+                                    <div style="font-size:0.72rem; color:#94a3b8;">
+                                        ${p.executive_position ? `<span style="color:#fbbf24; font-weight:700;">${p.executive_position}</span> • ` : ''}🎓 Camp Delegate
+                                    </div>
+                                </div>
+                            </div>
+                            <span style="font-weight:800; color:#fbbf24; font-size:0.84rem; white-space:nowrap; margin-left:8px;">
+                                ${p.hours}h
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${apbContributors.length > apbSpotlightList.length ? `
+                    <div id="apbAllContributorsGrid" class="yer-apb-grid" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.12);">
+                        ${apbContributors.map(p => `
+                            <div class="yer-apb-pill ${p.is_current_user ? 'yer-apb-pill-me' : ''}">
+                                <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+                                    <span style="width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.12); color:#f8fafc; font-weight:800; font-size:0.72rem; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        ${p.is_camp_delegate ? '🎓' : '✦'}
+                                    </span>
+                                    <div style="min-width:0;">
+                                        <div style="font-weight:700; color:#f8fafc; font-size:0.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${p.name} ${p.is_current_user ? '<span style="background:#f59e0b; color:#0f172a; font-size:0.62rem; font-weight:900; padding:1px 5px; border-radius:4px; margin-left:4px;">YOU</span>' : ''}
+                                        </div>
+                                        <div style="font-size:0.7rem; color:#94a3b8;">
+                                            ${p.is_camp_delegate ? 'Camp Certificate Holder' : `${p.events} events attended`}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span style="font-weight:800; color:#34d399; font-size:0.82rem; white-space:nowrap; margin-left:8px;">
+                                    ${p.hours}h
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        // Certificate Holders Showcase (Camp Attendees)
+        const certCardsHtml = certHolders.map(ch => `
+            <div class="yer-cert-card ${ch.is_current_user ? 'yer-cert-card-me' : ''}" data-cert-campus="${ch.campus}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                        <span style="background:#0f172a; color:#fbbf24; border:1px solid rgba(251, 191, 36, 0.4); font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:8px; flex-shrink:0;">
+                            ${ch.cohort_rank ? `#${ch.cohort_rank}` : 'VIP'}
+                        </span>
+                        <div style="min-width:0;">
+                            <div style="font-weight:800; color:#0f172a; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                ${ch.name}
+                                ${ch.is_current_user ? `<span style="background:#E35205; color:#fff; font-size:0.62rem; padding:1px 6px; border-radius:4px; margin-left:4px; vertical-align:middle;">YOU</span>` : ''}
+                            </div>
+                            <div style="font-size:0.74rem; color:#64748b; font-weight:600;">
+                                ${ch.executive_position ? `<span style="color:#E35205; font-weight:700;">${ch.executive_position}</span> • ` : ''}${ch.events} Events
+                            </div>
+                        </div>
+                    </div>
+                    <span style="font-size:0.7rem; font-weight:800; padding:3px 8px; border-radius:6px; background:${ch.is_apb ? '#fef3c7' : '#f1f5f9'}; color:${ch.is_apb ? '#b45309' : '#475569'}; white-space:nowrap;">
+                        ${ch.campus}${ch.is_apb ? ' 🏆' : ''}
+                    </span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px dashed #e2e8f0; font-size:0.78rem;">
+                    <span style="color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                        🎓 Official 2026 Certificate
+                    </span>
+                    <span style="font-weight:800; color:#0f172a;">${ch.hours} hrs</span>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <style>
+                .yer-wrapper {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 28px;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+                .yer-hero {
+                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #111827 100%);
+                    border-radius: 22px;
+                    padding: 32px;
+                    color: #ffffff;
+                    position: relative;
+                    overflow: hidden;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.35);
+                }
+                .yer-hero-metrics {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 14px;
+                    margin-top: 24px;
+                    padding-top: 22px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .yer-metric-box {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.09);
+                    border-radius: 14px;
+                    padding: 14px 16px;
+                }
+                .yer-section-header {
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 14px;
+                }
+                .yer-awards-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 18px;
+                }
+                .yer-award-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 20px;
+                    box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+                    display: flex;
+                    flex-direction: column;
+                }
+                .yer-award-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 8px;
+                    margin-bottom: 14px;
+                }
+                .yer-winner-box {
+                    background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+                    border: 1.5px solid #fed7aa;
+                    border-radius: 14px;
+                    padding: 14px;
+                }
+                .yer-campus-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                    gap: 16px;
+                }
+                .yer-campus-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 18px;
+                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+                }
+                .yer-campus-winner {
+                    border: 2px solid #f59e0b;
+                    background: linear-gradient(180deg, #fffbeb 0%, #ffffff 35%);
+                    box-shadow: 0 10px 24px -8px rgba(245, 158, 11, 0.22);
+                }
+                .yer-apb-banner {
+                    background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+                    border: 1px solid rgba(245, 158, 11, 0.4);
+                    border-radius: 18px;
+                    padding: 22px;
+                    color: #ffffff;
+                    margin-top: 16px;
+                }
+                .yer-apb-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+                    gap: 10px;
+                }
+                .yer-apb-pill {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: rgba(255, 255, 255, 0.06);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-radius: 12px;
+                    padding: 10px 12px;
+                }
+                .yer-apb-pill-me {
+                    border-color: #f59e0b;
+                    background: rgba(245, 158, 11, 0.14);
+                }
+                .yer-cert-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    gap: 12px;
+                }
+                .yer-cert-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 14px;
+                    transition: transform 0.15s ease, box-shadow 0.15s ease;
+                }
+                .yer-cert-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+                }
+                .yer-cert-card-me {
+                    border: 2px solid #E35205;
+                    background: #fffaf5;
+                }
+                .yer-filter-btn {
+                    border: 1px solid #e2e8f0;
+                    background: #ffffff;
+                    color: #475569;
+                    font-size: 0.78rem;
+                    font-weight: 700;
+                    padding: 6px 12px;
+                    border-radius: 999px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+                .yer-filter-btn.active {
+                    background: #0f172a;
+                    color: #ffffff;
+                    border-color: #0f172a;
+                }
+                @media (max-width: 768px) {
+                    .yer-hero {
+                        padding: 22px 18px;
+                    }
+                    .yer-hero-metrics {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+            </style>
+
+            <div class="yer-wrapper">
+                <!-- 1. SEASON FINALE BANNER -->
+                <div class="yer-hero" style="padding: 20px 24px;">
+                    <h1 style="margin:0 0 4px; font-size:clamp(1.2rem, 2vw, 1.45rem); font-weight:800; letter-spacing:-0.3px; color:#ffffff;">
+                        The ${year} Volunteering Year Has Officially Ended
+                    </h1>
+                    <p style="margin:0; color:#94a3b8; font-size:0.86rem;">
+                        Thank you for being part of the ${year} C-SHAW programme across all campuses.
+                    </p>
+                </div>
+
+                <!-- 2. LIVE AWARDS WINNERS & NUMBERS -->
+                <section>
+                    <div class="yer-section-header">
+                        <div>
+                            <h2 style="margin:0; font-size:1.3rem; font-weight:800; color:#0f172a;">🏆 ${year} Official Award Winners & Final Standings</h2>
+                            <p style="margin:3px 0 0; font-size:0.86rem; color:#64748b;">Calculated via the multi-pillar Power Score (Hours 50%, Events 25%, Punctuality 15%, LMS 10%).</p>
+                        </div>
+                        <a href="/live-awards/" style="display:inline-flex; align-items:center; gap:6px; color:#E35205; font-weight:800; font-size:0.86rem; text-decoration:none; background:#fff2ed; padding:8px 14px; border-radius:10px; border:1px solid rgba(227, 82, 5, 0.25);">
+                            <span>See Detailed Numbers & Formula Breakdown</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </a>
+                    </div>
+
+                    <div class="yer-awards-grid">
+                        ${renderAwardCategoryCard(
+                            'Peer Educator of the Year',
+                            'Seniors',
+                            '#d97706',
+                            awards.overall,
+                            `<span style="color:#E35205; display:flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>`
+                        )}
+                        ${renderAwardCategoryCard(
+                            'Best Junior Peer Educator',
+                            'Newcomers',
+                            '#059669',
+                            awards.newcomers,
+                            `<span style="color:#10b981; display:flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22c4.97 0 9-4.03 9-9-4.97 0-9 4.03-9 9z"></path><path d="M12 22c-4.97 0-9-4.03-9-9 4.97 0 9 4.03 9 9z"></path><path d="M12 22V2"></path></svg></span>`
+                        )}
+                        ${campusAwardCardHtml}
+                    </div>
+
+                    <!-- Management Special Recognition Awards -->
+                    <div style="margin-top: 18px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                            <span style="font-size:0.82rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.6px;">
+                                Management Awards
+                            </span>
+                            <span style="font-size:0.74rem; font-weight:700; color:#7c3aed; background:#f3e8ff; border:1px solid #d8b4fe; padding:3px 10px; border-radius:999px;">
+                                Decided by C-SHAW Management
+                            </span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                            <!-- Innovator of the Year -->
+                            <div class="yer-award-card" style="border-color:rgba(124, 58, 237, 0.28); background:linear-gradient(135deg, #faf5ff 0%, #ffffff 60%);">
+                                <div class="yer-award-header" style="margin-bottom:10px;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span style="color:#7c3aed; display:flex;">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"></path></svg>
+                                        </span>
+                                        <span style="font-weight:800; color:#0f172a; font-size:1rem;">Innovator of the Year</span>
+                                    </div>
+                                    <span style="font-size:0.66rem; font-weight:800; padding:3px 8px; border-radius:6px; background:#f3e8ff; color:#7c3aed; text-transform:uppercase;">Decided by Management</span>
+                                </div>
+                                <div class="yer-winner-box" style="border-color:#d8b4fe; background:linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                                        <div>
+                                            <div style="font-size:0.68rem; font-weight:800; color:#7c3aed; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">👑 2026 Winner</div>
+                                            <div style="font-size:1.15rem; font-weight:900; color:#0f172a;">Vuyiswa Mbena</div>
+                                            <div style="font-size:0.78rem; color:#64748b; font-weight:500; margin-top:3px;">Selected by Management for outstanding creativity & programme innovation.</div>
+                                        </div>
+                                        <span style="background:#7c3aed; color:#fff; font-weight:800; font-size:0.74rem; padding:5px 10px; border-radius:999px; white-space:nowrap;">
+                                            💡 Innovator
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Social Media Award -->
+                            <div class="yer-award-card" style="border-color:rgba(14, 165, 233, 0.28); background:linear-gradient(135deg, #f0f9ff 0%, #ffffff 60%);">
+                                <div class="yer-award-header" style="margin-bottom:10px;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span style="color:#0284c7; display:flex;">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                                        </span>
+                                        <span style="font-weight:800; color:#0f172a; font-size:1rem;">Social Media Award</span>
+                                    </div>
+                                    <span style="font-size:0.66rem; font-weight:800; padding:3px 8px; border-radius:6px; background:#e0f2fe; color:#0284c7; text-transform:uppercase;">Decided by Management</span>
+                                </div>
+                                <div class="yer-winner-box" style="border-color:#bae6fd; background:linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                                        <div>
+                                            <div style="font-size:0.68rem; font-weight:800; color:#0284c7; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">👑 2026 Winner</div>
+                                            <div style="font-size:1.15rem; font-weight:900; color:#0f172a;">Siyabonga Hlatshwayo</div>
+                                            <div style="font-size:0.78rem; color:#64748b; font-weight:500; margin-top:3px;">Selected by Management for exceptional digital impact & campaign visibility.</div>
+                                        </div>
+                                        <span style="background:#0284c7; color:#fff; font-weight:800; font-size:0.74rem; padding:5px 10px; border-radius:999px; white-space:nowrap;">
+                                            📱 Social Media
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        `;
+    }
+
+    function attachYearEndRoundupListeners() {
+        const btnCareerToolkit = document.getElementById('btnRoundupCareerToolkit');
+        if (btnCareerToolkit) {
+            btnCareerToolkit.addEventListener('click', () => {
+                const careerLink = document.getElementById('link-career');
+                if (careerLink) {
+                    careerLink.click();
+                } else if (typeof renderCareerToolkit === 'function') {
+                    renderCareerToolkit();
+                }
+            });
+        }
+
+        const btnMyProgress = document.getElementById('btnRoundupMyProgress');
+        if (btnMyProgress) {
+            btnMyProgress.addEventListener('click', () => {
+                const statsLink = document.getElementById('link-stats');
+                if (statsLink) {
+                    statsLink.click();
+                } else {
+                    renderStudentStats();
+                }
+            });
         }
     }
 
@@ -1685,6 +2315,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const exactMinutes = Math.floor((totalDecimal - exactHours) * 60);
             const exactSeconds = Math.round((((totalDecimal - exactHours) * 60) - exactMinutes) * 60);
 
+            const isCompleted = Boolean(data.is_completed || totalDecimal >= 80 || data.is_certificate_holder);
+            const displayProgressPct = isCompleted ? 100 : data.progress_percent;
+
             mainContent.innerHTML = `
                 <style>
                     @media (max-width: 768px) {
@@ -1794,17 +2427,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <div>
                         <div style="display: flex; justify-content: space-between; color: #6b6b90; font-size: 0.9rem; font-weight: 600; margin-bottom: 10px;">
-                            <span>Progress to Goal</span>
-                            <span style="color: white;">${data.remaining} hours left</span>
+                            <span>${isCompleted ? '2026 Programme Status' : 'Progress to Goal'}</span>
+                            <span style="color: ${isCompleted ? '#34d399' : 'white'}; font-weight: ${isCompleted ? '800' : '600'};">${isCompleted ? '✅ All Completed — Congratulations!' : `${data.remaining} hours left`}</span>
                         </div>
                         
                         <div style="height: 12px; background: #252545; border-radius: 6px; position: relative;">
                             <div style="
-                                width: ${data.progress_percent}%; 
+                                width: ${displayProgressPct}%; 
                                 height: 100%; 
-                                background: linear-gradient(90deg, #FF6B35, #FF8C42); 
+                                background: ${isCompleted ? 'linear-gradient(90deg, #10b981, #34d399, #fbbf24)' : 'linear-gradient(90deg, #FF6B35, #FF8C42)'}; 
                                 border-radius: 6px;
-                                box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+                                box-shadow: 0 0 20px ${isCompleted ? 'rgba(16, 185, 129, 0.45)' : 'rgba(255, 107, 53, 0.4)'};
                             "></div>
                         </div>
 
@@ -1917,6 +2550,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 </div>
             `;
+
+            document.querySelectorAll('.btn-stats-career-toolkit').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const careerLink = document.getElementById('link-career');
+                    if (careerLink) {
+                        careerLink.click();
+                    } else if (typeof renderCareerToolkit === 'function') {
+                        renderCareerToolkit();
+                    }
+                });
+            });
 
         } catch (err) {
             console.error(err);
@@ -3319,6 +3963,17 @@ function renderExecutiveAttendancePage() {
                     ${renderComparisonTable(data.comparison)}
                 </div>
             `;
+
+            document.querySelectorAll('.btn-stats-career-toolkit').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const careerLink = document.getElementById('link-career');
+                    if (careerLink) {
+                        careerLink.click();
+                    } else if (typeof renderCareerToolkit === 'function') {
+                        renderCareerToolkit();
+                    }
+                });
+            });
 
         } catch (err) {
             console.error(err);
@@ -6363,6 +7018,17 @@ window.copyToClipboard = function(btnElement) {
                     </div>
                 </div>
             `;
+
+            document.querySelectorAll('.btn-stats-career-toolkit').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const careerLink = document.getElementById('link-career');
+                    if (careerLink) {
+                        careerLink.click();
+                    } else if (typeof renderCareerToolkit === 'function') {
+                        renderCareerToolkit();
+                    }
+                });
+            });
 
         } catch (err) {
             console.error('Camp ticket error:', err);

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Awards Leaderboard | Coordinators</title>
+    <title>2026 Live Awards & Final Standings | C-SHAW</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -480,6 +480,45 @@
             background: rgba(59, 130, 246, 0.12);
             color: #2563eb;
         }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 18px 14px;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            .title-wrapper h1 {
+                font-size: 1.85rem;
+            }
+            .title-wrapper p {
+                font-size: 0.95rem;
+            }
+            .awards-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .award-card {
+                padding: 20px 16px;
+            }
+            .stats-breakdown,
+            .runner-up-details {
+                grid-template-columns: 1fr;
+            }
+            .guide-card {
+                padding: 22px 16px;
+            }
+            .guide-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .eligibility-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -491,12 +530,12 @@
 
     <header class="header">
         <div class="title-wrapper">
-            <h1>Live Awards Leaderboard</h1>
-            <p>Real-time normalized "Power Score" rankings calculated from verified hours, events, punctuality, and LMS points.</p>
+            <h1>2026 Final Awards Leaderboard</h1>
+            <p>Official locked "Power Score" standings calculated from verified hours, events, punctuality, and LMS points at season close.</p>
         </div>
-        <div class="live-status">
-            <div class="pulse-dot"></div>
-            <span class="last-updated" id="lastUpdatedText">Syncing data...</span>
+        <div class="live-status" style="border-color: rgba(245, 158, 11, 0.4); background: #fffbeb;">
+            <span style="font-size: 1.05rem;">🔒</span>
+            <span class="last-updated" id="lastUpdatedText" style="color: #b45309; font-weight: 800;">Official 2026 Final Standings (Locked)</span>
         </div>
     </header>
 
@@ -736,19 +775,15 @@
                 renderContenders('award-newcomer', data.newcomers);
                 renderContenders('award-campus', data.campuses, true);
                 
-                const now = new Date();
-                document.getElementById('lastUpdatedText').textContent = `Live Sync: ${now.toLocaleTimeString()}`;
+                document.getElementById('lastUpdatedText').textContent = `Official 2026 Final Standings (Locked)`;
             } catch (error) {
                 console.error("Failed to fetch live awards:", error);
-                document.getElementById('lastUpdatedText').textContent = `Reconnecting...`;
+                document.getElementById('lastUpdatedText').textContent = `Unable to load standings`;
             }
         }
 
-        // Initial fetch
+        // Load locked final standings once (no live polling)
         fetchLiveLeaderboard();
-
-        // Poll every 15 seconds
-        setInterval(fetchLiveLeaderboard, 15000);
     </script>
 </body>
 </html>
