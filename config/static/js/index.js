@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                             <h3 class="empty-state-title">The 2026 Volunteering Year Has Concluded.</h3>
-                            <p class="empty-state-text" style="margin-bottom: 24px;">Log in to view the official 2026 Year-End Roundup, Campus Standings, and Certificate Holders!</p>
+                            <p class="empty-state-text" style="margin-bottom: 24px;">Log in to view the official 2026 Year-End Roundup, Campus Standings.</p>
                             <div class="empty-state-cta">
                                 <a href="/about/" class="btn-read-cshaw">
                                     <span>Read about the C-SHAW Program</span>
