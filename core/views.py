@@ -1458,6 +1458,162 @@ def quarterly_report_page(request):
     return render(request, 'core/quarterly_report.html', context)
 
 
+def yearly_report_page(request):
+    """
+    Comprehensive Year-End Impact & Performance Report for C-SHAW Management.
+    All metrics and data are dynamically derived from actual database records.
+    """
+    from .models import CampTicket, CareerToolkitAsset
+    from lms.models import StudentProgress
+    from django.db.models import Avg
+
+    now = timezone.now()
+    year = 2026
+
+    # 1. Base query for active students (>5 total hours)
+    true_active_students = User.objects.filter(
+        role=User.Roles.STUDENT,
+        is_superuser=False
+    ).annotate(
+        total_event_hours=Coalesce(
+            Sum('activitysignup__hours_earned', filter=Q(activitysignup__attended=True)),
+            0.0,
+            output_field=DecimalField()
+        )
+    ).annotate(
+        grand_total=F('total_event_hours') + F('manual_bonus_hours')
+    ).filter(
+        grand_total__gt=5
+    )
+
+    total_registered = User.objects.filter(role=User.Roles.STUDENT, is_superuser=False).count()
+    active_peers = true_active_students.count()
+
+    event_hours_dict = ActivitySignup.objects.filter(attended=True).aggregate(Sum('hours_earned'))
+    event_hours = float(event_hours_dict['hours_earned__sum'] or 0.0)
+
+    manual_hours_dict = User.objects.filter(role=User.Roles.STUDENT).aggregate(Sum('manual_bonus_hours'))
+    manual_hours = float(manual_hours_dict['manual_bonus_hours__sum'] or 0.0)
+
+    total_hours = round(event_hours + manual_hours, 1)
+    total_events = VolunteerActivity.objects.filter(date_time__lte=now).count()
+
+    # Campus Breakdown - dynamically queried from DB
+    campuses_info = [
+        ('APB', 'Auckland Park Bunting Road'),
+        ('APK', 'Auckland Park Kingsway'),
+        ('DFC', 'Doornfontein Campus'),
+        ('SWC', 'Soweto Campus'),
+    ]
+    campus_list = []
+    campus_context = {}
+
+    for code, name in campuses_info:
+        total_pe_count = User.objects.filter(
+            role=User.Roles.STUDENT,
+            campus=code,
+            is_superuser=False
+        ).count()
+
+        active_pe_count = true_active_students.filter(campus=code).count()
+
+        camp_event_hours = float(ActivitySignup.objects.filter(
+            user__campus=code, attended=True
+        ).aggregate(Sum('hours_earned'))['hours_earned__sum'] or 0.0)
+
+        camp_manual_hours = float(User.objects.filter(
+            role=User.Roles.STUDENT, campus=code
+        ).aggregate(Sum('manual_bonus_hours'))['manual_bonus_hours__sum'] or 0.0)
+
+        total_camp_hours = camp_event_hours + camp_manual_hours
+        avg_hours = (total_camp_hours / active_pe_count) if active_pe_count > 0 else 0.0
+        act_pct = round((active_pe_count / total_pe_count * 100), 1) if total_pe_count > 0 else 0.0
+
+        item = {
+            'code': code,
+            'name': name,
+            'total_count': total_pe_count,
+            'active_count': active_pe_count,
+            'active_pct': act_pct,
+            'total_hours': round(total_camp_hours, 1),
+            'avg_hours': round(avg_hours, 1),
+        }
+        campus_list.append(item)
+
+        prefix = code.lower()
+        campus_context[f'{prefix}_total_count'] = total_pe_count
+        campus_context[f'{prefix}_active_count'] = active_pe_count
+        campus_context[f'{prefix}_total_hours'] = round(total_camp_hours, 1)
+        campus_context[f'{prefix}_avg_hours'] = round(avg_hours, 1)
+
+    # Sort campuses by total_hours descending
+    campus_list.sort(key=lambda x: (x['total_hours'], x['avg_hours']), reverse=True)
+
+    # Chart data
+    all_past_events = VolunteerActivity.objects.filter(date_time__lte=now).order_by('date_time')
+    turnout_labels = []
+    expected_data = []
+    actual_data = []
+
+    for event in all_past_events:
+        turnout_labels.append(event.title)
+        total_rsvps = ActivitySignup.objects.filter(activity=event).count()
+        expected_data.append(total_rsvps)
+        attended_count = ActivitySignup.objects.filter(activity=event, attended=True).count()
+        actual_data.append(attended_count)
+
+    all_time_rsvps = ActivitySignup.objects.count()
+    all_time_attended = ActivitySignup.objects.filter(attended=True).count()
+    attendance_rate = round((all_time_attended / all_time_rsvps) * 100, 1) if all_time_rsvps > 0 else 0.0
+
+    late_count = ActivitySignup.objects.filter(
+        attended=True,
+        sign_in_time__isnull=False,
+        sign_in_time__gt=F('activity__date_time')
+    ).count()
+    total_attended = ActivitySignup.objects.filter(attended=True).count()
+    on_time_count = max(0, total_attended - late_count)
+    excused_count = ActivitySignup.objects.filter(attended=False).count()
+
+    # Feedback & Ratings from DB
+    all_feedbacks = Feedback.objects.select_related('user').order_by('-created_at')
+    rating_data = Feedback.objects.filter(rating__isnull=False).aggregate(avg=Avg('rating'), count=Count('id'))
+    avg_rating = round(float(rating_data['avg']), 1) if rating_data['avg'] is not None else None
+    total_rating_reviews = rating_data['count'] or 0
+
+    camp_tickets_count = CampTicket.objects.count()
+    lms_cert_count = StudentProgress.objects.count()
+    career_assets_count = CareerToolkitAsset.objects.count()
+
+    context = {
+        'year': year,
+        'report_date': now.strftime("%d %B %Y"),
+        'total_hours': total_hours,
+        'total_events': total_events,
+        'total_registered': total_registered,
+        'active_peers': active_peers,
+        'attendance_rate': attendance_rate,
+        'avg_rating': avg_rating,
+        'total_rating_reviews': total_rating_reviews,
+        'camp_tickets_count': camp_tickets_count,
+        'lms_cert_count': lms_cert_count,
+        'career_assets_count': career_assets_count,
+        'campus_list': campus_list,
+
+        'chart_labels': json.dumps(turnout_labels),
+        'chart_expected': expected_data,
+        'chart_actual': actual_data,
+
+        'punctuality_on_time': on_time_count,
+        'punctuality_late': late_count,
+        'punctuality_excused': excused_count,
+
+        'feedbacks': all_feedbacks,
+        **campus_context,
+    }
+    return render(request, 'core/yearly_report.html', context)
+
+
 client = OpenAI(api_key=getattr(settings, 'OPENAI_API_KEY', ''))
 
 

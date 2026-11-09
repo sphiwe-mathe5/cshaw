@@ -1250,10 +1250,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h2 style="margin:0; font-size:1.3rem; font-weight:800; color:#0f172a;">🏆 ${year} Official Award Winners & Final Standings</h2>
                             <p style="margin:3px 0 0; font-size:0.86rem; color:#64748b;">Calculated via the multi-pillar Power Score (Hours 50%, Events 25%, Punctuality 15%, LMS 10%).</p>
                         </div>
-                        <a href="/live-awards/" style="display:inline-flex; align-items:center; gap:6px; color:#E35205; font-weight:800; font-size:0.86rem; text-decoration:none; background:#fff2ed; padding:8px 14px; border-radius:10px; border:1px solid rgba(227, 82, 5, 0.25);">
-                            <span>See Detailed Numbers & Formula Breakdown</span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                        </a>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <a href="/yearly-report/" style="display:inline-flex; align-items:center; gap:6px; color:#ffffff; font-weight:800; font-size:0.86rem; text-decoration:none; background:#0f172a; padding:8px 14px; border-radius:10px; border:1px solid rgba(255, 255, 255, 0.2);">
+                                <span>📊 2026 Management Report</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </a>
+                            <a href="/live-awards/" style="display:inline-flex; align-items:center; gap:6px; color:#E35205; font-weight:800; font-size:0.86rem; text-decoration:none; background:#fff2ed; padding:8px 14px; border-radius:10px; border:1px solid rgba(227, 82, 5, 0.25);">
+                                <span>See Detailed Numbers & Formula Breakdown</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </a>
+                        </div>
                     </div>
 
                     <div class="yer-awards-grid">
@@ -3690,7 +3696,7 @@ function renderExecutiveAttendancePage() {
 
             <div style="max-width: 800px; margin: 0 auto;">
                 
-                <div style="display:flex; gap:10px; margin-bottom:20px; background:#f1f3f5; padding:5px; border-radius:8px; width:fit-content;">
+                <div style="display:flex; gap:10px; margin-bottom:20px; background:#f1f3f5; padding:5px; border-radius:8px; width:fit-content; flex-wrap:wrap;">
                     <button id="btnViewEvents" onclick="switchReportView('events')" class="toggle-btn active-toggle" 
                         style="border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:600;">
                         Event List
@@ -3698,6 +3704,10 @@ function renderExecutiveAttendancePage() {
                     <button id="btnViewQuarterly" onclick="switchReportView('quarterly')" class="toggle-btn" 
                         style="border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:600; color:#666;">
                         Quarterly Overview
+                    </button>
+                    <button id="btnViewYearly" onclick="window.location.href='/yearly-report/'" class="toggle-btn" 
+                        style="border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-weight:700; color:#E35205; background:#fff2ed;">
+                        📊 2026 Annual Report &rarr;
                     </button>
                 </div>
 
